@@ -1,0 +1,33 @@
+site_name: Platform Observability
+site_description: Documentation for Platform Observability (CDF-driven)
+site_url: https://your-org.github.io/platform-observability/
+repo_url: https://github.com/your-org/platform-observability
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+  - footnotes
+  - def_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/your-org/platform-observability
+nav:
+  - Home: docs/index.md
+  - Overview: "docs/Platform Observability — Solution Overview & Usage Guide (CDF-driven) v0.1.md"
+  - Silver:
+      - Enrichment: docs/silver_enrichment.md
+      - Data Dictionary: docs/silver_data_dictionary.md
+  - Gold:
+      - Chargeback: docs/gold_chargeback.md
+      - Data Dictionary: docs/gold_data_dictionary.md
