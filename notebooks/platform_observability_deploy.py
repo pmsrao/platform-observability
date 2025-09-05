@@ -170,10 +170,17 @@ try:
 except Exception as e:
     print(f"Error getting raw SQL: {e}")
 
-# Now let's see the statements
-print("Generated statements:")
+# Now let's see the statements with proper parameters
+print("Generated statements with parameters:")
 try:
-    statements = sql_manager.parameterize_sql_statements("config/bootstrap_catalog_schemas")
+    # Pass the parameters explicitly
+    statements = sql_manager.parameterize_sql_statements(
+        "config/bootstrap_catalog_schemas",
+        catalog=sql_manager._config.catalog,
+        bronze_schema=sql_manager._config.bronze_schema,
+        silver_schema=sql_manager._config.silver_schema,
+        gold_schema=sql_manager._config.gold_schema
+    )
     print(f"Number of statements: {len(statements)}")
     for i, statement in enumerate(statements):
         print(f"Statement {i+1}: {repr(statement)}")
