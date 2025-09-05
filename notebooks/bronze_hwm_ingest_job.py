@@ -179,7 +179,7 @@ def upsert_billing_usage():
     - Required fields must be present
     """
     src = "system.billing.usage"
-            tgt = config.get_table_name("bronze", "brz_billing_usage")
+    tgt = config.get_table_name("bronze", "brz_billing_usage")
     
     logger.info(f"Processing billing usage from {src} to {tgt}")
     
@@ -230,7 +230,7 @@ def upsert_list_prices():
     - Used downstream for cost calculations
     """
     src = "system.billing.list_prices"
-            tgt = config.get_table_name("bronze", "brz_billing_list_prices")
+    tgt = config.get_table_name("bronze", "brz_billing_list_prices")
     
     logger.info(f"Processing list prices from {src} to {tgt}")
     
@@ -271,7 +271,7 @@ def upsert_job_run_timeline():
     - Used for cost allocation and performance monitoring
     """
     src = "system.lakeflow.job_run_timeline"
-            tgt = config.get_table_name("bronze", "brz_lakeflow_job_run_timeline")
+    tgt = config.get_table_name("bronze", "brz_lakeflow_job_run_timeline")
     
     logger.info(f"Processing job run timeline from {src} to {tgt}")
     
@@ -316,7 +316,7 @@ def upsert_job_task_run_timeline():
     - Used for performance optimization and debugging
     """
     src = "system.lakeflow.job_task_run_timeline"
-            tgt = config.get_table_name("bronze", "brz_lakeflow_job_task_run_timeline")
+    tgt = config.get_table_name("bronze", "brz_lakeflow_job_task_run_timeline")
     
     logger.info(f"Processing job task run timeline from {src} to {tgt}")
     
@@ -361,7 +361,7 @@ def upsert_lakeflow_jobs():
     - Used for entity identification and cost allocation
     """
     src = "system.lakeflow.jobs"
-            tgt = config.get_table_name("bronze", "bronze_lakeflow_jobs")
+    tgt = config.get_table_name("bronze", "brz_lakeflow_jobs")
     
     logger.info(f"Processing lakeflow jobs from {src} to {tgt}")
     
@@ -406,7 +406,7 @@ def upsert_lakeflow_pipelines():
     - Used for entity identification and cost allocation
     """
     src = "system.lakeflow.pipelines"
-            tgt = config.get_table_name("bronze", "brz_lakeflow_pipelines")
+    tgt = config.get_table_name("bronze", "brz_lakeflow_pipelines")
     
     logger.info(f"Processing lakeflow pipelines from {src} to {tgt}")
     
@@ -451,7 +451,7 @@ def upsert_compute_clusters():
     - Used for cost allocation and policy compliance
     """
     src = "system.compute.clusters"
-            tgt = config.get_table_name("bronze", "brz_compute_clusters")
+    tgt = config.get_table_name("bronze", "brz_compute_clusters")
     
     logger.info(f"Processing compute clusters from {src} to {tgt}")
     
@@ -497,7 +497,7 @@ def upsert_compute_node_types():
     - Used for cost calculations and capacity planning
     """
     src = "system.compute.node_types"
-            tgt = config.get_table_name("bronze", "bronze_compute_node_types")
+    tgt = config.get_table_name("bronze", "brz_compute_node_types")
     
     logger.info(f"Processing compute node types from {src} to {tgt}")
     
@@ -532,7 +532,7 @@ def upsert_access_workspaces():
     - Used for workspace identification and cost allocation
     """
     src = "system.access.workspaces_latest"
-            tgt = config.get_table_name("bronze", "brz_access_workspaces_latest")
+    tgt = config.get_table_name("bronze", "brz_access_workspaces_latest")
     
     logger.info(f"Processing access workspaces from {src} to {tgt}")
     

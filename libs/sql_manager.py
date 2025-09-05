@@ -12,18 +12,19 @@ class SQLManager:
         self._config = Config.get_config()
     
     def get_sql_file_path(self, operation: str) -> Path:
-        """Get the full path to a SQL file"""
-        # Check in bronze directory first, then in root sql directory
-bronze_path = self.sql_directory / "bronze" / f"{operation}.sql"
-        if bronze_path.exists():
-            return bronze_path
+        """Get the full path to a SQL file using explicit path"""
+        # Handle explicit paths (e.g., "config/bootstrap_catalog_schemas", "bronze/bronze_tables_bootstrap")
+        if "/" in operation:
+            # Explicit path provided
+            sql_file_path = self.sql_directory / f"{operation}.sql"
+        else:
+            # Fallback to root sql directory for backward compatibility
+            sql_file_path = self.sql_directory / f"{operation}.sql"
         
-        # Check in root sql directory
-        root_path = self.sql_directory / f"{operation}.sql"
-        if root_path.exists():
-            return root_path
+        if not sql_file_path.exists():
+            raise FileNotFoundError(f"SQL file not found: {sql_file_path}")
         
-        raise FileNotFoundError(f"SQL file not found for operation '{operation}'")
+        return sql_file_path
     
     def load_sql(self, operation: str) -> str:
         """Load SQL content from file with caching"""
@@ -81,21 +82,20 @@ bronze_path = self.sql_directory / "bronze" / f"{operation}.sql"
         return self._config.get_schema_name(schema)
     
     def get_available_operations(self) -> list:
-        """Get list of available SQL operations"""
+        """Get list of available SQL operations with explicit paths"""
         operations = []
         
-        # Check bronze directory
-        bronze_dir = self.sql_directory / "bronze"
-        if bronze_dir.exists():
-            for sql_file in bronze_dir.glob("*.sql"):
-                operations.append(sql_file.stem)
+        # Check specific subdirectories and include the path prefix
+        for subdir in ["bronze", "bronze/operations", "silver", "gold", "config"]:
+            dir_path = self.sql_directory / subdir
+            if dir_path.exists():
+                for sql_file in dir_path.glob("*.sql"):
+                    # Include the subdirectory path in the operation name
+                    relative_path = sql_file.relative_to(self.sql_directory)
+                    operation_name = str(relative_path.with_suffix(''))  # Remove .sql extension
+                    operations.append(operation_name)
         
-        # Check root sql directory
-        for sql_file in self.sql_directory.glob("*.sql"):
-            if sql_file.name not in ["README.md"]:  # Exclude non-SQL files
-                operations.append(sql_file.stem)
-        
-        return sorted(list(set(operations)))
+        return sorted(operations)
     
     def validate_sql(self, operation: str) -> bool:
         """Validate that a SQL operation exists and is readable"""

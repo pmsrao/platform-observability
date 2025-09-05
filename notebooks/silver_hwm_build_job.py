@@ -29,15 +29,31 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-# Add libs to path
-sys.path.append('/Workspace/Repos/platform-observability/libs')
+# PySpark imports
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import functions as F
+
+# Import from libs package (cloud-agnostic approach)
+import sys
+import os
+
+# Add current directory to path for local development
+current_dir = os.path.dirname(os.path.abspath(__file__))
+libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
+if libs_dir not in sys.path:
+    sys.path.append(libs_dir)
+
+# For Databricks, also try the workspace path
+workspace_libs_path = '/Workspace/Repos/platform-observability/libs'
+if workspace_libs_path not in sys.path:
+    sys.path.append(workspace_libs_path)
 
 from config import Config
 from processing_state import get_last_processed_timestamp, commit_processing_state
 from tag_processor import TagProcessor
-from logging import get_logger
+from logging import StructuredLogger
 from error_handling import validate_data_quality
-from utils import get_date_sk
+from utils import yyyymmdd
 
 # COMMAND ----------
 
@@ -48,13 +64,13 @@ from utils import get_date_sk
 
 # Get configuration
 config = Config.get_config()
-logger = get_logger(__name__, config.log_level)
+logger = StructuredLogger("silver_hwm_build_job")
 
-logger.info("Starting Silver layer HWM build job", extra={
+logger.info("Starting Silver layer HWM build job", {
     "catalog": config.catalog,
     "bronze_schema": config.bronze_schema,
     "silver_schema": config.silver_schema,
-    "environment": config.environment
+    "environment": config.ENV
 })
 
 # COMMAND ----------
@@ -197,7 +213,7 @@ def build_silver_entity_latest(spark) -> bool:
             df.run_as,
             df.created_time,
             df.updated_time
-        ).withColumn("entity_type", lit("JOB"))
+        ).withColumn("entity_type", F.lit("JOB"))
         
         # Write to Silver table
         silver_table = get_silver_table_name("slv_entity_latest")
@@ -248,8 +264,8 @@ def build_silver_clusters(spark) -> bool:
             df.created_time,
             df.updated_time
         ).withColumn("valid_from", df.created_time) \
-         .withColumn("valid_to", lit(None)) \
-         .withColumn("is_current", lit(True))
+         .withColumn("valid_to", F.lit(None)) \
+         .withColumn("is_current", F.lit(True))
         
         # Write to Silver table
         silver_table = get_silver_table_name("slv_clusters")
@@ -406,8 +422,8 @@ def build_silver_job_task_run_timeline(spark) -> bool:
             df.date_sk_start,
             df.date_sk_end
         ).withColumn("valid_from", df.start_time) \
-         .withColumn("valid_to", lit(None)) \
-         .withColumn("is_current", lit(True))
+         .withColumn("valid_to", F.lit(None)) \
+         .withColumn("is_current", F.lit(True))
         
         # Write to Silver table
         silver_table = get_silver_table_name("slv_job_task_run_timeline")

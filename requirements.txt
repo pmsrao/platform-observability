@@ -26,8 +26,15 @@ bandit>=1.7.5
 
 # CI/CD and deployment
 databricks-cli>=0.200.0
-azure-identity>=1.13.0
+
+# Cloud-agnostic secrets management (optional dependencies)
+# AWS
 boto3>=1.28.0
+# Azure
+azure-keyvault-secrets>=4.6.0
+azure-identity>=1.13.0
+# GCP
+google-cloud-secret-manager>=2.16.0
 
 # Utilities
 click>=8.1.0

@@ -17,6 +17,9 @@ class EnvironmentConfig:
     # Gold layer processing configuration
     gold_complete_refresh: bool
     gold_processing_strategy: str
+    # Databricks configuration
+    databricks_host: Optional[str] = None
+    databricks_token: Optional[str] = None
     
     def get_table_name(self, schema: str, table: str) -> str:
         """Get fully qualified table name from config instance"""
@@ -35,8 +38,15 @@ class EnvironmentConfig:
 class Config:
     """Centralized configuration management"""
     
+    # Valid environments
+    VALID_ENVIRONMENTS = ["dev", "prod", "test"]
+    
     # Environment detection
     ENV = os.getenv("ENVIRONMENT", "dev").lower()
+    
+    # Validate environment
+    if ENV not in VALID_ENVIRONMENTS:
+        raise ValueError(f"Invalid environment: {ENV}. Must be one of {VALID_ENVIRONMENTS}")
     
     # Base configuration
     BASE_CONFIG = {
@@ -51,7 +61,10 @@ class Config:
         "enable_alerts": True,
         # Gold layer processing configuration
         "gold_complete_refresh": False,
-        "gold_processing_strategy": "updated_time"
+        "gold_processing_strategy": "updated_time",
+        # Databricks configuration
+        "databricks_host": os.getenv("DATABRICKS_HOST"),
+        "databricks_token": os.getenv("DATABRICKS_TOKEN")
     }
     
     # Environment-specific overrides

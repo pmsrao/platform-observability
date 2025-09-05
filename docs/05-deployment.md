@@ -1,20 +1,48 @@
-# Platform Observability - Production Deployment Guide
+# Platform Observability - Cloud-Agnostic Deployment Guide
 
 ## Table of Contents
 - [1. Overview](#1-overview)
-- [2. Prerequisites](#2-prerequisites)
-- [3. Environment Setup](#3-environment-setup)
-- [4. Pipeline Deployment](#4-pipeline-deployment)
-- [5. Workflow Configuration](#5-workflow-configuration)
-- [6. Monitoring & Alerting](#6-monitoring--alerting)
-- [7. Troubleshooting](#7-troubleshooting)
-- [8. Related Documentation](#8-related-documentation)
+- [2. Cloud-Agnostic Features](#2-cloud-agnostic-features)
+- [3. Prerequisites](#3-prerequisites)
+- [4. Environment Setup](#4-environment-setup)
+- [5. Secrets Management](#5-secrets-management)
+- [6. Pipeline Deployment](#6-pipeline-deployment)
+- [7. Workflow Configuration](#7-workflow-configuration)
+- [8. Monitoring & Alerting](#8-monitoring--alerting)
+- [9. Troubleshooting](#9-troubleshooting)
+- [10. Related Documentation](#10-related-documentation)
 
 ## 1. Overview
 
-This guide covers the production deployment of the Platform Observability solution, including HWM job setup, workflow orchestration, and operational considerations.
+This guide covers the **cloud-agnostic** production deployment of the Platform Observability solution, including HWM job setup, workflow orchestration, secrets management, and operational considerations. The solution is designed to run in any Databricks environment across different cloud providers (AWS, Azure, GCP) without requiring cloud-specific configurations.
 
-### 1.1 Deployment Architecture
+## 2. Cloud-Agnostic Features
+
+### **Key Features**
+- **Cloud-Agnostic Secrets Management**: Automatically detects and uses the appropriate secrets provider
+- **Environment Detection**: Automatically configures based on available cloud services
+- **Fallback Mechanisms**: Gracefully falls back to environment variables when cloud services are unavailable
+- **No Hardcoded Dependencies**: No Azure Key Vault or other cloud-specific hardcoded references
+
+### **Supported Cloud Providers**
+
+#### **AWS**
+- **Secrets Manager**: For storing sensitive configuration
+- **Parameter Store**: Alternative for configuration parameters
+- **Environment Variables**: Fallback for development
+
+#### **Azure**
+- **Key Vault**: For storing secrets and certificates
+- **Environment Variables**: Fallback for development
+
+#### **GCP**
+- **Secret Manager**: For storing sensitive data
+- **Environment Variables**: Fallback for development
+
+#### **Local Development**
+- **Environment Variables**: Primary method for local development
+
+### **Deployment Architecture**
 
 ```
 Production Environment
@@ -33,9 +61,9 @@ Production Environment
 4. **Validation** - Data quality and system health verification
 5. **Monitoring** - Operational monitoring and alerting
 
-## 2. Prerequisites
+## 3. Prerequisites
 
-### 2.1 System Requirements
+### 3.1 System Requirements
 
 - **Databricks Runtime**: 13.0+ with Unity Catalog enabled
 - **Workspace Access**: Admin or Account Admin privileges
@@ -63,9 +91,119 @@ Ensure these files are available:
 - `notebooks/` - HWM job definitions
 - `jobs/` - Workflow configuration
 
-## 3. Environment Setup
+## 4. Environment Setup
 
-### 3.1 Bootstrap Production Environment
+### 4.1 Prepare Environment
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd platform-observability
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment template
+cp env.example .env
+```
+
+### 4.2 Configure Environment
+
+Edit `.env` file with your specific configuration:
+
+```bash
+# Basic configuration
+ENVIRONMENT=dev
+DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
+DATABRICKS_TOKEN=your-token
+
+# Optional: Cloud-specific configuration
+# AWS
+AWS_DEFAULT_REGION=us-west-2
+
+# Azure
+AZURE_KEY_VAULT_URL=https://your-vault.vault.azure.net/
+
+# GCP
+GOOGLE_CLOUD_PROJECT=your-project-id
+```
+
+## 5. Secrets Management
+
+### 5.1 Automatic Detection
+
+The solution automatically detects the best available secrets provider:
+
+1. **Environment Variables** (always available)
+2. **AWS Secrets Manager** (if AWS credentials are configured)
+3. **Azure Key Vault** (if Azure credentials and vault URL are configured)
+4. **GCP Secret Manager** (if GCP credentials and project are configured)
+
+### 5.2 Cloud Secrets Configuration
+
+For production environments, you can store sensitive data in cloud secrets:
+
+#### **AWS Secrets Manager**
+```bash
+# Store as JSON in AWS Secrets Manager
+{
+  "DATABRICKS_TOKEN": "your-token",
+  "SLACK_WEBHOOK_URL": "your-webhook",
+  "TEAMS_WEBHOOK_URL": "your-webhook"
+}
+```
+
+#### **Azure Key Vault**
+```bash
+# Set vault URL
+export AZURE_KEY_VAULT_URL=https://your-vault.vault.azure.net/
+
+# Store secrets in Key Vault
+az keyvault secret set --vault-name your-vault --name "DATABRICKS-TOKEN" --value "your-token"
+```
+
+#### **GCP Secret Manager**
+```bash
+# Set project ID
+export GOOGLE_CLOUD_PROJECT=your-project-id
+
+# Create secrets
+gcloud secrets create DATABRICKS_TOKEN --data-file=- <<< "your-token"
+```
+
+### 5.3 Manual Configuration
+
+You can also manually set environment variables:
+
+```bash
+# Set environment variables
+export DATABRICKS_HOST="https://your-workspace.cloud.databricks.com"
+export DATABRICKS_TOKEN="your-personal-access-token"
+export ENVIRONMENT="dev"  # or "prod"
+```
+
+## 6. Pipeline Deployment
+
+### 6.1 Deploy to Databricks
+
+#### **Option A: Using Databricks CLI**
+```bash
+# Configure Databricks CLI
+databricks configure --token
+
+# Deploy notebooks
+databricks workspace import_dir notebooks /Workspace/Repos/platform-observability/notebooks
+
+# Deploy libraries
+databricks fs cp -r libs dbfs:/FileStore/platform-observability/libs
+```
+
+#### **Option B: Using Databricks UI**
+1. Upload notebooks to your workspace
+2. Upload library files to DBFS
+3. Configure job parameters
+
+### 6.2 Bootstrap Production Environment
 
 ```python
 from libs.sql_parameterizer import SQLParameterizer
@@ -112,11 +250,11 @@ GRANT SELECT ON SCHEMA {config.catalog}.{config.gold_schema} TO `account users`
 """)
 ```
 
-## 4. Job Deployment
+## 7. Job Deployment
 
-### 4.1 Bronze HWM Ingest Job
+### 7.1 Bronze HWM Ingest Job
 
-#### 4.1.1 Create Job
+#### 7.1.1 Create Job
 
 1. Go to **Databricks Workspace > Workflows > Jobs**
 2. Click **Create Job**
@@ -129,24 +267,23 @@ Notebook Path: /notebooks/bronze_hwm_ingest_job
 Cluster: Auto (or specify cluster)
 ```
 
-#### 4.1.2 Job Configuration
+#### 7.1.2 Job Configuration
 
 ```json
 {
-  "name": "Platform_Observability_Bronze_HWM_Ingest",
-  "type": "notebook",
-  "notebook_path": "/notebooks/bronze_hwm_ingest_job",
-  "timeout_seconds": 3600,
-  "retry_on_timeout": true,
-  "max_retries": 3,
+  "name": "Platform Observability - Bronze Ingest",
+  "notebook_task": {
+    "notebook_path": "/Workspace/Repos/platform-observability/notebooks/bronze_hwm_ingest_job"
+  },
   "new_cluster": {
-    "node_type_id": "Standard_DS3_v2",
-    "num_workers": 2,
-    "autoscale": {
-      "min_workers": 1,
-      "max_workers": 4
-    },
-    "spark_version": "13.3.x-scala2.12"
+    "spark_version": "13.3.x-scala2.12",
+    "node_type_id": "i3.xlarge",
+    "num_workers": 2
+  },
+  "environment": {
+    "ENVIRONMENT": "prod",
+    "DATABRICKS_HOST": "{{secrets/your-scope/databricks-host}}",
+    "DATABRICKS_TOKEN": "{{secrets/your-scope/databricks-token}}"
   }
 }
 ```

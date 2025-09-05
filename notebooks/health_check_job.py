@@ -27,11 +27,23 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 
-# Add libs to path
-sys.path.append('/Workspace/Repos/platform-observability/libs')
+# Import from libs package (cloud-agnostic approach)
+import sys
+import os
+
+# Add current directory to path for local development
+current_dir = os.path.dirname(os.path.abspath(__file__))
+libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
+if libs_dir not in sys.path:
+    sys.path.append(libs_dir)
+
+# For Databricks, also try the workspace path
+workspace_libs_path = '/Workspace/Repos/platform-observability/libs'
+if workspace_libs_path not in sys.path:
+    sys.path.append(workspace_libs_path)
 
 from config import Config
-from logging import get_logger
+from logging import StructuredLogger
 
 # COMMAND ----------
 
@@ -42,14 +54,14 @@ from logging import get_logger
 
 # Get configuration
 config = Config.get_config()
-logger = get_logger(__name__, config.log_level)
+logger = StructuredLogger("health_check_job")
 
-logger.info("Starting health check job", extra={
+logger.info("Starting health check job", {
     "catalog": config.catalog,
     "bronze_schema": config.bronze_schema,
     "silver_schema": config.silver_schema,
     "gold_schema": config.gold_schema,
-    "environment": config.environment
+    "environment": config.ENV
 })
 
 # COMMAND ----------

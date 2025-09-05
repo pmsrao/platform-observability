@@ -1,6 +1,6 @@
-# Recent Changes Summary
+# Platform Observability - Recent Changes & Migration Summary
 
-This document summarizes the major changes made in the last 3-4 iterations of the Platform Observability solution.
+This document provides a comprehensive summary of all major changes, migrations, and updates made to the Platform Observability solution, including architectural changes, naming convention updates, and migration guides.
 
 ## 🚀 Major Architectural Changes
 
@@ -23,15 +23,46 @@ SCD2 (Slowly Changing Dimension Type 2) preserves complete historical informatio
 
 ### **2. Migration from DLT to HWM Approach**
 
+#### **Why Migrate to HWM?**
+1. **Simpler Architecture**: One consistent pattern across all layers
+2. **Easier Maintenance**: Similar code structure and logic
+3. **Better Control**: More granular control over processing
+4. **Easier Testing**: Can test individual functions independently
+5. **Consistent with Bronze**: Same approach already familiar to the team
+6. **Resource Management**: Better control over resource usage
+7. **Debugging**: Simpler to debug and troubleshoot
+
 #### **Before (DLT Approach)**
-- **Silver Layer**: Built using Delta Live Tables (DLT) pipeline
-- **Gold Layer**: Built using Delta Live Tables (DLT) pipeline
-- **Workflow**: DLT pipeline orchestration with `silver_gold_orchestrator`
+```
+Bronze (HWM Job) → Silver (DLT Pipeline) → Gold (DLT Pipeline)
+```
 
 #### **After (HWM Approach)**
-- **Silver Layer**: Built using High-Water Mark (HWM) job (`silver_hwm_build_job.py`)
-- **Gold Layer**: Built using High-Water Mark (HWM) job (`gold_hwm_build_job.py`)
-- **Workflow**: Job-based orchestration with `daily_observability_workflow.json`
+```
+Bronze (HWM Job) → Silver (HWM Job) → Gold (HWM Job)
+```
+
+#### **New HWM Jobs Created**
+
+##### **Silver Layer HWM Job**
+- **File**: `notebooks/silver_hwm_build_job.py`
+- **Purpose**: Build Silver layer from Bronze using HWM approach
+- **Features**:
+  - Incremental processing using HWM tracking
+  - SCD2 implementation for key tables
+  - Tag enrichment and normalization
+  - Data quality validation
+  - Structured logging and monitoring
+
+##### **Gold Layer HWM Job**
+- **File**: `notebooks/gold_hwm_build_job.py`
+- **Purpose**: Build Gold layer from Silver using HWM approach
+- **Features**:
+  - Incremental processing using HWM tracking
+  - SCD2-aware dimension building
+  - Temporal fact alignment
+  - Performance optimization
+  - Comprehensive monitoring
 
 #### **Benefits of HWM Migration**
 - ✅ **Simpler Architecture**: No complex DLT pipeline management
@@ -70,6 +101,59 @@ WHERE updated_time > '{last_timestamp.isoformat()}'
 | **Bronze** | `bronze_sys_*` | `brz_*` | `brz_billing_usage` |
 | **Silver** | `silver_*` | `slv_*` | `slv_workspace` |
 | **Gold** | `dim_*`, `fact_*` | `gld_dim_*`, `gld_fact_*` | `gld_dim_workspace` |
+
+### **Detailed Naming Changes**
+
+#### **Bronze Layer Table Names**
+**Previous Naming**: Used incorrect `sys_` prefix and `_raw` suffix  
+**New Naming**: `brz_[source_schema]_[table_name]` format
+
+| Previous Name | New Name | Source Schema | Source Table |
+|---------------|----------|---------------|--------------|
+| `bronze_sys_billing_usage_raw` | `brz_billing_usage` | `system.billing` | `usage` |
+| `bronze_sys_billing_list_prices_raw` | `brz_billing_list_prices` | `system.billing` | `list_prices` |
+| `bronze_lakeflow_jobs_raw` | `brz_lakeflow_jobs` | `system.lakeflow` | `jobs` |
+| `bronze_lakeflow_pipelines_raw` | `brz_lakeflow_pipelines` | `system.lakeflow` | `pipelines` |
+| `bronze_lakeflow_job_run_timeline_raw` | `brz_lakeflow_job_run_timeline` | `system.lakeflow` | `job_run_timeline` |
+| `bronze_lakeflow_job_task_run_timeline_raw` | `brz_lakeflow_job_task_run_timeline` | `system.lakeflow` | `job_task_run_timeline` |
+| `bronze_system_compute_clusters_raw` | `brz_compute_clusters` | `system.compute` | `clusters` |
+| `bronze_system_compute_node_types_raw` | `brz_compute_node_types` | `system.compute` | `node_types` |
+| `bronze_access_workspaces_latest_raw` | `brz_access_workspaces_latest` | `system.access` | `workspaces_latest` |
+
+#### **Silver Layer Table Names**
+**Previous Naming**: Used `silver_` prefix  
+**New Naming**: `slv_[table_name]` format
+
+| Previous Name | New Name | Purpose |
+|---------------|----------|---------|
+| `silver_workspace` | `slv_workspace` | Workspace information |
+| `silver_jobs_scd` | `slv_jobs_scd` | Jobs with SCD2 support |
+| `silver_pipelines_scd` | `slv_pipelines_scd` | Pipelines with SCD2 support |
+| `silver_price_scd` | `slv_price_scd` | Price history |
+| `silver_usage_txn` | `slv_usage_txn` | Usage transactions |
+| `silver_job_run_timeline` | `slv_job_run_timeline` | Job run timeline |
+| `silver_job_task_run_timeline` | `slv_job_task_run_timeline` | Task timeline |
+| `silver_clusters` | `slv_clusters` | Cluster information |
+| `silver_entity_latest_v` | `slv_entity_latest_v` | Entity latest view |
+| `silver_usage_tags_exploded` | `slv_usage_tags_exploded` | Exploded tags view |
+| `silver_usage_run_enriched_v` | `slv_usage_run_enriched_v` | Usage-run enriched view |
+
+#### **Gold Layer Table Names**
+**Previous Naming**: Used descriptive names without prefix  
+**New Naming**: `gld_[table_name]` format
+
+| Previous Name | New Name | Purpose |
+|---------------|----------|---------|
+| `dim_workspace` | `gld_dim_workspace` | Workspace dimension |
+| `dim_job` | `gld_dim_job` | Job dimension (SCD2) |
+| `dim_pipeline` | `gld_dim_pipeline` | Pipeline dimension (SCD2) |
+| `dim_cluster` | `gld_dim_cluster` | Cluster dimension (SCD2) |
+| `dim_sku` | `gld_dim_sku` | SKU dimension |
+| `dim_run_status` | `gld_dim_run_status` | Run status dimension |
+| `dim_node_type` | `gld_dim_node_type` | Node type dimension |
+| `fact_usage_priced_day` | `gld_fact_usage_priced_day` | Daily usage facts |
+| `fact_usage_priced_hour` | `gld_fact_usage_priced_hour` | Hourly usage facts |
+| `fact_job_run_summary` | `gld_fact_job_run_summary` | Job run summary facts |
 
 ### **Directory Structure Updates**
 
@@ -117,7 +201,7 @@ sql/
 ### **Files Updated**
 - `jobs/daily_observability_workflow.json` - Updated for HWM jobs
 - `sql/config/performance_optimizations.sql` - Updated table names
-- `notebooks/Platform_Observability_Deployment.py` - Updated for HWM approach
+- `notebooks/platform_observability_deployment.py` - Simplified cloud-agnostic deployment
 - All documentation files - Updated for new architecture
 
 ## 🔧 Technical Improvements

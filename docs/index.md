@@ -24,10 +24,10 @@ Welcome to the comprehensive documentation for Platform Observability (CDF-drive
 - **Audience**: Data Engineers, Analysts, BI Developers
 - **Content**: Bronze, Silver, Gold layer schemas, data flow, relationships
 
-### 5. [05-deployment.md](05-deployment.md) - Production Deployment
-- **Purpose**: Production deployment and operational guidance
+### 5. [05-deployment.md](05-deployment.md) - Cloud-Agnostic Deployment Guide
+- **Purpose**: Cloud-agnostic production deployment and operational guidance
 - **Audience**: DevOps Engineers, Platform Engineers
-- **Content**: Pipeline deployment, workflow configuration, monitoring, troubleshooting
+- **Content**: Cloud-agnostic deployment, pipeline deployment, workflow configuration, monitoring, troubleshooting
 
 ### 6. [06-improvements.md](06-improvements.md) - Improvements Roadmap
 - **Purpose**: Future enhancements and development roadmap
@@ -54,30 +54,15 @@ Welcome to the comprehensive documentation for Platform Observability (CDF-drive
 - **Audience**: All stakeholders, Business Users, Platform Engineers, Data Teams
 - **Content**: Persona-based use cases, insight categories, implementation examples, best practices
 
-### 11. [11-naming-convention-update.md](11-naming-convention-update.md) - Naming Convention Updates
-- **Purpose**: Document all naming convention changes and updates
-- **Audience**: Developers, Data Engineers, Platform Engineers
-- **Content**: Bronze/Silver/Gold table renames, schema updates, SCD2 implementation
-
-### 12. [12-hwm-migration-guide.md](12-hwm-migration-guide.md) - HWM Migration Guide
-- **Purpose**: Guide for migrating from DLT to High-Water Mark approach
+### 11. [13-recent-changes-summary.md](13-recent-changes-summary.md) - Recent Changes & Migration Summary
+- **Purpose**: Comprehensive summary of all major changes, migrations, and updates
 - **Audience**: Developers, Platform Engineers, DevOps Engineers
-- **Content**: Migration benefits, implementation details, testing strategy, best practices
+- **Content**: Architectural changes, naming convention updates, HWM migration, SCD2 implementation, file structure changes
 
-### 13. [13-recent-changes-summary.md](13-recent-changes-summary.md) - Recent Changes Summary
-- **Purpose**: Summary of recent changes and architectural updates
-- **Audience**: Developers, Platform Engineers, DevOps Engineers
-- **Content**: Major changes, naming updates, file structure changes, migration steps
-
-### 14. [14-scd2-implementation-guide.md](14-scd2-implementation-guide.md) - SCD2 Implementation Guide
+### 12. [14-scd2-implementation-guide.md](14-scd2-implementation-guide.md) - SCD2 Implementation Guide
 - **Purpose**: Comprehensive guide to SCD2 implementation in Gold layer
 - **Audience**: Data Engineers, Platform Engineers, BI Developers
 - **Content**: SCD2 concepts, implementation details, temporal joins, use cases, best practices
-
-### 15. [15-scd2-implementation-summary.md](15-scd2-implementation-summary.md) - SCD2 Implementation Summary
-- **Purpose**: Complete summary of SCD2 implementation changes and deployment readiness
-- **Audience**: Developers, Platform Engineers, DevOps Engineers, Project Managers
-- **Content**: Implementation overview, files modified, technical details, use cases, deployment steps
 
 ## 🚀 Quick Navigation
 
@@ -88,13 +73,15 @@ Welcome to the comprehensive documentation for Platform Observability (CDF-drive
 
 ### For Developers
 1. Review [03-parameterization.md](03-parameterization.md) for configuration
-2. Use [05-deployment.md](05-deployment.md) for production setup
-3. Check [06-improvements.md](06-improvements.md) for enhancement ideas
+2. Use [05-deployment.md](05-deployment.md) for cloud-agnostic deployment
+3. Check [13-recent-changes-summary.md](13-recent-changes-summary.md) for latest changes
+4. Reference [14-scd2-implementation-guide.md](14-scd2-implementation-guide.md) for SCD2 details
 
 ### For Operations
-1. Follow [05-deployment.md](05-deployment.md) for deployment
+1. Follow [05-deployment.md](05-deployment.md) for cloud-agnostic deployment
 2. Use [09-data-dictionary.md](09-data-dictionary.md) for troubleshooting
 3. Reference [02-getting-started.md](02-getting-started.md) for validation
+4. Check [13-recent-changes-summary.md](13-recent-changes-summary.md) for migration guidance
 
 ## 📋 Additional Resources
 

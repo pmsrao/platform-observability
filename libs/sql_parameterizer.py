@@ -14,7 +14,10 @@ from .sql_manager import sql_manager
 class SQLParameterizer:
     """Utility class for parameterizing and executing SQL files"""
     
-    def __init__(self, spark: SparkSession):
+    def __init__(self, spark: SparkSession = None):
+        if spark is None:
+            from pyspark.sql import SparkSession
+            spark = SparkSession.builder.getOrCreate()
         self.spark = spark
         self.config = Config.get_config()
     
@@ -49,10 +52,10 @@ class SQLParameterizer:
         print("✅ Bronze tables created successfully")
     
     def create_processing_state(self) -> None:
-    """Create processing state tables for CDF and HWM tracking"""
-    print("Creating processing state tables...")
-    self.execute_bootstrap_sql("config/processing_offsets")
-    print("✅ Processing state tables created successfully")
+        """Create processing state tables for CDF and HWM tracking"""
+        print("Creating processing state tables...")
+        self.execute_bootstrap_sql("config/processing_offsets")
+        print("✅ Processing state tables created successfully")
     
     def create_silver_tables(self) -> None:
         """Create silver layer tables"""
@@ -90,7 +93,7 @@ class SQLParameterizer:
             self.bootstrap_catalog_schemas()
             
             # Step 2: Create processing state tables
-self.create_processing_state()
+            self.create_processing_state()
             
             # Step 3: Create bronze tables
             self.bootstrap_bronze_tables()
@@ -122,7 +125,7 @@ self.create_processing_state()
         return sql_manager.get_available_operations()
 
 
-def bootstrap_platform_observability(spark: SparkSession) -> None:
+def bootstrap_platform_observability(spark: SparkSession = None) -> None:
     """Convenience function to bootstrap the entire platform observability system"""
     parameterizer = SQLParameterizer(spark)
     parameterizer.full_bootstrap()

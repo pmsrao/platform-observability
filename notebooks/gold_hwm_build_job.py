@@ -42,15 +42,27 @@ from pyspark.sql.functions import isnan, isnull, otherwise
 from pyspark.sql.functions import array, explode, collect_list, collect_set
 from pyspark.sql.functions import udf
 
-# Add libs to path
-sys.path.append('/Workspace/Repos/platform-observability/libs')
+# Import from libs package (cloud-agnostic approach)
+import sys
+import os
+
+# Add current directory to path for local development
+current_dir = os.path.dirname(os.path.abspath(__file__))
+libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
+if libs_dir not in sys.path:
+    sys.path.append(libs_dir)
+
+# For Databricks, also try the workspace path
+workspace_libs_path = '/Workspace/Repos/platform-observability/libs'
+if workspace_libs_path not in sys.path:
+    sys.path.append(workspace_libs_path)
 
 from config import Config
 from processing_state import get_last_processed_timestamp, commit_processing_state
 from tag_processor import TagProcessor
-from logging import get_logger
+from logging import StructuredLogger
 from error_handling import validate_data_quality
-from utils import get_date_sk
+from utils import yyyymmdd
 
 # COMMAND ----------
 
@@ -61,13 +73,13 @@ from utils import get_date_sk
 
 # Get configuration
 config = Config.get_config()
-logger = get_logger(__name__, config.log_level)
+logger = StructuredLogger("gold_hwm_build_job")
 
-logger.info("Starting Gold layer HWM build job", extra={
+logger.info("Starting Gold layer HWM build job", {
     "catalog": config.catalog,
     "silver_schema": config.silver_schema,
     "gold_schema": config.gold_schema,
-    "environment": config.environment
+    "environment": config.ENV
 })
 
 # COMMAND ----------
