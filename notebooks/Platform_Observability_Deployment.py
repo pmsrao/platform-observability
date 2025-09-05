@@ -3,11 +3,11 @@
 # MAGIC %md
 # MAGIC # Platform Observability - Cloud-Agnostic Deployment
 # MAGIC 
-# MAGIC This notebook provides a simplified, step-by-step deployment of the Platform Observability solution with cloud-agnostic secrets management.
+# MAGIC This notebook provides a simplified, step-by-step deployment of the Platform Observability solution.
 # MAGIC 
 # MAGIC ## 🚀 Features
 # MAGIC - **Cloud-Agnostic**: Works on AWS, Azure, GCP, or any Databricks environment
-# MAGIC - **Secrets Management**: Automatic detection of cloud secrets providers
+# MAGIC - **Environment Configuration**: Simple environment variable based configuration
 # MAGIC - **HWM Architecture**: High-Water Mark approach for all layers
 # MAGIC - **SCD2 Support**: Historical tracking in Gold layer
 # MAGIC - **Configuration-Based**: No job parameters required
@@ -15,14 +15,14 @@
 # MAGIC ## 📋 Prerequisites
 # MAGIC - Databricks workspace with Unity Catalog enabled
 # MAGIC - Appropriate permissions to create catalogs, schemas, and tables
-# MAGIC - Cloud credentials (optional - falls back to environment variables)
+# MAGIC - Environment variables set for configuration
 # MAGIC 
 # MAGIC ---
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 1: Initialize Configuration & Secrets
+# MAGIC ## Step 1: Initialize Configuration
 
 # COMMAND ----------
 
@@ -41,13 +41,12 @@ workspace_libs_path = '/Workspace/Repos/platform-observability/libs'
 if workspace_libs_path not in sys.path:
     sys.path.append(workspace_libs_path)
 
-# Import configuration and secrets management
+# Import configuration
 from config import Config
-from secrets_manager import secrets_manager
 
 # COMMAND ----------
 
-# Get configuration (automatically uses secrets manager)
+# Get configuration
 config = Config.get_config()
 
 print("🔧 Configuration Loaded:")
@@ -58,9 +57,6 @@ print(f"   Silver Schema: {config.silver_schema}")
 print(f"   Gold Schema: {config.gold_schema}")
 print(f"   Databricks Host: {config.databricks_host}")
 
-# Test secrets manager
-print(f"\n🔐 Secrets Provider: {secrets_manager._active_provider.__class__.__name__}")
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -68,22 +64,81 @@ print(f"\n🔐 Secrets Provider: {secrets_manager._active_provider.__class__.__n
 
 # COMMAND ----------
 
-# Import SQL parameterizer
-from sql_parameterizer import SQLParameterizer
+# Import SQL parameterizer for bootstrap
+from libs.sql_parameterizer import SQLParameterizer
 
-# Initialize and bootstrap entire environment
-print("🏗️ Bootstrapping Platform Observability Environment...")
+# Initialize SQL parameterizer
 sql_param = SQLParameterizer()
 
-# Full bootstrap - creates everything needed
-sql_param.full_bootstrap()
+# COMMAND ----------
 
-print("✅ Environment bootstrap complete!")
-print("   - Catalog and schemas created")
-print("   - Bronze tables with CDF enabled")
-print("   - Silver and Gold tables created")
-print("   - Processing state tables initialized")
-print("   - Performance optimizations applied")
+# MAGIC %md
+# MAGIC ### 2.1 Create Catalog and Schemas
+
+# COMMAND ----------
+
+# Bootstrap catalog and schemas
+sql_param.bootstrap_catalog_schemas()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 2.2 Create Processing State Tables
+
+# COMMAND ----------
+
+# Create processing state tables for HWM tracking
+sql_param.create_processing_state()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 2.3 Create Bronze Tables
+
+# COMMAND ----------
+
+# Create bronze layer tables with CDF enabled
+sql_param.bootstrap_bronze_tables()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 2.4 Create Silver Tables
+
+# COMMAND ----------
+
+# Create silver layer tables
+sql_param.create_silver_tables()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 2.5 Create Gold Tables
+
+# COMMAND ----------
+
+# Create gold layer tables
+sql_param.create_gold_tables()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 2.6 Apply Performance Optimizations
+
+# COMMAND ----------
+
+# Apply performance optimizations
+sql_param.apply_performance_optimizations()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 2.7 Create Gold Views
+
+# COMMAND ----------
+
+# Create gold layer views
+sql_param.create_gold_views()
 
 # COMMAND ----------
 
@@ -130,143 +185,267 @@ print("\n✅ Environment verification complete!")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 🚀 HWM Jobs Ready for Deployment
+# MAGIC ### 4.1 Bronze HWM Ingest Job
 # MAGIC 
-# MAGIC The following HWM jobs are **configuration-based** and ready for deployment:
+# MAGIC Deploy the Bronze HWM Ingest Job:
 # MAGIC 
-# MAGIC #### **1. Bronze HWM Ingest Job**
-# MAGIC - **File**: `bronze_hwm_ingest_job.py`
-# MAGIC - **Purpose**: Ingest data from system tables to Bronze layer
-# MAGIC - **Features**: CDF-enabled, incremental processing, data quality validation
-# MAGIC 
-# MAGIC #### **2. Silver HWM Build Job**
-# MAGIC - **File**: `silver_hwm_build_job.py`  
-# MAGIC - **Purpose**: Build Silver layer from Bronze using CDF
-# MAGIC - **Features**: SCD2 support, tag processing, business logic
-# MAGIC 
-# MAGIC #### **3. Gold HWM Build Job**
-# MAGIC - **File**: `gold_hwm_build_job.py`
-# MAGIC - **Purpose**: Build Gold layer with SCD2-aware dimensions
-# MAGIC - **Features**: Historical tracking, temporal accuracy, performance optimization
-# MAGIC 
-# MAGIC #### **4. Performance Optimization Job**
-# MAGIC - **File**: `performance_optimization_job.py`
-# MAGIC - **Purpose**: Optimize table performance and statistics
-# MAGIC 
-# MAGIC #### **5. Health Check Job**
-# MAGIC - **File**: `health_check_job.py`
-# MAGIC - **Purpose**: Monitor system health and data quality
+# MAGIC 1. **Notebook**: `notebooks/bronze_hwm_ingest_job.py`
+# MAGIC 2. **Schedule**: Daily at 2:00 AM
+# MAGIC 3. **Purpose**: Ingest data from Databricks APIs with HWM tracking
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### 📋 Deployment Commands
-# MAGIC 
-# MAGIC **Deploy using Databricks CLI:**
-# MAGIC 
-# MAGIC ```bash
-# MAGIC # Configure Databricks CLI (if not already done)
-# MAGIC databricks configure --token
-# MAGIC 
-# MAGIC # Deploy notebooks to workspace
-# MAGIC databricks workspace import_dir notebooks /Workspace/Repos/platform-observability/notebooks
-# MAGIC 
-# MAGIC # Deploy libraries to DBFS
-# MAGIC databricks fs cp -r libs dbfs:/FileStore/platform-observability/libs
-# MAGIC 
-# MAGIC # Create jobs (example for Bronze job)
-# MAGIC databricks jobs create --json-file bronze_job_config.json
-# MAGIC ```
-# MAGIC 
-# MAGIC **Or deploy via Databricks UI:**
-# MAGIC 1. Upload notebooks to workspace
-# MAGIC 2. Upload libraries to DBFS  
-# MAGIC 3. Create jobs with cloud-agnostic configuration
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Step 5: Configure Cloud-Agnostic Jobs
-
-# COMMAND ----------
-
-# Display sample job configuration with cloud-agnostic secrets
-job_config = {
-    "name": "Platform Observability - Bronze Ingest",
-    "notebook_task": {
-        "notebook_path": "/Workspace/Repos/platform-observability/notebooks/bronze_hwm_ingest_job"
+# Display sample job configuration
+bronze_job_config = {
+    "name": "platform-observability-bronze-ingest",
+    "notebook_path": "/Workspace/Repos/platform-observability/notebooks/bronze_hwm_ingest_job",
+    "schedule": {
+        "quartz_cron_expression": "0 0 2 * * ?",
+        "timezone_id": "Asia/Kolkata"
     },
-    "new_cluster": {
-        "spark_version": "13.3.x-scala2.12",
-        "node_type_id": "i3.xlarge",
-        "num_workers": 2
-    },
+    "max_concurrent_runs": 1,
+    "timeout_seconds": 3600,
     "environment": {
-        "ENVIRONMENT": "prod",
-        "DATABRICKS_HOST": "{{secrets/your-scope/databricks-host}}",
-        "DATABRICKS_TOKEN": "{{secrets/your-scope/databricks-token}}"
+        "ENVIRONMENT": "dev"  # or "prod"
     }
 }
 
-print("🔧 Sample Job Configuration (Cloud-Agnostic):")
-import json
-print(json.dumps(job_config, indent=2))
+print("📋 Bronze Job Configuration:")
+for key, value in bronze_job_config.items():
+    print(f"   {key}: {value}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 6: Deploy Workflow
+# MAGIC ### 4.2 Silver HWM Build Job
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Deploy the Silver HWM Build Job:
+# MAGIC 
+# MAGIC 1. **Notebook**: `notebooks/silver_hwm_build_job.py`
+# MAGIC 2. **Schedule**: Daily at 3:00 AM (after bronze)
+# MAGIC 3. **Purpose**: Transform bronze data to silver with HWM tracking
+
+# COMMAND ----------
+
+# Display sample job configuration
+silver_job_config = {
+    "name": "platform-observability-silver-build",
+    "notebook_path": "/Workspace/Repos/platform-observability/notebooks/silver_hwm_build_job",
+    "schedule": {
+        "quartz_cron_expression": "0 0 3 * * ?",
+        "timezone_id": "Asia/Kolkata"
+    },
+    "max_concurrent_runs": 1,
+    "timeout_seconds": 3600,
+    "environment": {
+        "ENVIRONMENT": "dev"  # or "prod"
+    }
+}
+
+print("📋 Silver Job Configuration:")
+for key, value in silver_job_config.items():
+    print(f"   {key}: {value}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 4.3 Gold HWM Build Job
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Deploy the Gold HWM Build Job:
+# MAGIC 
+# MAGIC 1. **Notebook**: `notebooks/gold_hwm_build_job.py`
+# MAGIC 2. **Schedule**: Daily at 4:00 AM (after silver)
+# MAGIC 3. **Purpose**: Build gold layer with SCD2 and HWM tracking
+
+# COMMAND ----------
+
+# Display sample job configuration
+gold_job_config = {
+    "name": "platform-observability-gold-build",
+    "notebook_path": "/Workspace/Repos/platform-observability/notebooks/gold_hwm_build_job",
+    "schedule": {
+        "quartz_cron_expression": "0 0 4 * * ?",
+        "timezone_id": "Asia/Kolkata"
+    },
+    "max_concurrent_runs": 1,
+    "timeout_seconds": 3600,
+    "environment": {
+        "ENVIRONMENT": "dev"  # or "prod"
+    }
+}
+
+print("📋 Gold Job Configuration:")
+for key, value in gold_job_config.items():
+    print(f"   {key}: {value}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 4.4 Health Check Job
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Deploy the Health Check Job:
+# MAGIC 
+# MAGIC 1. **Notebook**: `notebooks/health_check_job.py`
+# MAGIC 2. **Schedule**: Every 6 hours
+# MAGIC 3. **Purpose**: Monitor system health and data quality
+
+# COMMAND ----------
+
+# Display sample job configuration
+health_job_config = {
+    "name": "platform-observability-health-check",
+    "notebook_path": "/Workspace/Repos/platform-observability/notebooks/health_check_job",
+    "schedule": {
+        "quartz_cron_expression": "0 0 */6 * * ?",
+        "timezone_id": "Asia/Kolkata"
+    },
+    "max_concurrent_runs": 1,
+    "timeout_seconds": 1800,
+    "environment": {
+        "ENVIRONMENT": "dev"  # or "prod"
+    }
+}
+
+print("📋 Health Check Job Configuration:")
+for key, value in health_job_config.items():
+    print(f"   {key}: {value}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Step 5: Deploy Workflows
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 5.1 Daily Observability Workflow
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Deploy the Daily Observability Workflow:
+# MAGIC 
+# MAGIC 1. **Workflow File**: `jobs/daily_observability_workflow.json`
+# MAGIC 2. **Schedule**: Daily at 1:00 AM
+# MAGIC 3. **Purpose**: Orchestrate the complete daily pipeline
 
 # COMMAND ----------
 
 # Display workflow configuration
-import json
+workflow_config = {
+    "name": "platform-observability-daily-workflow",
+    "schedule": {
+        "quartz_cron_expression": "0 0 1 * * ?",
+        "timezone_id": "Asia/Kolkata"
+    },
+    "tasks": [
+        {
+            "task_key": "bronze_ingest",
+            "notebook_task": {
+                "notebook_path": "/Workspace/Repos/platform-observability/notebooks/bronze_hwm_ingest_job"
+            }
+        },
+        {
+            "task_key": "silver_build",
+            "notebook_task": {
+                "notebook_path": "/Workspace/Repos/platform-observability/notebooks/silver_hwm_build_job"
+            },
+            "depends_on": [{"task_key": "bronze_ingest"}]
+        },
+        {
+            "task_key": "gold_build",
+            "notebook_task": {
+                "notebook_path": "/Workspace/Repos/platform-observability/notebooks/gold_hwm_build_job"
+            },
+            "depends_on": [{"task_key": "silver_build"}]
+        }
+    ]
+}
 
-try:
-    with open('../jobs/daily_observability_workflow.json', 'r') as f:
-        workflow = json.load(f)
-    
-    print("🔄 Daily Observability Workflow:")
-    print(json.dumps(workflow, indent=2))
-    
-except FileNotFoundError:
-    print("📝 Workflow file not found. Create jobs manually or use the sample configuration above.")
+print("📋 Workflow Configuration:")
+print(f"   Name: {workflow_config['name']}")
+print(f"   Schedule: {workflow_config['schedule']['quartz_cron_expression']}")
+print(f"   Tasks: {len(workflow_config['tasks'])}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 7: Test Deployment
-
-# COMMAND ----------
-
-# Test Bronze ingestion (optional - uncomment to run)
-# print("🧪 Testing Bronze ingestion...")
-# %run bronze_hwm_ingest_job
+# MAGIC ## Step 6: Testing and Validation
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 8: Validate Data Quality
+# MAGIC ### 6.1 Test Data Ingestion
 
 # COMMAND ----------
 
-# Check processing state
+# Test bronze data ingestion
+print("🧪 Testing Bronze Data Ingestion...")
+
 try:
-    processing_state = spark.sql(f"""
-        SELECT 
-            table_name,
-            last_processed_timestamp,
-            processing_status
-        FROM {config.catalog}.{config.silver_schema}._cdf_processing_offsets
-        ORDER BY last_processed_timestamp DESC
-        LIMIT 10
-    """)
-    
-    print("📊 Processing State:")
-    processing_state.show(truncate=False)
-    
+    # Check if bronze tables exist and have data
+    bronze_tables = ["billing_usage", "compute_clusters", "job_runs"]
+    for table in bronze_tables:
+        try:
+            count = spark.sql(f"SELECT COUNT(*) as cnt FROM {config.get_table_name('bronze', table)}").collect()[0]['cnt']
+            print(f"✅ {table}: {count} records")
+        except Exception as e:
+            print(f"❌ {table}: {str(e)}")
 except Exception as e:
-    print(f"ℹ️ Processing state table not yet populated: {e}")
+    print(f"❌ Bronze ingestion test failed: {str(e)}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 6.2 Test Data Transformation
+
+# COMMAND ----------
+
+# Test silver data transformation
+print("🧪 Testing Silver Data Transformation...")
+
+try:
+    # Check if silver tables exist and have data
+    silver_tables = ["dim_compute_clusters", "fact_job_runs", "fact_billing_usage"]
+    for table in silver_tables:
+        try:
+            count = spark.sql(f"SELECT COUNT(*) as cnt FROM {config.get_table_name('silver', table)}").collect()[0]['cnt']
+            print(f"✅ {table}: {count} records")
+        except Exception as e:
+            print(f"❌ {table}: {str(e)}")
+except Exception as e:
+    print(f"❌ Silver transformation test failed: {str(e)}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 6.3 Test Gold Layer
+
+# COMMAND ----------
+
+# Test gold layer
+print("🧪 Testing Gold Layer...")
+
+try:
+    # Check if gold tables exist and have data
+    gold_tables = ["dim_compute_clusters", "fact_job_runs", "fact_billing_usage"]
+    for table in gold_tables:
+        try:
+            count = spark.sql(f"SELECT COUNT(*) as cnt FROM {config.get_table_name('gold', table)}").collect()[0]['cnt']
+            print(f"✅ {table}: {count} records")
+        except Exception as e:
+            print(f"❌ {table}: {str(e)}")
+except Exception as e:
+    print(f"❌ Gold layer test failed: {str(e)}")
 
 # COMMAND ----------
 
@@ -276,24 +455,30 @@ except Exception as e:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 🎉 Platform Observability Successfully Deployed
+# MAGIC ### ✅ What's Been Deployed
 # MAGIC 
-# MAGIC **What's Ready:**
-# MAGIC - ✅ **Cloud-Agnostic Environment**: Works on any cloud provider
-# MAGIC - ✅ **Secrets Management**: Automatic provider detection
-# MAGIC - ✅ **HWM Architecture**: All layers use High-Water Mark approach
-# MAGIC - ✅ **SCD2 Support**: Historical tracking in Gold layer
-# MAGIC - ✅ **Configuration-Based**: No job parameters required
-# MAGIC - ✅ **Performance Optimized**: Z-ORDER and statistics applied
+# MAGIC | Component | Status | Description |
+# MAGIC |-----------|--------|-------------|
+# MAGIC | **Environment** | `{config.ENV}` | Current environment |
+# MAGIC | **Catalog** | `{config.catalog}` | Unity Catalog name |
+# MAGIC | **Bronze Schema** | `{config.bronze_schema}` | Raw data layer |
+# MAGIC | **Silver Schema** | `{config.silver_schema}` | Cleaned data layer |
+# MAGIC | **Gold Schema** | `{config.gold_schema}` | Business-ready data layer |
+# MAGIC | **Databricks Host** | `{config.databricks_host}` | Workspace URL |
+# MAGIC 
+# MAGIC ### 📚 Documentation
+# MAGIC 
+# MAGIC - **Deployment Guide**: `docs/05-deployment.md`
+# MAGIC - **Recent Changes**: `docs/13-recent-changes-summary.md`
+# MAGIC - **Data Dictionary**: `docs/09-data-dictionary.md`
+# MAGIC - **Use Cases**: `docs/10-insights-and-use-cases.md`
 # MAGIC 
 # MAGIC ### 🚀 Next Steps
 # MAGIC 
-# MAGIC 1. **Deploy HWM Jobs**: Use the configuration examples above
-# MAGIC 2. **Deploy Workflow**: Create the daily observability workflow
-# MAGIC 3. **Configure Scheduling**: Set up appropriate schedules
-# MAGIC 4. **Monitor Execution**: Use Databricks UI for monitoring
-# MAGIC 5. **Validate Data Flow**: Ensure data flows through all layers
-# MAGIC 6. **Test SCD2**: Verify historical tracking works correctly
+# MAGIC 1. **Configure Jobs**: Deploy the job configurations shown above
+# MAGIC 2. **Set Environment Variables**: Ensure all required environment variables are set
+# MAGIC 3. **Monitor**: Use the health check job to monitor system health
+# MAGIC 4. **Customize**: Adjust configurations based on your specific needs
 # MAGIC 
 # MAGIC ### 🔧 Configuration Summary
 # MAGIC 
@@ -304,27 +489,13 @@ except Exception as e:
 # MAGIC | **Bronze Schema** | `{config.bronze_schema}` |
 # MAGIC | **Silver Schema** | `{config.silver_schema}` |
 # MAGIC | **Gold Schema** | `{config.gold_schema}` |
-# MAGIC | **Secrets Provider** | `{secrets_manager._active_provider.__class__.__name__}` |
 # MAGIC | **Databricks Host** | `{config.databricks_host}` |
 # MAGIC 
 # MAGIC ### 📚 Documentation
 # MAGIC 
 # MAGIC - **Deployment Guide**: `docs/05-deployment.md`
 # MAGIC - **Recent Changes**: `docs/13-recent-changes-summary.md`
-# MAGIC - **SCD2 Guide**: `docs/14-scd2-implementation-guide.md`
 # MAGIC - **Data Dictionary**: `docs/09-data-dictionary.md`
-# MAGIC 
-# MAGIC ### 🆘 Support
-# MAGIC 
-# MAGIC For issues or questions:
-# MAGIC 1. Check the troubleshooting section in deployment guide
-# MAGIC 2. Review logs for detailed error messages
-# MAGIC 3. Verify cloud credentials and permissions
-# MAGIC 4. Test with environment variables as fallback
-# MAGIC 
-# MAGIC ---
-# MAGIC 
-# MAGIC *Platform Observability - Cloud-Agnostic Deployment*  
-# MAGIC *Last updated: January 2024*
+# MAGIC - **Use Cases**: `docs/10-insights-and-use-cases.md`
 
 # COMMAND ----------
