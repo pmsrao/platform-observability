@@ -127,8 +127,18 @@ class SQLManager:
         
         # Split by semicolon and clean up
         statements = []
-        for statement in sql_content.split(';'):
+        raw_statements = sql_content.split(';')
+        
+        for i, statement in enumerate(raw_statements):
+            original_statement = statement
             statement = statement.strip()
+            
+            # Debug: print what we're processing
+            print(f"Processing statement {i+1}: {repr(original_statement[:100])}...")
+            print(f"  After strip: {repr(statement[:100])}...")
+            print(f"  Is empty: {not statement}")
+            print(f"  Starts with --: {statement.startswith('--') if statement else False}")
+            
             # Only skip completely empty statements or pure comments
             if statement and not statement.startswith('--'):
                 # Remove any trailing comments but keep the statement
@@ -137,6 +147,12 @@ class SQLManager:
                 # Only add if there's still content after removing comments
                 if statement:
                     statements.append(statement)
+                    print(f"  ✅ Added statement: {repr(statement[:100])}...")
+                else:
+                    print(f"  ❌ Statement became empty after comment removal")
+            else:
+                print(f"  ❌ Skipped statement")
+            print("  ---")
         
         return statements
     
