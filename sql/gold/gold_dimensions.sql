@@ -39,7 +39,10 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_entity (
     is_current BOOLEAN DEFAULT TRUE      -- Flag for current version
 )
 USING DELTA
-PARTITIONED BY (entity_type);
+PARTITIONED BY (entity_type)
+TBLPROPERTIES (
+    'delta.feature.allowColumnDefaults' = 'supported'
+);
 
 -- SKU Dimension
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_sku (
@@ -120,7 +123,10 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_cluster (
     is_current BOOLEAN DEFAULT TRUE      -- Flag for current version
 )
 USING DELTA
-PARTITIONED BY (cloud);
+PARTITIONED BY (cloud)
+TBLPROPERTIES (
+    'delta.feature.allowColumnDefaults' = 'supported'
+);
 
 -- Node Type Dimension
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_node_type (
