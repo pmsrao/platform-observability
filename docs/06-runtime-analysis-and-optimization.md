@@ -38,7 +38,7 @@ This guide explains the **Databricks Runtime analysis and optimization** feature
 #### **A. Clusters Table (`bronze_clusters_raw`)**
 ```sql
 -- NEW: Runtime and Node Type Information
-databricks_runtime_version STRING,   -- e.g., "13.3.x-scala2.12", "14.0.x-scala2.12"
+dbr_version STRING,                   -- e.g., "13.3.x-scala2.12", "14.0.x-scala2.12"
 runtime_environment STRING,          -- e.g., "python", "scala", "sql", "ml"
 node_type_id STRING,                 -- e.g., "Standard_DS3_v2", "Standard_E4s_v3"
 min_workers INT,                     -- Minimum number of worker nodes
@@ -106,7 +106,7 @@ is_supported BOOLEAN,                -- Whether still supported
 **Sample Query**:
 ```sql
 SELECT 
-    databricks_runtime_version,
+    dbr_version,
     major_version,
     minor_version,
     upgrade_priority,
@@ -114,7 +114,7 @@ SELECT
     SUM(total_cost_usd) as total_cost
 FROM v_runtime_version_analysis
 WHERE date_sk = 20241201
-GROUP BY databricks_runtime_version, major_version, minor_version, upgrade_priority
+GROUP BY dbr_version, major_version, minor_version, upgrade_priority
 ORDER BY upgrade_priority DESC, total_cost DESC;
 ```
 
@@ -155,7 +155,7 @@ ORDER BY cluster_count DESC;
 ```sql
 SELECT 
     cluster_name,
-    databricks_runtime_version,
+    dbr_version,
     upgrade_urgency,
     runtime_recommendation,
     scaling_recommendation,
@@ -245,31 +245,29 @@ WHERE sizing_recommendation LIKE '%Enable auto-scaling%'
 
 ## Implementation Details
 
-### **1. DLT Pipeline Enhancements**
+### **1. HWM Job Enhancements**
 
 #### **A. Runtime Processing in Silver Layer**
 ```python
-@dlt.table(name="slv_clusters")
-def slv_clusters():
+def build_silver_clusters(spark):
     return clusters_new.select(
         # ... existing fields ...
-        "databricks_runtime_version", "runtime_environment", "node_type_id",
+        "dbr_version", "runtime_environment", "node_type_id",
         "min_workers", "max_workers", "driver_node_type_id", "worker_node_type_id",
         "autoscale_enabled"
     ).withColumn(
         "major_version",
-        F.regexp_extract(F.col("databricks_runtime_version"), r"(\d+)\.", 1).cast("int")
+        F.regexp_extract(F.col("dbr_version"), r"(\d+)\.", 1).cast("int")
     ).withColumn(
         "minor_version",
-        F.regexp_extract(F.col("databricks_runtime_version"), r"\.(\d+)\.", 1).cast("int")
+        F.regexp_extract(F.col("dbr_version"), r"\.(\d+)\.", 1).cast("int")
     )
 ```
 
 #### **B. Runtime Versions Processing**
 ```python
-@dlt.table(name="silver_runtime_versions")
-def silver_runtime_versions():
-    return dlt.read("bronze_runtime_versions_raw").withColumn(
+def build_silver_runtime_versions(spark):
+    return spark.table("bronze_runtime_versions_raw").withColumn(
         "runtime_age_months",
         F.months_between(F.current_date(), F.col("release_date"))
     ).withColumn(

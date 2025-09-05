@@ -15,7 +15,7 @@ config = Config.get_config()
 class LogContext:
     """Context information for structured logging"""
     job_id: str
-    run_id: str
+    job_run_id: str
     pipeline_name: str
     environment: str
     timestamp: str

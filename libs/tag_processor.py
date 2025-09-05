@@ -236,7 +236,7 @@ class TagProcessor:
             return base.limit(0)
         return (base
             .where(F.col("custom_tags").isNotNull())
-            .select("workspace_id", "entity_type", "entity_id", "run_id", "date_sk", F.map_entries("custom_tags").alias("kv"))
-            .select("workspace_id", "entity_type", "entity_id", "run_id", "date_sk", F.col("kv.key").alias("tag_key"), F.col("kv.value").alias("tag_value"))
+            .select("workspace_id", "entity_type", "entity_id", "job_run_id", "date_sk", F.map_entries("custom_tags").alias("kv"))
+            .select("workspace_id", "entity_type", "entity_id", "job_run_id", "date_sk", F.col("kv.key").alias("tag_key"), F.col("kv.value").alias("tag_value"))
             .distinct()
         )

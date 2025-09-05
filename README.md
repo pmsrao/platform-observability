@@ -7,7 +7,7 @@
 
 - **Bronze (Job)**: Daily **High-Water Mark (HWM)** ingestion from `system.*` tables with CDF enabled for downstream consumption
 - **Silver (HWM)**: Processes **only new/changed records** via Change Data Feed (CDF) with per-source version processing offsets
-- **Gold (HWM)**: Incrementally **updates** only **impacted `date_sk`** partitions into facts/dims + views for compliance/latency insights
+- **Gold (HWM)**: Incrementally **updates** only **impacted `date_key`** partitions into facts/dims + views for compliance/latency insights
 - **Monitoring & Alerting**: Comprehensive observability with structured logging, performance metrics, and automated alerts
 - **Data Quality**: Built-in validation rules and monitoring for data integrity
 - **CI/CD**: Automated deployment pipelines for dev and production environments
@@ -35,7 +35,7 @@ platform_observability.plt_bronze.*  ──────────────�
         │
         ├─► Silver: entity SCD2, pricing, tags, timelines, cluster/node types
         │
-        └─► Gold: dims & facts (incremental updates by date_sk)
+        └─► Gold: dims & facts (incremental updates by date_key)
                  ├─ gld_dim_date, gld_dim_workspace, gld_dim_entity, gld_dim_sku, gld_dim_run_status, gld_dim_node_type
 ├─ gld_fact_usage_priced_day, gld_fact_entity_cost, gld_fact_run_cost
 ├─ gld_fact_run_status_cost, gld_fact_runs_finished_day, gld_fact_usage_by_node_type_day
@@ -81,7 +81,7 @@ platform-observability/
 │  ├─ bronze_hwm_ingest_job.py                 # 🆕 Enhanced Bronze ingest Job with monitoring
 │  ├─ silver_hwm_build_job.py                  # 🆕 Silver layer HWM build job
 │  ├─ gold_hwm_build_job.py                    # 🆕 Gold layer HWM build job
-│  └─ platform_observability_deployment.py    # 🆕 Main deployment notebook
+│  └─ platform_observability_deploy.py        # 🆕 Main deployment notebook
 ├─ jobs/
 │  └─ daily_observability_workflow.json        # Daily workflow configuration
 ├─ tests/                                       # 🆕 Comprehensive test suite
@@ -304,7 +304,7 @@ databricks fs cp sql/ dbfs:/platform-observability/prod/sql/ --recursive
 ### **Manual Optimizations**
 ```sql
 -- Optimize specific tables
-OPTIMIZE plt_gold.gld_fact_usage_priced_day ZORDER BY (workspace_id, date_sk);
+OPTIMIZE plt_gold.gld_fact_usage_priced_day ZORDER BY (workspace_key, date_key);
 
 -- Collect statistics
 ANALYZE TABLE plt_gold.gld_fact_usage_priced_day COMPUTE STATISTICS FOR ALL COLUMNS;
@@ -345,7 +345,7 @@ monitoring_system.create_alert(
 - **Auto-optimize**: Enabled by default
 - **Auto-compact**: Enabled by default
 - **Z-ORDER**: Applied to common query patterns
-- **Partitioning**: By `date_sk` for time-based queries
+- **Partitioning**: By `date_key` for time-based queries
 
 ## 📊 Data Quality Rules
 

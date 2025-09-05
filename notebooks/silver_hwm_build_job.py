@@ -409,7 +409,7 @@ def build_silver_job_run_timeline(spark) -> bool:
         transformed_df = df.select(
             df.workspace_id,
             df.job_id,
-            df.run_id,
+            df.run_id.alias("job_run_id"),  # Transform run_id to job_run_id
             df.start_time,
             df.end_time,
             df.result_state,
@@ -460,7 +460,8 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         transformed_df = df.select(
             df.workspace_id,
             df.job_id,
-            df.run_id,
+            df.run_id.alias("task_run_id"),  # Transform run_id to task_run_id
+            df.parent_run_id.alias("job_run_id"),  # Parent run becomes job_run_id
             df.task_key,
             df.start_time,
             df.end_time,

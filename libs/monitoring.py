@@ -205,11 +205,11 @@ class PipelineMonitor:
         self.monitoring = monitoring_system
         self.performance_monitor = PerformanceMonitor(logger)
     
-    def monitor_pipeline_start(self, pipeline_name: str, run_id: str):
+    def monitor_pipeline_start(self, pipeline_name: str, job_run_id: str):
         """Monitor pipeline start"""
         self.logger.info(f"Pipeline started: {pipeline_name}", {
             "pipeline_name": pipeline_name,
-            "run_id": run_id,
+            "job_run_id": job_run_id,
             "event": "pipeline_start"
         })
         
@@ -218,11 +218,11 @@ class PipelineMonitor:
             name="pipeline_start_count",
             value=1,
             unit="count",
-            tags={"pipeline_name": pipeline_name, "run_id": run_id},
+            tags={"pipeline_name": pipeline_name, "job_run_id": job_run_id},
             metadata={"event": "pipeline_start"}
         )
     
-    def monitor_pipeline_completion(self, pipeline_name: str, run_id: str, 
+    def monitor_pipeline_completion(self, pipeline_name: str, job_run_id: str, 
                                    success: bool, duration_seconds: float,
                                    records_processed: int = 0):
         """Monitor pipeline completion"""
@@ -230,7 +230,7 @@ class PipelineMonitor:
         
         self.logger.info(f"Pipeline completed: {pipeline_name}", {
             "pipeline_name": pipeline_name,
-            "run_id": run_id,
+            "job_run_id": job_run_id,
             "status": status,
             "duration_seconds": duration_seconds,
             "records_processed": records_processed,
@@ -242,26 +242,26 @@ class PipelineMonitor:
             name="pipeline_duration_seconds",
             value=duration_seconds,
             unit="seconds",
-            tags={"pipeline_name": pipeline_name, "run_id": run_id, "status": status}
+            tags={"pipeline_name": pipeline_name, "job_run_id": job_run_id, "status": status}
         )
         
         self.monitoring.create_metric(
             name="pipeline_records_processed",
             value=records_processed,
             unit="count",
-            tags={"pipeline_name": pipeline_name, "run_id": run_id, "status": status}
+            tags={"pipeline_name": pipeline_name, "job_run_id": job_run_id, "status": status}
         )
         
         # Create alert for failures
         if not success:
             self.monitoring.create_alert(
                 title=f"Pipeline {pipeline_name} failed",
-                message=f"Pipeline {pipeline_name} (run {run_id}) failed after {duration_seconds:.2f} seconds",
+                message=f"Pipeline {pipeline_name} (run {job_run_id}) failed after {duration_seconds:.2f} seconds",
                 severity=AlertSeverity.ERROR,
                 source="pipeline_monitor",
                 metadata={
                     "pipeline_name": pipeline_name,
-                    "run_id": run_id,
+                    "job_run_id": job_run_id,
                     "duration_seconds": duration_seconds
                 }
             )
@@ -296,17 +296,17 @@ class PipelineMonitor:
         )
     
     def monitor_cost_thresholds(self, cost_usd: float, threshold_usd: float, 
-                                pipeline_name: str, run_id: str):
+                                pipeline_name: str, job_run_id: str):
         """Monitor costs and alert if thresholds exceeded"""
         if cost_usd > threshold_usd:
             self.monitoring.create_alert(
                 title=f"Cost threshold exceeded: {pipeline_name}",
-                message=f"Pipeline {pipeline_name} (run {run_id}) cost ${cost_usd:.2f} exceeded threshold ${threshold_usd:.2f}",
+                message=f"Pipeline {pipeline_name} (run {job_run_id}) cost ${cost_usd:.2f} exceeded threshold ${threshold_usd:.2f}",
                 severity=AlertSeverity.WARNING,
                 source="cost_monitor",
                 metadata={
                     "pipeline_name": pipeline_name,
-                    "run_id": run_id,
+                    "job_run_id": job_run_id,
                     "cost_usd": cost_usd,
                     "threshold_usd": threshold_usd
                 }
@@ -317,7 +317,7 @@ class PipelineMonitor:
             name="pipeline_cost_usd",
             value=cost_usd,
             unit="USD",
-            tags={"pipeline_name": pipeline_name, "run_id": run_id}
+            tags={"pipeline_name": pipeline_name, "job_run_id": job_run_id}
         )
 
 class HealthChecker:

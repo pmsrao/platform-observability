@@ -41,12 +41,12 @@ def with_entity_and_run(df: DataFrame) -> DataFrame:
         DataFrame: Input DataFrame with additional columns:
             - entity_type: "JOB" or "PIPELINE"
             - entity_id: ID of the job or pipeline
-            - run_id: ID of the specific run
+            - job_run_id: ID of the specific run
             - serverless_flag: Whether the product is serverless
     
     Example:
         >>> enriched_df = with_entity_and_run(usage_df)
-        >>> enriched_df.select("entity_type", "entity_id", "run_id").show()
+        >>> enriched_df.select("entity_type", "entity_id", "job_run_id").show()
     """
     df = (df
         .withColumn("entity_type", 
@@ -55,7 +55,7 @@ def with_entity_and_run(df: DataFrame) -> DataFrame:
         .withColumn("entity_id", 
             F.when(F.col("entity_type") == "JOB", F.col("usage_metadata.job_id"))
             .when(F.col("entity_type") == "PIPELINE", F.col("usage_metadata.dlt_pipeline_id")))
-        .withColumn("run_id", 
+        .withColumn("job_run_id", 
             F.when(F.col("entity_type") == "JOB", F.col("usage_metadata.job_run_id"))
             .when(F.col("entity_type") == "PIPELINE", F.col("usage_metadata.dlt_pipeline_id")))
         .withColumn("serverless_flag", F.col("product_features.is_serverless"))

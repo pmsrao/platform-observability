@@ -23,16 +23,17 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_jobs_scd (
     description STRING,
     creator_id STRING,
     run_as STRING,
-    valid_from TIMESTAMP,
-    valid_to TIMESTAMP,
-    is_current BOOLEAN,
     tags MAP<STRING, STRING>,
     -- NEW: Computed workflow fields
     is_parent_workflow BOOLEAN,
     is_sub_workflow BOOLEAN,
     workflow_level STRING,
     parent_workflow_name STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    -- SCD2 columns
+    valid_from TIMESTAMP,
+    valid_to TIMESTAMP,
+    is_current BOOLEAN
 ) USING DELTA;
 
 -- Pipelines SCD2 Table (Type 2 - Historical tracking)
@@ -54,10 +55,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_pipelines_scd (
         channel:STRING
     >,
     configuration MAP<STRING, STRING>,
+    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
-    is_current BOOLEAN,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    is_current BOOLEAN
 ) USING DELTA;
 
 -- Price Table (Type 2 - Historical pricing)
@@ -70,10 +72,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_price_scd (
     price_usd DECIMAL(38,18),
     price_start_time TIMESTAMP,
     price_end_time TIMESTAMP,
+    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
-    is_current BOOLEAN,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    is_current BOOLEAN
 ) USING DELTA;
 
 -- Usage Transaction Table (Enriched usage data)
@@ -203,10 +206,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_job_task_run_timeline (
     termination_code STRING,
     execution_secs DECIMAL(38,18),
     date_sk INT,
+    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
-    is_current BOOLEAN,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    is_current BOOLEAN
 ) USING DELTA;
 
 -- Clusters SCD2 Table (Type 2 - Historical tracking)
@@ -253,10 +257,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     minor_version INT,
     runtime_age_months INT,
     is_lts BOOLEAN,
+    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
-    is_current BOOLEAN,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    is_current BOOLEAN
 ) USING DELTA;
 
 

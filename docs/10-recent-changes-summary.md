@@ -201,7 +201,7 @@ sql/
 ### **Files Updated**
 - `jobs/daily_observability_workflow.json` - Updated for HWM jobs
 - `sql/config/performance_optimizations.sql` - Updated table names
-- `notebooks/platform_observability_deployment.py` - Simplified cloud-agnostic deployment
+- `notebooks/platform_observability_deploy.py` - Simplified cloud-agnostic deployment
 - All documentation files - Updated for new architecture
 
 ## 🔧 Technical Improvements

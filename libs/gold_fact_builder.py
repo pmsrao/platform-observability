@@ -182,9 +182,7 @@ class UsageFactBuilder(FactBuilder):
                     F.col("cluster_key"),
                     F.col("sku_key"),
                     # MEASURES (numeric values to be aggregated)
-                    F.col("usage_quantity"),
-                    F.col("list_cost_usd"),
-                    F.col("duration_hours"),
+                    F.col("record_id"),                    # Unique identifier from billing.usage
                     # DEGENERATE DIMENSIONS
                     F.col("job_run_id"),
                     F.col("cloud"),
@@ -198,7 +196,11 @@ class UsageFactBuilder(FactBuilder):
                     F.col("pipeline_name"),
                     F.col("cluster_identifier"),
                     F.col("workflow_level"),
-                    F.col("parent_workflow_name")
+                    F.col("parent_workflow_name"),
+                    # MEASURES
+                    F.col("usage_quantity"),
+                    F.col("list_cost_usd"),
+                    F.col("duration_hours")
                 )
             )
             
@@ -235,6 +237,7 @@ class EntityCostFactBuilder(FactBuilder):
             aggregated_df = (silver_df
                 .groupBy("date_sk", "account_id", "workspace_id", "entity_type", "entity_id")
                 .agg(
+                    # MEASURES
                     F.sum("list_cost_usd").alias("list_cost_usd"),
                     F.countDistinct("job_run_id").alias("runs_count")
                 )
@@ -326,6 +329,7 @@ class RunCostFactBuilder(FactBuilder):
                     F.col("job_run_id"),
                     F.col("cloud"),
                     F.col("usage_unit"),
+                    # MEASURES
                     F.col("list_cost_usd"),
                     F.col("usage_quantity"),
                     F.col("duration_hours")

@@ -186,7 +186,7 @@ class DataQualityMonitor:
                 rule_type="validation",
                 severity="error",
                 rule_function=self._check_required_fields,
-                parameters={"required_columns": ["job_id", "run_id", "period_start_time", "period_end_time"]}
+                parameters={"required_columns": ["job_id", "job_run_id", "period_start_time", "period_end_time"]}
             )
         
         # Compute clusters specific rules

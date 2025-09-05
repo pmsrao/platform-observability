@@ -9,9 +9,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_usage_priced_day (
     entity_key BIGINT,
     cluster_key BIGINT,
     sku_key BIGINT,
-    usage_quantity DECIMAL(38,18),
-    list_cost_usd DECIMAL(38,18),
-    duration_hours DECIMAL(38,18),
+    record_id STRING,                    -- Unique identifier from billing.usage for traceability
     job_run_id STRING,
     cloud STRING,
     usage_unit STRING,
@@ -23,7 +21,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_usage_priced_day (
     pipeline_name STRING,
     cluster_identifier STRING,
     workflow_level STRING,
-    parent_workflow_name STRING
+    parent_workflow_name STRING,
+    -- MEASURES
+    usage_quantity DECIMAL(38,18),
+    list_cost_usd DECIMAL(38,18),
+    duration_hours DECIMAL(38,18)
 )
 USING DELTA
 PARTITIONED BY (date_key, cloud);
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_entity_cost (
     date_key INT,
     workspace_key BIGINT,
     entity_key BIGINT,
+    -- MEASURES
     list_cost_usd DECIMAL(38,18),
     runs_count BIGINT
 )
@@ -49,6 +52,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_run_cost (
     job_run_id STRING,
     cloud STRING,
     usage_unit STRING,
+    -- MEASURES
     list_cost_usd DECIMAL(38,18),
     usage_quantity DECIMAL(38,18),
     duration_hours DECIMAL(38,18)
@@ -63,6 +67,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_run_status_cost (
     entity_key BIGINT,
     run_status_key BIGINT,
     job_run_id STRING,
+    -- MEASURES
     result_state_cost_usd DECIMAL(38,18)
 )
 USING DELTA
@@ -73,6 +78,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_runs_finished_day (
     date_key INT,
     workspace_key BIGINT,
     entity_key BIGINT,
+    -- MEASURES
     finished_runs BIGINT,
     success_runs BIGINT,
     failed_runs BIGINT,

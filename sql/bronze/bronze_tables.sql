@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_billing_usage (
         warehouse_id:STRING,
         instance_pool_id:STRING,
         node_type:STRING,
-        job_run_id:STRING,
+        run_id:STRING,
         notebook_id:STRING,
         dlt_pipeline_id:STRING,
         endpoint_name:STRING,
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_lakeflow_job_run_timeli
     account_id STRING,
     workspace_id STRING,                 -- STRING, not BIGINT
     job_id STRING,                       -- STRING, not BIGINT
-    job_run_id STRING,                   -- Renamed from run_id for clarity
+    run_id STRING,                       -- Original run_id from source
     period_start_time TIMESTAMP,
     period_end_time TIMESTAMP,
     trigger_type STRING,
@@ -166,8 +166,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_lakeflow_job_task_run_t
     account_id STRING,
     workspace_id STRING,                 -- STRING, not BIGINT
     job_id STRING,                       -- STRING, not BIGINT
-    task_run_id STRING,                  -- Renamed from run_id for clarity
-    job_run_id STRING,                   -- Parent job run ID
+    run_id STRING,                       -- Original run_id from source
     parent_run_id STRING,                -- Parent run ID
     period_start_time TIMESTAMP,
     period_end_time TIMESTAMP,

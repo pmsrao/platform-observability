@@ -32,7 +32,7 @@ Provide a reliable, low-cost observability layer on Databricks that unifies **us
 **Design assumptions:**
 - **Medallion** architecture with **Delta Change Data Feed (CDF)** driving Silver/Gold increments
 - Catalog & schemas: `platform_observability.plt_bronze`, `plt_silver`, `plt_gold`
-- **date_sk** is the canonical time key (YYYYMMDD)
+- **date_key** is the canonical time key (YYYYMMDD)
 - Daily schedule **05:30 Asia/Kolkata**; late arrivals handled by CDF + small overlap where needed
 - "Cost" = **list price**; can be extended to actual/discounted pricing later
 
@@ -43,20 +43,20 @@ Provide a reliable, low-cost observability layer on Databricks that unifies **us
 - No reshaping beyond standardization and light expectations
 
 **Silver (Curated)**
-- Conformed entities (Jobs & Pipelines) with SCD2
+- Conformed entities (Jobs, Pipelines & Clusters) with SCD2
 - Pricing join (effective interval) to compute **list_cost_usd**
 - **Tags exploded** to key/value rows
-- Run & task timelines normalized with **date_sk** and durations
+- Run & task timelines normalized with **date_key** and durations
 - Optional cluster SCD and node‑type lookup for hardware analytics
 
 **Gold (Star Schema)**
-- Dimensions: **date**, **workspace**, **entity (job/pipeline)**, **SKU**, **run status**, **node type**
+- Dimensions: **date**, **workspace**, **entity (job/pipeline)**, **cluster**, **SKU**, **run status**, **node type**
 - Facts: **usage_priced_day**, **entity_cost**, **run_cost**, **run_status_cost**, **runs_finished_day**, **usage_by_node_type_day**
 - Views: **policy compliance**, **required tag coverage**, **task latency trend/anomaly**
 
 **Incremental engine (CDF‑driven):**
 - Silver reads **only changed rows** from Bronze since the last bookmark
-- Gold recalculates and **MERGEs only impacted `date_sk`** partitions
+- Gold recalculates and **MERGEs only impacted `date_key`** partitions
 
 **Quality & governance:**
 - Expectations (non‑negative qty, valid durations, price coverage)
@@ -68,17 +68,17 @@ Provide a reliable, low-cost observability layer on Databricks that unifies **us
 ```
 System Tables (billing, lakeflow, access, compute)
         │
-        ▼  (DLT Pipeline A — Bronze, CDF enabled)
+        ▼  (HWM Job — Bronze, CDF enabled)
 platform_observability.plt_bronze.*  ───────────────►  Bronze with CDF
         │                                  ▲
         │                                  │ CDF versions (bookmarks)
         ▼
-(DLT Pipeline B — Silver/Gold, CDF read)
+(HWM Jobs — Silver/Gold, CDF read)
         │
         ├─► Silver: entity SCD2, pricing, tags, timelines, cluster/node types
         │
-        └─► Gold: dims & facts (MERGE only impacted date_sk)
-                 ├─ dim_date, dim_workspace, dim_entity, dim_sku, dim_run_status, dim_node_type
+        └─► Gold: dims & facts (MERGE only impacted date_key)
+                 ├─ dim_date, dim_workspace, dim_entity, dim_cluster, dim_sku, dim_run_status, dim_node_type
                  ├─ gld_fact_usage_priced_day, fact_entity_cost, fact_run_cost
                  ├─ fact_run_status_cost, fact_runs_finished_day, fact_usage_by_node_type_day
                  └─ views: policy compliance, tag coverage, latency trend/anomaly
@@ -87,9 +87,9 @@ platform_observability.plt_bronze.*  ──────────────�
 ## 5. How It Works
 
 **Run sequence:**
-1. **Bronze ingest (DLT A)** pulls the latest snapshots from system tables and keeps **CDF** on for each table
-2. **Silver build (DLT B)** reads **only CDF changes** since the last successful version per source (bookmarks), derives entity/run fields, joins pricing, explodes tags, intervalizes SCDs, and standardizes **date_sk**
-3. **Gold materialization (DLT B)** computes aggregates only for **impacted dates** and performs **idempotent MERGEs** into fact/dim tables
+1. **Bronze ingest (HWM Job)** pulls the latest snapshots from system tables and keeps **CDF** on for each table
+2. **Silver build (HWM Job)** reads **only CDF changes** since the last successful version per source (bookmarks), derives entity/run fields, joins pricing, explodes tags, intervalizes SCDs, and standardizes **date_key**
+3. **Gold materialization (HWM Job)** computes aggregates only for **impacted dates** and performs **idempotent MERGEs** into fact/dim tables
 4. **Compliance & trend views** refresh off Gold/Silver without full rebuilds
 5. **Bookmarks** are updated at the end of a successful run for next‑day increments
 
