@@ -141,6 +141,20 @@ sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
 
 # COMMAND ----------
 
+# Debug: Let's see what SQL statements are being generated
+print("🔍 Debugging SQL Generation:")
+try:
+    statements = sql_manager.parameterize_sql_statements("config/bootstrap_catalog_schemas")
+    print(f"Number of statements: {len(statements)}")
+    for i, statement in enumerate(statements):
+        print(f"Statement {i+1}: {repr(statement)}")
+        print(f"Length: {len(statement)}")
+        print("---")
+except Exception as e:
+    print(f"Error generating statements: {e}")
+
+# COMMAND ----------
+
 # Bootstrap catalog and schemas
 sql_param.bootstrap_catalog_schemas()
 

@@ -128,7 +128,11 @@ class SQLManager:
         statements = []
         for statement in sql_content.split(';'):
             statement = statement.strip()
-            if statement and not statement.startswith('--'):
+            # Remove comments and empty statements
+            if statement and not statement.startswith('--') and not statement.startswith('/*'):
+                # Remove any trailing comments
+                if '--' in statement:
+                    statement = statement.split('--')[0].strip()
                 statements.append(statement)
         
         return statements

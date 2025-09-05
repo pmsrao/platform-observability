@@ -41,7 +41,13 @@ class SQLParameterizer:
         for i, statement in enumerate(statements):
             if statement.strip():
                 print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
-                self.spark.sql(statement)
+                try:
+                    self.spark.sql(statement)
+                    print(f"   ✅ Statement {i+1} executed successfully")
+                except Exception as e:
+                    print(f"   ❌ Statement {i+1} failed: {e}")
+                    print(f"   Statement content: {repr(statement)}")
+                    raise
     
     def bootstrap_catalog_schemas(self) -> None:
         """Bootstrap catalog and schemas"""
