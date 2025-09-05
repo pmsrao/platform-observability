@@ -148,6 +148,13 @@ except FileNotFoundError as e:
 # COMMAND ----------
 
 # Initialize SQL parameterizer with the new SQLManager instance
+# Force reload the SQLParameterizer to ensure we get the latest version
+import importlib
+import sys
+if 'libs.sql_parameterizer' in sys.modules:
+    importlib.reload(sys.modules['libs.sql_parameterizer'])
+from libs.sql_parameterizer import SQLParameterizer
+
 sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
 
 # COMMAND ----------
@@ -309,23 +316,31 @@ print("🔍 Debugging SQLParameterizer Method:")
 print(f"SQLParameterizer SQLManager: {sql_param.sql_manager}")
 print(f"SQLParameterizer SQLManager has parameterize_sql_statements: {hasattr(sql_param.sql_manager, 'parameterize_sql_statements')}")
 
+# Let's test the statement generation directly
+print("\n🧪 Testing statement generation in SQLParameterizer:")
+try:
+    statements = sql_param.sql_manager.parameterize_sql_statements(
+        "config/bootstrap_catalog_schemas",
+        catalog=sql_param.config.catalog,
+        bronze_schema=sql_param.config.bronze_schema,
+        silver_schema=sql_param.config.silver_schema,
+        gold_schema=sql_param.config.gold_schema
+    )
+    print(f"SQLParameterizer generated {len(statements)} statements")
+    for i, stmt in enumerate(statements):
+        print(f"  Statement {i+1}: {stmt[:100]}...")
+except Exception as e:
+    print(f"❌ Statement generation failed: {e}")
+
 # Test the exact method that was failing
 try:
-    print("Testing sql_param.bootstrap_catalog_schemas()...")
+    print("\nTesting sql_param.bootstrap_catalog_schemas()...")
     sql_param.bootstrap_catalog_schemas()
     print("✅ SQLParameterizer method worked!")
 except Exception as e:
     print(f"❌ SQLParameterizer method failed: {e}")
     print("This confirms there's still an issue with the SQLParameterizer method")
-    
-    # Let's try creating a fresh SQLParameterizer with the updated SQLManager
-    print("\n🔧 Trying with fresh SQLParameterizer...")
-    try:
-        fresh_sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
-        fresh_sql_param.bootstrap_catalog_schemas()
-        print("✅ Fresh SQLParameterizer method worked!")
-    except Exception as e2:
-        print(f"❌ Fresh SQLParameterizer also failed: {e2}")
+    print("We'll continue using our working manual approach for all operations.")
 
 # COMMAND ----------
 
