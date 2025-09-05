@@ -232,9 +232,29 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     tags MAP<STRING, STRING>,
     cluster_source STRING,
     init_scripts ARRAY<STRING>,
-    aws_attributes STRUCT,
-    azure_attributes STRUCT,
-    gcp_attributes STRUCT,
+    aws_attributes STRUCT<
+        instance_profile_arn:STRING,
+        zone_id:STRING,
+        first_on_demand:INT,
+        availability:STRING,
+        spot_bid_price_percent:INT,
+        ebs_volume_type:STRING,
+        ebs_volume_count:INT,
+        ebs_volume_size:INT,
+        ebs_volume_iops:INT,
+        ebs_volume_throughput:INT
+    >,
+    azure_attributes STRUCT<
+        first_on_demand:INT,
+        availability:STRING,
+        spot_bid_max_price:DOUBLE
+    >,
+    gcp_attributes STRUCT<
+        use_preemptible_executors:BOOLEAN,
+        zone_id:STRING,
+        first_on_demand:INT,
+        availability:STRING
+    >,
     driver_instance_pool_id STRING,
     worker_instance_pool_id STRING,
     dbr_version STRING,                  -- Renamed from spark_version
