@@ -120,6 +120,19 @@ class SQLManager:
         
         return sql_content
     
+    def parameterize_sql_statements(self, operation: str, **kwargs) -> list:
+        """Load SQL and return as list of individual statements"""
+        sql_content = self.parameterize_sql(operation, **kwargs)
+        
+        # Split by semicolon and clean up
+        statements = []
+        for statement in sql_content.split(';'):
+            statement = statement.strip()
+            if statement and not statement.startswith('--'):
+                statements.append(statement)
+        
+        return statements
+    
     def parameterize_sql_with_catalog_schema(self, operation: str, **kwargs) -> str:
         """Load SQL and substitute parameters including catalog and schema placeholders"""
         sql_content = self.load_sql(operation)

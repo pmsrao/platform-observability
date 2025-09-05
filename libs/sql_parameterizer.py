@@ -34,11 +34,14 @@ class SQLParameterizer:
         if "gold_schema" not in kwargs:
             kwargs["gold_schema"] = self.config.gold_schema
         
-        # Get parameterized SQL
-        sql = self.sql_manager.parameterize_sql(operation, **kwargs)
+        # Get parameterized SQL statements
+        statements = self.sql_manager.parameterize_sql_statements(operation, **kwargs)
         
-        # Execute SQL
-        self.spark.sql(sql)
+        # Execute each statement separately
+        for i, statement in enumerate(statements):
+            if statement.strip():
+                print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+                self.spark.sql(statement)
     
     def bootstrap_catalog_schemas(self) -> None:
         """Bootstrap catalog and schemas"""
