@@ -270,8 +270,30 @@ except Exception as e:
 
 # COMMAND ----------
 
-# Bootstrap catalog and schemas
-sql_param.bootstrap_catalog_schemas()
+# Bootstrap catalog and schemas using our working manual approach
+print("🚀 Bootstrapping catalog and schemas...")
+try:
+    # Use the same working approach as our manual test
+    statements = sql_param.sql_manager.parameterize_sql_statements(
+        "config/bootstrap_catalog_schemas",
+        catalog=sql_param.config.catalog,
+        bronze_schema=sql_param.config.bronze_schema,
+        silver_schema=sql_param.config.silver_schema,
+        gold_schema=sql_param.config.gold_schema
+    )
+    
+    # Execute each statement
+    for i, statement in enumerate(statements):
+        if statement.strip():
+            print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+            sql_param.spark.sql(statement)
+            print(f"   ✅ Statement {i+1} executed successfully")
+    
+    print("✅ Catalog and schemas created successfully")
+    
+except Exception as e:
+    print(f"❌ Bootstrap failed: {e}")
+    raise
 
 # COMMAND ----------
 
