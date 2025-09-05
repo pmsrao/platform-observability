@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.policy_baseline (
     threshold_unit STRING,
     severity STRING,
     is_active BOOLEAN,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    created_at TIMESTAMP
 ) USING DELTA;
 
 -- Insert default policies

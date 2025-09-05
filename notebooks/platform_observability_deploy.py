@@ -75,86 +75,31 @@ print(f"   Databricks Host: {config.databricks_host}")
 
 # Import SQL parameterizer for bootstrap
 import os
+import importlib
+import sys
 from pathlib import Path
 
-# Direct import - the modules should be up to date
+# Force reload modules to ensure latest changes
+if 'libs.sql_manager' in sys.modules:
+    importlib.reload(sys.modules['libs.sql_manager'])
+if 'libs.sql_parameterizer' in sys.modules:
+    importlib.reload(sys.modules['libs.sql_parameterizer'])
+
 from libs.sql_parameterizer import SQLParameterizer
 from libs.sql_manager import SQLManager
 
-# Create a new SQLManager instance with explicit path based on current working directory
-# From the debug output, we know we're in /Workspace/Users/podilapalls@gmail.com/platform-observability/notebooks
-# So the sql directory should be at /Workspace/Users/podilapalls@gmail.com/platform-observability/sql
+# Create SQLManager with explicit path for Databricks environment
 explicit_sql_path = "/Workspace/Users/podilapalls@gmail.com/platform-observability/sql"
-
-# Force reload the SQLManager class to get the latest version
-import importlib
-import sys
-if 'libs.sql_manager' in sys.modules:
-    importlib.reload(sys.modules['libs.sql_manager'])
-from libs.sql_manager import SQLManager
-
 sql_manager = SQLManager(sql_directory=explicit_sql_path)
 
-# Test if the new method exists
-print("🔍 Testing SQLManager Methods:")
-print(f"   Has parameterize_sql_statements: {hasattr(sql_manager, 'parameterize_sql_statements')}")
-if hasattr(sql_manager, 'parameterize_sql_statements'):
-    print("   ✅ parameterize_sql_statements method is available")
-else:
-    print("   ❌ parameterize_sql_statements method is missing")
-
-# Debug path configuration
-print("🔍 Debugging Path Configuration:")
-print(f"   Current working directory: {os.getcwd()}")
+print("🔧 SQL Environment Setup:")
 print(f"   SQL directory: {sql_manager.sql_directory}")
 print(f"   SQL directory exists: {sql_manager.sql_directory.exists()}")
-print(f"   Available SQL files: {sql_manager.get_available_operations()}")
-print(f"   Config catalog: {sql_manager._config.catalog}")
-print(f"   Config bronze schema: {sql_manager._config.bronze_schema}")
-print(f"   Config silver schema: {sql_manager._config.silver_schema}")
-print(f"   Config gold schema: {sql_manager._config.gold_schema}")
-
-# Test if we can find the specific file that's failing
-test_operation = "config/bootstrap_catalog_schemas"
-try:
-    test_path = sql_manager.get_sql_file_path(test_operation)
-    print(f"✅ Found SQL file: {test_path}")
-except FileNotFoundError as e:
-    print(f"❌ SQL file not found: {e}")
-    print("🔍 Trying alternative approaches...")
-    
-    # Try to find the file manually
-    from pathlib import Path
-    possible_locations = [
-        Path.cwd() / "sql" / "config" / "bootstrap_catalog_schemas.sql",
-        Path.cwd().parent / "sql" / "config" / "bootstrap_catalog_schemas.sql",
-        Path("/Workspace/Repos/platform-observability/sql/config/bootstrap_catalog_schemas.sql"),
-        Path("/Workspace/Users/podilapalls@gmail.com/platform-observability/sql/config/bootstrap_catalog_schemas.sql")
-    ]
-    
-    # Try to add __file__ based path if available
-    try:
-        possible_locations.append(Path(__file__).parent.parent / "sql" / "config" / "bootstrap_catalog_schemas.sql")
-    except NameError:
-        pass
-    
-    for location in possible_locations:
-        if location.exists():
-            print(f"✅ Found file at: {location}")
-            break
-    else:
-        print("❌ File not found in any expected location")
+print(f"   Available SQL operations: {len(sql_manager.get_available_operations())}")
 
 # COMMAND ----------
 
-# Initialize SQL parameterizer with the new SQLManager instance
-# Force reload the SQLParameterizer to ensure we get the latest version
-import importlib
-import sys
-if 'libs.sql_parameterizer' in sys.modules:
-    importlib.reload(sys.modules['libs.sql_parameterizer'])
-from libs.sql_parameterizer import SQLParameterizer
-
+# Initialize SQL parameterizer with the updated SQLManager instance
 sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
 
 # COMMAND ----------

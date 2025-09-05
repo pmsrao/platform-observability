@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_workspace (
     workspace_url STRING,
     create_time TIMESTAMP,
     status STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA;
 
 -- Jobs SCD2 Table (Type 2 - Historical tracking)
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_jobs_scd (
     is_sub_workflow BOOLEAN,
     workflow_level STRING,
     parent_workflow_name STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    _loaded_at TIMESTAMP,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_pipelines_scd (
         channel:STRING
     >,
     configuration MAP<STRING, STRING>,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    _loaded_at TIMESTAMP,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_price_scd (
     price_usd DECIMAL(38,18),
     price_start_time TIMESTAMP,
     price_end_time TIMESTAMP,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    _loaded_at TIMESTAMP,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
     inherited_cost_center STRING,
     inherited_workflow_level STRING,
     inherited_parent_workflow STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA;
 
 -- Job Run Timeline Table (Run execution data)
@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_job_run_timeline (
     job_parameters MAP<STRING, STRING>,
     date_sk_start INT,
     date_sk_end INT,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA;
 
 -- Job Task Run Timeline SCD2 Table (Type 2 - Historical tracking)
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_job_task_run_timeline (
     termination_code STRING,
     execution_secs DECIMAL(38,18),
     date_sk INT,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    _loaded_at TIMESTAMP,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
@@ -257,7 +257,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     minor_version INT,
     runtime_age_months INT,
     is_lts BOOLEAN,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    _loaded_at TIMESTAMP,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,

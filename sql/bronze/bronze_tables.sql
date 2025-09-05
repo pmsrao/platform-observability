@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_billing_usage (
     >,
     usage_type STRING,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_billing_list_prices (
         effective_list:STRUCT<default:DECIMAL(38,18)>
     >,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_lakeflow_jobs (
     delete_time TIMESTAMP,
     run_as STRING,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_lakeflow_pipelines (
     change_time TIMESTAMP,
     delete_time TIMESTAMP,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_lakeflow_job_run_timeli
     termination_code STRING,
     job_parameters MAP<STRING, STRING>,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_lakeflow_job_task_run_t
     result_state STRING,
     termination_code STRING,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_access_workspaces_lates
     create_time TIMESTAMP,
     status STRING,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_compute_clusters (
     data_security_mode STRING,
     policy_id STRING,
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_compute_node_types (
     memory_mb BIGINT,                    -- Renamed from memory_gb and changed type to match source
     gpu_count BIGINT,                    -- Changed type to match source
     row_hash STRING,
-    _loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+    _loaded_at TIMESTAMP
 ) USING DELTA
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
