@@ -85,7 +85,23 @@ from libs.sql_manager import SQLManager
 # From the debug output, we know we're in /Workspace/Users/podilapalls@gmail.com/platform-observability/notebooks
 # So the sql directory should be at /Workspace/Users/podilapalls@gmail.com/platform-observability/sql
 explicit_sql_path = "/Workspace/Users/podilapalls@gmail.com/platform-observability/sql"
+
+# Force reload the SQLManager class to get the latest version
+import importlib
+import sys
+if 'libs.sql_manager' in sys.modules:
+    importlib.reload(sys.modules['libs.sql_manager'])
+from libs.sql_manager import SQLManager
+
 sql_manager = SQLManager(sql_directory=explicit_sql_path)
+
+# Test if the new method exists
+print("🔍 Testing SQLManager Methods:")
+print(f"   Has parameterize_sql_statements: {hasattr(sql_manager, 'parameterize_sql_statements')}")
+if hasattr(sql_manager, 'parameterize_sql_statements'):
+    print("   ✅ parameterize_sql_statements method is available")
+else:
+    print("   ❌ parameterize_sql_statements method is missing")
 
 # Debug path configuration
 print("🔍 Debugging Path Configuration:")
