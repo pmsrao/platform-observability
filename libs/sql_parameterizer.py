@@ -41,6 +41,7 @@ class SQLParameterizer:
         for i, statement in enumerate(statements):
             if statement.strip():
                 print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+                print(f"   Full statement: {repr(statement)}")
                 try:
                     self.spark.sql(statement)
                     print(f"   ✅ Statement {i+1} executed successfully")

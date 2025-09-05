@@ -129,20 +129,11 @@ class SQLManager:
         statements = []
         raw_statements = sql_content.split(';')
         
-        for i, statement in enumerate(raw_statements):
-            original_statement = statement
+        for statement in raw_statements:
             statement = statement.strip()
-            
-            # Debug: print what we're processing
-            print(f"Processing statement {i+1}: {repr(original_statement[:100])}...")
-            print(f"  After strip: {repr(statement[:100])}...")
-            print(f"  Is empty: {not statement}")
-            print(f"  Starts with --: {statement.startswith('--') if statement else False}")
             
             # Skip empty statements
             if not statement:
-                print(f"  ❌ Skipped empty statement")
-                print("  ---")
                 continue
             
             # If statement starts with comments, try to find the actual SQL
@@ -158,10 +149,7 @@ class SQLManager:
                 if sql_lines:
                     # Join the SQL lines
                     statement = ' '.join(sql_lines)
-                    print(f"  Found SQL after comments: {repr(statement[:100])}...")
                 else:
-                    print(f"  ❌ No SQL found after comments")
-                    print("  ---")
                     continue
             
             # Remove any trailing comments but keep the statement
@@ -171,10 +159,6 @@ class SQLManager:
             # Only add if there's still content after processing
             if statement:
                 statements.append(statement)
-                print(f"  ✅ Added statement: {repr(statement[:100])}...")
-            else:
-                print(f"  ❌ Statement became empty after processing")
-            print("  ---")
         
         return statements
     
