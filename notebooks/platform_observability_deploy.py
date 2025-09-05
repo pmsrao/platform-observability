@@ -304,14 +304,28 @@ except Exception as e:
 
 # Let's test the SQLParameterizer method to see what's different
 print("🔍 Debugging SQLParameterizer Method:")
+
+# First, let's check if the SQLParameterizer is using the updated SQLManager
+print(f"SQLParameterizer SQLManager: {sql_param.sql_manager}")
+print(f"SQLParameterizer SQLManager has parameterize_sql_statements: {hasattr(sql_param.sql_manager, 'parameterize_sql_statements')}")
+
+# Test the exact method that was failing
 try:
-    # Test the exact method that was failing
     print("Testing sql_param.bootstrap_catalog_schemas()...")
     sql_param.bootstrap_catalog_schemas()
     print("✅ SQLParameterizer method worked!")
 except Exception as e:
     print(f"❌ SQLParameterizer method failed: {e}")
     print("This confirms there's still an issue with the SQLParameterizer method")
+    
+    # Let's try creating a fresh SQLParameterizer with the updated SQLManager
+    print("\n🔧 Trying with fresh SQLParameterizer...")
+    try:
+        fresh_sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
+        fresh_sql_param.bootstrap_catalog_schemas()
+        print("✅ Fresh SQLParameterizer method worked!")
+    except Exception as e2:
+        print(f"❌ Fresh SQLParameterizer also failed: {e2}")
 
 # COMMAND ----------
 
