@@ -50,7 +50,7 @@ from config import Config
 config = Config.get_config()
 
 print("🔧 Configuration Loaded:")
-print(f"   Environment: {config.ENV}")
+print(f"   Environment: {Config.ENV}")
 print(f"   Catalog: {config.catalog}")
 print(f"   Bronze Schema: {config.bronze_schema}")
 print(f"   Silver Schema: {config.silver_schema}")
@@ -459,7 +459,7 @@ except Exception as e:
 # MAGIC 
 # MAGIC | Component | Status | Description |
 # MAGIC |-----------|--------|-------------|
-# MAGIC | **Environment** | `{config.ENV}` | Current environment |
+# MAGIC | **Environment** | `{Config.ENV}` | Current environment |
 # MAGIC | **Catalog** | `{config.catalog}` | Unity Catalog name |
 # MAGIC | **Bronze Schema** | `{config.bronze_schema}` | Raw data layer |
 # MAGIC | **Silver Schema** | `{config.silver_schema}` | Cleaned data layer |
@@ -484,7 +484,7 @@ except Exception as e:
 # MAGIC 
 # MAGIC | Component | Value |
 # MAGIC |-----------|-------|
-# MAGIC | **Environment** | `{config.ENV}` |
+# MAGIC | **Environment** | `{Config.ENV}` |
 # MAGIC | **Catalog** | `{config.catalog}` |
 # MAGIC | **Bronze Schema** | `{config.bronze_schema}` |
 # MAGIC | **Silver Schema** | `{config.silver_schema}` |
