@@ -60,6 +60,14 @@ print(f"   Databricks Host: {config.databricks_host}")
 # COMMAND ----------
 
 # Import SQL parameterizer for bootstrap
+import importlib
+import libs.sql_parameterizer
+import libs.sql_manager
+
+# Reload modules to ensure we get the latest changes
+importlib.reload(libs.sql_parameterizer)
+importlib.reload(libs.sql_manager)
+
 from libs.sql_parameterizer import SQLParameterizer
 from libs.sql_manager import SQLManager
 import os
