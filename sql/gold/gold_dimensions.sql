@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_cluster (
     enable_elastic_disk BOOLEAN,
     cluster_source STRING,
     init_scripts STRING,
+    cloud STRING,                        -- Cloud provider (AWS, Azure, GCP)
     aws_attributes STRUCT<
         instance_profile_arn:STRING,
         zone_id:STRING,
