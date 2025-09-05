@@ -200,6 +200,41 @@ except Exception as e:
 
 # COMMAND ----------
 
+# Let's test the SQL execution manually first
+print("🧪 Testing SQL Execution Manually:")
+try:
+    # Get the statements
+    statements = sql_manager.parameterize_sql_statements(
+        "config/bootstrap_catalog_schemas",
+        catalog=sql_manager._config.catalog,
+        bronze_schema=sql_manager._config.bronze_schema,
+        silver_schema=sql_manager._config.silver_schema,
+        gold_schema=sql_manager._config.gold_schema
+    )
+    
+    print(f"Number of statements: {len(statements)}")
+    
+    # Test executing just the first statement
+    if statements:
+        first_statement = statements[0]
+        print(f"First statement: {repr(first_statement)}")
+        print(f"Statement length: {len(first_statement)}")
+        
+        # Try to execute just the first statement
+        from pyspark.sql import SparkSession
+        spark = SparkSession.builder.getOrCreate()
+        
+        print("Executing first statement only...")
+        spark.sql(first_statement)
+        print("✅ First statement executed successfully!")
+        
+except Exception as e:
+    print(f"❌ Manual execution failed: {e}")
+    import traceback
+    traceback.print_exc()
+
+# COMMAND ----------
+
 # Bootstrap catalog and schemas
 sql_param.bootstrap_catalog_schemas()
 

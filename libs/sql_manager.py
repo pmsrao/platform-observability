@@ -147,8 +147,8 @@ class SQLManager:
                         sql_lines.append(line)
                 
                 if sql_lines:
-                    # Join the SQL lines
-                    statement = ' '.join(sql_lines)
+                    # Join the SQL lines with newlines, not spaces
+                    statement = '\n'.join(sql_lines)
                 else:
                     continue
             
