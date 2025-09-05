@@ -66,6 +66,15 @@ print(f"   Databricks Host: {config.databricks_host}")
 
 # Import SQL parameterizer for bootstrap
 from libs.sql_parameterizer import SQLParameterizer
+from libs.sql_manager import sql_manager
+
+# Debug path configuration
+print("🔍 Debugging Path Configuration:")
+debug_info = sql_manager.debug_paths()
+for key, value in debug_info.items():
+    print(f"   {key}: {value}")
+
+# COMMAND ----------
 
 # Initialize SQL parameterizer
 sql_param = SQLParameterizer()

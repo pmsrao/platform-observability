@@ -6,7 +6,12 @@ from config import Config
 class SQLManager:
     """Manages SQL file operations and parameter substitution"""
     
-    def __init__(self, sql_directory: str = "sql"):
+    def __init__(self, sql_directory: str = None):
+        if sql_directory is None:
+            # Try to find the sql directory relative to the project root
+            current_file = Path(__file__)
+            project_root = current_file.parent.parent  # Go up from libs/ to project root
+            sql_directory = project_root / "sql"
         self.sql_directory = Path(sql_directory)
         self._sql_cache: Dict[str, str] = {}
         self._config = Config.get_config()
@@ -22,7 +27,22 @@ class SQLManager:
             sql_file_path = self.sql_directory / f"{operation}.sql"
         
         if not sql_file_path.exists():
-            raise FileNotFoundError(f"SQL file not found: {sql_file_path}")
+            # Provide more detailed error information
+            available_files = []
+            if self.sql_directory.exists():
+                for sql_file in self.sql_directory.rglob("*.sql"):
+                    relative_path = sql_file.relative_to(self.sql_directory)
+                    available_files.append(str(relative_path.with_suffix('')))
+            
+            error_msg = f"SQL file not found: {sql_file_path}\n"
+            error_msg += f"SQL directory: {self.sql_directory}\n"
+            error_msg += f"Operation: {operation}\n"
+            if available_files:
+                error_msg += f"Available SQL files: {', '.join(sorted(available_files))}"
+            else:
+                error_msg += f"SQL directory does not exist or contains no .sql files"
+            
+            raise FileNotFoundError(error_msg)
         
         return sql_file_path
     
@@ -124,6 +144,20 @@ class SQLManager:
         sql_content = sql_content.replace(self._config.gold_schema, "{gold_schema}")
         
         return sql_content
+    
+    def debug_paths(self) -> Dict[str, Any]:
+        """Debug method to show current path configuration"""
+        import os
+        return {
+            "current_working_directory": os.getcwd(),
+            "sql_directory": str(self.sql_directory),
+            "sql_directory_exists": self.sql_directory.exists(),
+            "available_sql_files": self.get_available_operations(),
+            "config_catalog": self._config.catalog,
+            "config_bronze_schema": self._config.bronze_schema,
+            "config_silver_schema": self._config.silver_schema,
+            "config_gold_schema": self._config.gold_schema
+        }
 
 # Global SQL manager instance
 sql_manager = SQLManager()
