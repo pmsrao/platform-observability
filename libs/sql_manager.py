@@ -122,8 +122,18 @@ class SQLManager:
     
     def parameterize_sql_statements(self, operation: str, **kwargs) -> list:
         """Load SQL and return as list of individual statements"""
-        # Pass the kwargs to parameterize_sql
-        sql_content = self.parameterize_sql(operation, **kwargs)
+        # Add catalog and schema placeholders if not provided
+        if "catalog" not in kwargs:
+            kwargs["catalog"] = self._config.catalog
+        if "bronze_schema" not in kwargs:
+            kwargs["bronze_schema"] = self._config.bronze_schema
+        if "silver_schema" not in kwargs:
+            kwargs["silver_schema"] = self._config.silver_schema
+        if "gold_schema" not in kwargs:
+            kwargs["gold_schema"] = self._config.gold_schema
+        
+        # Use parameterize_sql_with_catalog_schema to ensure proper parameterization
+        sql_content = self.parameterize_sql_with_catalog_schema(operation, **kwargs)
         
         # Split by semicolon and clean up
         statements = []
@@ -153,8 +163,23 @@ class SQLManager:
                     continue
             
             # Remove any trailing comments but keep the statement
-            if '--' in statement:
-                statement = statement.split('--')[0].strip()
+            # Only remove comments at the end of lines, not inline comments
+            lines = statement.split('\n')
+            cleaned_lines = []
+            for line in lines:
+                # Only remove comments that are at the end of the line (after SQL content)
+                if '--' in line:
+                    # Find the position of the comment
+                    comment_pos = line.find('--')
+                    # Check if there's SQL content before the comment
+                    sql_part = line[:comment_pos].strip()
+                    if sql_part:  # If there's SQL content, keep it
+                        cleaned_lines.append(sql_part)
+                    else:  # If the line is just a comment, skip it
+                        continue
+                else:
+                    cleaned_lines.append(line)
+            statement = '\n'.join(cleaned_lines)
             
             # Only add if there's still content after processing
             if statement:
