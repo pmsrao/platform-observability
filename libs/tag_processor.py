@@ -56,10 +56,21 @@ class TagProcessor:
         if map_col not in df.columns:
             # Apply defaults if map not present
             for _, norm_col in cls.REQUIRED_TAGS.items():
+                # Create both raw and normalized columns
+                result = result.withColumn(f"{norm_col}_raw", F.lit(None))
                 result = result.withColumn(norm_col, F.lit(cls.DEFAULTS[norm_col]))
             return result
 
         for src_key, norm_col in cls.REQUIRED_TAGS.items():
+            # Extract original value (raw)
+            result = result.withColumn(
+                f"{norm_col}_raw",
+                F.coalesce(
+                    F.col(f"{map_col}.{src_key}"),
+                    F.col(f"{map_col}.{norm_col}")
+                )
+            )
+            # Create normalized value with defaults
             result = result.withColumn(
                 norm_col,
                 F.coalesce(
@@ -68,7 +79,7 @@ class TagProcessor:
                     F.lit(cls.DEFAULTS[norm_col])
                 )
             )
-        # Env normalization
+        # Env normalization (only for normalized column)
         result = result.withColumn("environment", cls.normalize_environment(F.col("environment")))
         return result
 
@@ -96,11 +107,19 @@ class TagProcessor:
         # Trim/lower basic string tags and apply defaults where null/empty
         result = df
         for _, norm_col in cls.REQUIRED_TAGS.items():
+            # Ensure normalized columns have defaults where null/empty
             result = result.withColumn(
                 norm_col,
                 F.when(F.col(norm_col).isNull() | (F.trim(F.col(norm_col)) == F.lit("")), F.lit(cls.DEFAULTS[norm_col]))
                  .otherwise(F.col(norm_col))
             )
+            # Ensure raw columns are properly trimmed (but keep original values)
+            if f"{norm_col}_raw" in df.columns:
+                result = result.withColumn(
+                    f"{norm_col}_raw",
+                    F.when(F.col(f"{norm_col}_raw").isNull(), F.lit(None))
+                     .otherwise(F.trim(F.col(f"{norm_col}_raw")))
+                )
         result = result.withColumn("environment", cls.normalize_environment(F.col("environment")))
         return result
 
@@ -180,6 +199,22 @@ class TagProcessor:
             F.col("job.use_case").alias("inherited_use_case"),
             F.col("job.workflow_level").alias("inherited_workflow_level"),
             F.col("job.parent_workflow_name").alias("inherited_parent_workflow")
+        )
+
+    @staticmethod
+    def add_worker_node_type_category(df: DataFrame) -> DataFrame:
+        """
+        Add worker node type category based on node type patterns
+        """
+        return df.withColumn(
+            "worker_node_type_category",
+            F.when(F.col("worker_node_type").like("%Standard_DS%"), F.lit("General Purpose (DS)"))
+             .when(F.col("worker_node_type").like("%Standard_E%"), F.lit("Memory Optimized (E)"))
+             .when(F.col("worker_node_type").like("%Standard_F%"), F.lit("Compute Optimized (F)"))
+             .when(F.col("worker_node_type").like("%Standard_L%"), F.lit("Storage Optimized (L)"))
+             .when(F.col("worker_node_type").like("%Standard_N%"), F.lit("GPU Enabled (N)"))
+             .when(F.col("worker_node_type").like("%Standard_M%"), F.lit("Memory Optimized (M)"))
+             .otherwise(F.lit("Other"))
         )
 
     @classmethod

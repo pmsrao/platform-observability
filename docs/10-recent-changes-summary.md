@@ -190,8 +190,8 @@ sql/
 - `notebooks/gold_hwm_build_job.py` - Gold layer HWM job
 - `notebooks/performance_optimization_job.py` - Performance optimization job
 - `notebooks/health_check_job.py` - Health monitoring job
-- `docs/12-hwm-migration-guide.md` - Migration guide
-- `docs/13-recent-changes-summary.md` - This document
+- `docs/09-task-based-processing.md` - Task-based processing guide
+- `docs/10-recent-changes-summary.md` - This document
 
 ### **Files Removed/Replaced**
 - `pipelines/silver_gold/silver_gold_build_dlt.py` - Replaced by HWM jobs
@@ -321,12 +321,11 @@ sql/
 - `README.md` - Updated architecture and workflow
 - `docs/01-overview.md` - Updated for HWM approach
 - `docs/02-getting-started.md` - Updated deployment steps
-- `docs/05-deployment.md` - Updated for HWM jobs
-- `docs/11-naming-convention-update.md` - New naming standards
+- `docs/11-deployment.md` - Updated for HWM jobs
 
 ### **New Documents**
-- `docs/12-hwm-migration-guide.md` - Migration guide
-- `docs/13-recent-changes-summary.md` - This summary
+- `docs/09-task-based-processing.md` - Task-based processing guide
+- `docs/10-recent-changes-summary.md` - This summary
 
 ## 🎯 Next Steps
 
@@ -352,5 +351,5 @@ For questions about these changes:
 
 ---
 
-*This document was last updated: January 2024*
-*Version: 13-recent-changes-summary*
+*This document was last updated: January 2025*
+*Version: 10-recent-changes-summary*

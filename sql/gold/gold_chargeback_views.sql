@@ -13,11 +13,11 @@ SELECT
     SUM(list_cost_usd) as total_cost_usd,
     SUM(usage_quantity) as total_usage_quantity,
     SUM(duration_hours) as total_duration_hours,
-    COUNT(DISTINCT run_id) as total_runs,
+    COUNT(DISTINCT job_run_id) as total_runs,
     AVG(list_cost_usd) as avg_cost_per_run
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.dim_workspace w ON f.workspace_id = w.workspace_id
-JOIN {catalog}.{gold_schema}.dim_entity e ON f.workspace_id = e.workspace_id 
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace_id
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.workspace_id = e.workspace_id 
     AND f.entity_type = e.entity_type 
     AND f.entity_id = e.entity_id
 GROUP BY date_sk, workspace_id, workspace_name, entity_type, entity_id, entity_name;
@@ -25,16 +25,16 @@ GROUP BY date_sk, workspace_id, workspace_name, entity_type, entity_id, entity_n
 -- Department Cost Summary View (Tag-based, not workspace prefix)
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_department_cost_summary AS
 SELECT 
-    COALESCE(f.department, 'unknown') as department_code,
+    f.department as department_code,
     w.workspace_name,
-    f.date_sk,
+    f.date_key,
     SUM(f.list_cost_usd) as department_total_cost,
     COUNT(DISTINCT f.entity_id) as active_entities,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     COUNT(DISTINCT f.workspace_id) as active_workspaces
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.dim_workspace w ON f.workspace_id = w.workspace_id
-GROUP BY COALESCE(f.department, 'unknown'), w.workspace_name, f.date_sk;
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace_id
+GROUP BY f.department, w.workspace_name, f.date_sk;
 
 -- Cost Trend by SKU View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_sku_cost_trends AS
@@ -48,7 +48,7 @@ SELECT
     AVG(list_cost_usd / NULLIF(usage_quantity, 0)) as avg_cost_per_unit,
     COUNT(DISTINCT workspace_id) as active_workspaces
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.dim_sku s ON f.cloud = s.cloud 
+JOIN {catalog}.{gold_schema}.gld_dim_sku s ON f.cloud = s.cloud 
     AND f.sku_name = s.sku_name 
     AND f.usage_unit = s.usage_unit
 GROUP BY date_sk, cloud, sku_name, usage_unit;
@@ -58,71 +58,71 @@ GROUP BY date_sk, cloud, sku_name, usage_unit;
 -- Line of Business Cost Summary
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_line_of_business_cost AS
 SELECT 
-    f.date_sk,
-    COALESCE(f.line_of_business, 'Unknown') as line_of_business,
-    COALESCE(f.department, 'unknown') as department,
-    COALESCE(f.environment, 'dev') as environment,
+    f.date_key,
+    f.line_of_business,
+    f.department,
+    f.environment,
     COUNT(DISTINCT f.workspace_id) as active_workspaces,
     COUNT(DISTINCT f.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk, COALESCE(f.line_of_business, 'Unknown'), COALESCE(f.department, 'unknown'), COALESCE(f.environment, 'dev');
+GROUP BY f.date_key, f.line_of_business, f.department, f.environment;
 
 -- Environment Cost Analysis
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_environment_cost AS
 SELECT 
-    f.date_sk,
-    COALESCE(f.environment, 'dev') as environment,
-    COALESCE(f.line_of_business, 'Unknown') as line_of_business,
+    f.date_key,
+    f.environment,
+    f.line_of_business,
     COUNT(DISTINCT f.workspace_id) as active_workspaces,
     COUNT(DISTINCT f.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk, COALESCE(f.environment, 'dev'), COALESCE(f.line_of_business, 'Unknown');
+GROUP BY f.date_key, f.environment, f.line_of_business;
 
 -- Use Case Cost Analysis
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_use_case_cost AS
 SELECT 
-    f.date_sk,
-    COALESCE(f.use_case, 'Unknown') as use_case,
-    COALESCE(f.line_of_business, 'Unknown') as line_of_business,
-    COALESCE(f.department, 'unknown') as department,
+    f.date_key,
+    f.use_case,
+    f.line_of_business,
+    f.department,
     COUNT(DISTINCT f.workspace_id) as active_workspaces,
     COUNT(DISTINCT f.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk, COALESCE(f.use_case, 'Unknown'), COALESCE(f.line_of_business, 'Unknown'), COALESCE(f.department, 'unknown');
+GROUP BY f.date_key, f.use_case, f.line_of_business, f.department;
 
 -- Cluster Cost Analysis
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cluster_cost AS
 SELECT 
-    f.date_sk,
-    COALESCE(f.cluster_identifier, 'Unknown') as cluster_identifier,
-    COALESCE(f.line_of_business, 'Unknown') as line_of_business,
-    COALESCE(f.department, 'unknown') as department,
+    f.date_key,
+    f.cluster_identifier,
+    f.line_of_business,
+    f.department,
     COUNT(DISTINCT f.workspace_id) as active_workspaces,
     COUNT(DISTINCT f.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk, COALESCE(f.cluster_identifier, 'Unknown'), COALESCE(f.line_of_business, 'Unknown'), COALESCE(f.department, 'unknown');
+GROUP BY f.date_key, f.cluster_identifier, f.line_of_business, f.department;
 
 -- Tag Quality and Missing Tags Visibility View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_tag_quality_analysis AS
 SELECT 
-    f.date_sk,
+    f.date_key,
     f.workspace_id,
     w.workspace_name,
     f.entity_type,
     f.entity_id,
-    -- Tag completeness indicators
+    -- Tag completeness indicators (based on default values)
     CASE WHEN f.line_of_business = 'Unknown' THEN 'Missing' ELSE 'Present' END as line_of_business_status,
     CASE WHEN f.department = 'unknown' THEN 'Missing' ELSE 'Present' END as department_status,
     CASE WHEN f.cost_center = 'unallocated' THEN 'Missing' ELSE 'Present' END as cost_center_status,
@@ -157,12 +157,12 @@ SELECT
     f.usage_quantity,
     f.duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.dim_workspace w ON f.workspace_id = w.workspace_id;
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace_id;
 
 -- Tag Coverage Summary View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_tag_coverage_summary AS
 SELECT 
-    f.date_sk,
+    f.date_key,
     -- Overall tag coverage
     COUNT(*) as total_records,
     SUM(CASE WHEN f.line_of_business != 'Unknown' THEN 1 ELSE 0 END) as records_with_line_of_business,
@@ -194,51 +194,46 @@ GROUP BY f.date_sk;
 -- Cost Center Analysis View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cost_center_analysis AS
 SELECT 
-    f.date_sk,
-    COALESCE(f.cost_center, 'unallocated') as cost_center,
-    COALESCE(f.line_of_business, 'Unknown') as line_of_business,
-    COALESCE(f.department, 'unknown') as department,
+    f.date_key,
+    f.cost_center,
+    f.line_of_business,
+    f.department,
     COUNT(DISTINCT f.workspace_id) as active_workspaces,
     COUNT(DISTINCT f.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk, COALESCE(f.cost_center, 'unallocated'), 
-         COALESCE(f.line_of_business, 'Unknown'), COALESCE(f.department, 'unknown');
+GROUP BY f.date_key, f.cost_center, f.line_of_business, f.department;
 
 -- Workflow Hierarchy Cost Analysis
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_workflow_hierarchy_cost AS
 SELECT 
-    f.date_sk,
-    COALESCE(f.workflow_level, 'STANDALONE') as workflow_level,
-    COALESCE(f.parent_workflow_name, 'None') as parent_workflow_name,
-    COALESCE(f.cost_center, 'unallocated') as cost_center,
-    COALESCE(f.line_of_business, 'Unknown') as line_of_business,
+    f.date_key,
+    f.workflow_level,
+    f.parent_workflow_name,
+    f.cost_center,
+    f.line_of_business,
     COUNT(DISTINCT f.workspace_id) as active_workspaces,
     COUNT(DISTINCT f.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk, COALESCE(f.workflow_level, 'STANDALONE'), 
-         COALESCE(f.parent_workflow_name, 'None'), COALESCE(f.cost_center, 'unallocated'),
-         COALESCE(f.line_of_business, 'Unknown');
+GROUP BY f.date_key, f.workflow_level, f.parent_workflow_name, f.cost_center, f.line_of_business;
 
 -- Cluster Cost Attribution by Workflow
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cluster_workflow_cost AS
 SELECT 
-    f.date_sk,
-    COALESCE(f.cluster_identifier, 'Unknown') as cluster_identifier,
-    COALESCE(f.workflow_level, 'STANDALONE') as workflow_level,
-    COALESCE(f.parent_workflow_name, 'None') as parent_workflow_name,
-    COALESCE(f.cost_center, 'unallocated') as cost_center,
+    f.date_key,
+    f.cluster_identifier,
+    f.workflow_level,
+    f.parent_workflow_name,
+    f.cost_center,
     COUNT(DISTINCT f.workspace_id) as active_workspaces,
     COUNT(DISTINCT f.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk, COALESCE(f.cluster_identifier, 'Unknown'), 
-         COALESCE(f.workflow_level, 'STANDALONE'), COALESCE(f.parent_workflow_name, 'None'),
-         COALESCE(f.cost_center, 'unallocated');
+GROUP BY f.date_key, f.cluster_identifier, f.workflow_level, f.parent_workflow_name, f.cost_center;

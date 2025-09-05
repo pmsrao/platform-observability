@@ -1,13 +1,16 @@
 -- Processing Offset Tables for CDF and HWM Tracking
 -- This file creates tables for tracking processed data versions and offsets
 
--- CDF Processing Offsets Table
+-- CDF Processing Offsets Table (Task-based)
+-- Each task maintains its own processing state to avoid conflicts
 CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}._cdf_processing_offsets (
-    source_table STRING,
-    last_processed_version BIGINT,
-    last_processed_timestamp TIMESTAMP,
+    source_table STRING,                    -- Source table name (e.g., 'slv_usage_txn')
+    task_name STRING,                       -- Task name (e.g., 'task_gld_fact_usage_priced_day')
+    last_processed_version BIGINT,          -- Last processed Delta version
+    last_processed_timestamp TIMESTAMP,     -- Last processed timestamp
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-) USING DELTA;
+) USING DELTA
+PARTITIONED BY (source_table);
 
 -- Bronze High Water Mark Processing Offsets Table
 CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}._bronze_hwm_processing_offsets (

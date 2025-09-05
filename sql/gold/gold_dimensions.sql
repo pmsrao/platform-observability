@@ -4,9 +4,12 @@
 
 -- Workspace Dimension
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_workspace (
-    workspace_id BIGINT,
+    workspace_key BIGINT GENERATED ALWAYS AS IDENTITY,  -- Surrogate key
+    account_id STRING,
+    workspace_id STRING,                 -- Natural key (changed from BIGINT to STRING)
     workspace_name STRING,
     workspace_url STRING,
+    status STRING,
     region STRING,
     cloud STRING,
     created_time TIMESTAMP,
@@ -15,51 +18,108 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_workspace (
 USING DELTA
 PARTITIONED BY (cloud);
 
--- Entity Dimension
+-- Entity Dimension (SCD2)
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_entity (
-    workspace_id BIGINT,
+    entity_key BIGINT GENERATED ALWAYS AS IDENTITY,  -- Surrogate key
+    account_id STRING,
+    workspace_id STRING,                 -- Natural key (changed from BIGINT to STRING)
     entity_type STRING,
-    entity_id STRING,
+    entity_id STRING,                    -- Natural key
     name STRING,
+    description STRING,
+    creator_id STRING,
     run_as STRING,
     workspace_name STRING,
     workspace_url STRING,
     created_time TIMESTAMP,
-    updated_time TIMESTAMP
+    updated_time TIMESTAMP,
+    -- SCD2 columns
+    valid_from TIMESTAMP,                -- When this version became valid
+    valid_to TIMESTAMP,                  -- When this version became invalid (NULL for current)
+    is_current BOOLEAN DEFAULT TRUE      -- Flag for current version
 )
 USING DELTA
-PARTITIONED BY (entity_type, cloud);
+PARTITIONED BY (entity_type);
 
 -- SKU Dimension
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_sku (
+    sku_key BIGINT GENERATED ALWAYS AS IDENTITY,  -- Surrogate key
+    account_id STRING,
     cloud STRING,
-    sku_name STRING,
+    sku_name STRING,                    -- Natural key
     usage_unit STRING,
-    billing_origin_product STRING
+    currency_code STRING,
+    billing_origin_product STRING,
+    current_price_usd DECIMAL(38,18),
+    price_effective_date DATE
 )
 USING DELTA
 PARTITIONED BY (cloud);
 
 -- Run Status Dimension
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_run_status (
-    result_state STRING,
+    run_status_key BIGINT GENERATED ALWAYS AS IDENTITY,  -- Surrogate key
+    result_state STRING,                    -- Natural key
     termination_code STRING
 )
 USING DELTA;
 
+-- Cluster Dimension (SCD2)
+CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_cluster (
+    cluster_key BIGINT GENERATED ALWAYS AS IDENTITY,  -- Surrogate key
+    account_id STRING,
+    workspace_id STRING,                 -- Natural key
+    cluster_id STRING,                   -- Natural key
+    cluster_name STRING,
+    owned_by STRING,
+    create_time TIMESTAMP,
+    delete_time TIMESTAMP,
+    driver_node_type STRING,
+    worker_node_type STRING,
+    worker_count INT,
+    min_autoscale_workers INT,
+    max_autoscale_workers INT,
+    auto_termination_minutes INT,
+    enable_elastic_disk BOOLEAN,
+    cluster_source STRING,
+    init_scripts STRING,
+    aws_attributes STRUCT,
+    azure_attributes STRUCT,
+    gcp_attributes STRUCT,
+    driver_instance_pool_id STRING,
+    worker_instance_pool_id STRING,
+    dbr_version STRING,                  -- Databricks Runtime version
+    change_time TIMESTAMP,
+    change_date DATE,
+    data_security_mode STRING,
+    policy_id STRING,
+    worker_node_type_category STRING,    -- Categorized node type (General Purpose, Memory Optimized, etc.)
+    -- SCD2 columns
+    valid_from TIMESTAMP,                -- When this version became valid
+    valid_to TIMESTAMP,                  -- When this version became invalid (NULL for current)
+    is_current BOOLEAN DEFAULT TRUE      -- Flag for current version
+)
+USING DELTA
+PARTITIONED BY (cloud);
+
 -- Node Type Dimension
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_node_type (
-    node_type_id STRING,
-    node_type_name STRING,
+    node_type_key BIGINT GENERATED ALWAYS AS IDENTITY,  -- Surrogate key
+    account_id STRING,
+    node_type STRING,                    -- Natural key (renamed from node_type_id to match source)
+    core_count DOUBLE,                   -- Renamed from vcpus to match source
+    memory_mb BIGINT,                    -- Renamed from memory_gb and changed type
+    gpu_count BIGINT,                    -- Changed type to match source
     cloud STRING,
-    category STRING
+    category STRING,                     -- Node type category from Silver layer
+    worker_node_type_category STRING     -- Categorized node type (General Purpose, Memory Optimized, etc.)
 )
 USING DELTA
 PARTITIONED BY (cloud);
 
 -- Date Dimension (if not exists)
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_date (
-    date_sk INT,
+    date_key INT,                        -- Renamed from date_sk for consistency
     date DATE,
     year INT,
     month INT,

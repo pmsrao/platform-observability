@@ -68,7 +68,7 @@ def example_3_sql_operations():
     
     # Get parameterized SQL for bootstrap operations
     print("\n--- Bootstrap Operations ---")
-    bootstrap_ops = ["processing_offsets", "bronze_tables_bootstrap"]
+    bootstrap_ops = ["processing_offsets", "bronze_tables"]
     for op in bootstrap_ops:
         if op in operations:
             sql = sql_manager.parameterize_sql_with_catalog_schema(op)

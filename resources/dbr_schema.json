@@ -1,0 +1,240 @@
+{
+    "system.billing.usage": {
+      "columns": [
+        {"name": "record_id", "type": "string"},
+        {"name": "account_id", "type": "string"},
+        {"name": "workspace_id", "type": "string"},
+        {"name": "sku_name", "type": "string"},
+        {"name": "cloud", "type": "string"},
+        {"name": "usage_start_time", "type": "timestamp"},
+        {"name": "usage_end_time", "type": "timestamp"},
+        {"name": "usage_date", "type": "date"},
+        {"name": "custom_tags", "type": "map<string,string>"},
+        {"name": "usage_unit", "type": "string"},
+        {"name": "usage_quantity", "type": "decimal"},
+        {
+          "name": "usage_metadata",
+          "type": "struct",
+          "fields": [
+            {"name": "cluster_id", "type": "string"},
+            {"name": "job_id", "type": "string"},
+            {"name": "warehouse_id", "type": "string"},
+            {"name": "instance_pool_id", "type": "string"},
+            {"name": "node_type", "type": "string"},
+            {"name": "job_run_id", "type": "string"},
+            {"name": "notebook_id", "type": "string"},
+            {"name": "dlt_pipeline_id", "type": "string"},
+            {"name": "endpoint_name", "type": "string"},
+            {"name": "endpoint_id", "type": "string"},
+            {"name": "dlt_update_id", "type": "string"},
+            {"name": "dlt_maintenance_id", "type": "string"},
+            {"name": "metastore_id", "type": "string"},
+            {"name": "run_name", "type": "string"},
+            {"name": "job_name", "type": "string"},
+            {"name": "notebook_path", "type": "string"},
+            {"name": "central_clean_room_id", "type": "string"},
+            {"name": "source_region", "type": "string"},
+            {"name": "destination_region", "type": "string"},
+            {"name": "app_id", "type": "string"},
+            {"name": "app_name", "type": "string"},
+            {"name": "private_endpoint_name", "type": "string"},
+            {"name": "budget_policy_id", "type": "string"}
+          ]
+        },
+        {
+          "name": "identity_metadata",
+          "type": "struct",
+          "fields": [
+            {"name": "run_as", "type": "string"},
+            {"name": "owned_by", "type": "string"},
+            {"name": "created_by", "type": "string"}
+          ]
+        },
+        {"name": "record_type", "type": "string"},
+        {"name": "ingestion_date", "type": "date"},
+        {"name": "billing_origin_product", "type": "string"},
+        {
+          "name": "product_features",
+          "type": "struct",
+          "fields": [
+            {"name": "jobs_tier", "type": "string"},
+            {"name": "sql_tier", "type": "string"},
+            {"name": "dlt_tier", "type": "string"},
+            {"name": "is_serverless", "type": "boolean"},
+            {"name": "is_photon", "type": "boolean"},
+            {"name": "serving_type", "type": "string"},
+            {"name": "offering_type", "type": "string"},
+            {
+              "name": "networking",
+              "type": "struct",
+              "fields": [
+                {"name": "connectivity_type", "type": "string"}
+              ]
+            }
+          ]
+        },
+        {"name": "usage_type", "type": "string"}
+      ]
+    },
+  
+    "system.billing.list_prices": {
+      "columns": [
+        {"name": "price_start_time", "type": "timestamp"},
+        {"name": "price_end_time", "type": "timestamp"},
+        {"name": "account_id", "type": "string"},
+        {"name": "sku_name", "type": "string"},
+        {"name": "cloud", "type": "string"},
+        {"name": "currency_code", "type": "string"},
+        {"name": "usage_unit", "type": "string"},
+        {
+          "name": "pricing",
+          "type": "struct",
+          "fields": [
+            {"name": "default", "type": "decimal"},
+            {
+              "name": "promotional",
+              "type": "struct",
+              "fields": [{"name": "default", "type": "decimal"}]
+            },
+            {
+              "name": "effective_list",
+              "type": "struct",
+              "fields": [{"name": "default", "type": "decimal"}]
+            }
+          ]
+        }
+      ]
+    },
+  
+    "system.lakeflow.job_run_timeline": {
+      "columns": [
+        {"name": "account_id", "type": "string"},
+        {"name": "workspace_id", "type": "string"},
+        {"name": "job_id", "type": "string"},
+        {"name": "run_id", "type": "string"},
+        {"name": "period_start_time", "type": "timestamp"},
+        {"name": "period_end_time", "type": "timestamp"},
+        {"name": "trigger_type", "type": "string"},
+        {"name": "run_type", "type": "string"},
+        {"name": "run_name", "type": "string"},
+        {"name": "compute_ids", "type": "array<string>"},
+        {"name": "result_state", "type": "string"},
+        {"name": "termination_code", "type": "string"},
+        {"name": "job_parameters", "type": "map<string,string>"}
+      ]
+    },
+  
+    "system.lakeflow.job_task_run_timeline": {
+      "columns": [
+        {"name": "account_id", "type": "string"},
+        {"name": "workspace_id", "type": "string"},
+        {"name": "job_id", "type": "string"},
+        {"name": "run_id", "type": "string"},
+        {"name": "job_run_id", "type": "string"},
+        {"name": "parent_run_id", "type": "string"},
+        {"name": "period_start_time", "type": "timestamp"},
+        {"name": "period_end_time", "type": "timestamp"},
+        {"name": "task_key", "type": "string"},
+        {"name": "compute_ids", "type": "array<string>"},
+        {"name": "result_state", "type": "string"},
+        {"name": "termination_code", "type": "string"}
+      ]
+    },
+  
+    "system.lakeflow.jobs": {
+      "columns": [
+        {"name": "account_id", "type": "string"},
+        {"name": "workspace_id", "type": "string"},
+        {"name": "job_id", "type": "string"},
+        {"name": "name", "type": "string"},
+        {"name": "description", "type": "string"},
+        {"name": "creator_id", "type": "string"},
+        {"name": "tags", "type": "map<string,string>"},
+        {"name": "change_time", "type": "timestamp"},
+        {"name": "delete_time", "type": "timestamp"},
+        {"name": "run_as", "type": "string"}
+      ]
+    },
+  
+    "system.lakeflow.pipelines": {
+      "columns": [
+        {"name": "account_id", "type": "string"},
+        {"name": "workspace_id", "type": "string"},
+        {"name": "pipeline_id", "type": "string"},
+        {"name": "pipeline_type", "type": "string"},
+        {"name": "name", "type": "string"},
+        {"name": "created_by", "type": "string"},
+        {"name": "run_as", "type": "string"},
+        {"name": "tags", "type": "map<string,string>"},
+        {
+          "name": "settings",
+          "type": "struct",
+          "fields": [
+            {"name": "photon", "type": "boolean"},
+            {"name": "development", "type": "boolean"},
+            {"name": "continuous", "type": "boolean"},
+            {"name": "serverless", "type": "boolean"},
+            {"name": "edition", "type": "string"},
+            {"name": "channel", "type": "string"}
+          ]
+        },
+        {"name": "configuration", "type": "map<string,string>"},
+        {"name": "change_time", "type": "timestamp"},
+        {"name": "delete_time", "type": "timestamp"}
+      ]
+    },
+  
+    "system.access.workspaces_latest": {
+      "columns": [
+        {"name": "account_id", "type": "string"},
+        {"name": "workspace_id", "type": "string"},
+        {"name": "workspace_name", "type": "string"},
+        {"name": "workspace_url", "type": "string"},
+        {"name": "create_time", "type": "timestamp"},
+        {"name": "status", "type": "string"}
+      ]
+    },
+  
+    "system.compute.clusters": {
+      "columns": [
+        {"name": "account_id", "type": "string"},
+        {"name": "workspace_id", "type": "string"},
+        {"name": "cluster_id", "type": "string"},
+        {"name": "cluster_name", "type": "string"},
+        {"name": "owned_by", "type": "string"},
+        {"name": "create_time", "type": "timestamp"},
+        {"name": "delete_time", "type": "timestamp"},
+        {"name": "driver_node_type", "type": "string"},
+        {"name": "worker_node_type", "type": "string"},
+        {"name": "worker_count", "type": "bigint"},
+        {"name": "min_autoscale_workers", "type": "bigint"},
+        {"name": "max_autoscale_workers", "type": "bigint"},
+        {"name": "auto_termination_minutes", "type": "bigint"},
+        {"name": "enable_elastic_disk", "type": "boolean"},
+        {"name": "tags", "type": "map<string,string>"},
+        {"name": "cluster_source", "type": "string"},
+        {"name": "init_scripts", "type": "array<string>"},
+        {"name": "aws_attributes", "type": "struct"},
+        {"name": "azure_attributes", "type": "struct"},
+        {"name": "gcp_attributes", "type": "struct"},
+        {"name": "driver_instance_pool_id", "type": "string"},
+        {"name": "worker_instance_pool_id", "type": "string"},
+        {"name": "dbr_version", "type": "string"},
+        {"name": "change_time", "type": "timestamp"},
+        {"name": "change_date", "type": "date"},
+        {"name": "data_security_mode", "type": "string"},
+        {"name": "policy_id", "type": "string"}
+      ]
+    },
+  
+    "system.compute.node_types": {
+      "columns": [
+        {"name": "account_id", "type": "string"},
+        {"name": "node_type", "type": "string"},
+        {"name": "core_count", "type": "double"},
+        {"name": "memory_mb", "type": "long"},
+        {"name": "gpu_count", "type": "long"}
+      ]
+    }
+  }
+  

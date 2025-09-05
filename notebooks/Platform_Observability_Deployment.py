@@ -468,10 +468,10 @@ except Exception as e:
 # MAGIC 
 # MAGIC ### 📚 Documentation
 # MAGIC 
-# MAGIC - **Deployment Guide**: `docs/05-deployment.md`
-# MAGIC - **Recent Changes**: `docs/13-recent-changes-summary.md`
-# MAGIC - **Data Dictionary**: `docs/09-data-dictionary.md`
-# MAGIC - **Use Cases**: `docs/10-insights-and-use-cases.md`
+# MAGIC - **Deployment Guide**: `docs/11-deployment.md`
+# MAGIC - **Recent Changes**: `docs/10-recent-changes-summary.md`
+# MAGIC - **Data Dictionary**: `docs/04-data-dictionary.md`
+# MAGIC - **Use Cases**: `docs/07-insights-and-use-cases.md`
 # MAGIC 
 # MAGIC ### 🚀 Next Steps
 # MAGIC 
@@ -493,9 +493,9 @@ except Exception as e:
 # MAGIC 
 # MAGIC ### 📚 Documentation
 # MAGIC 
-# MAGIC - **Deployment Guide**: `docs/05-deployment.md`
-# MAGIC - **Recent Changes**: `docs/13-recent-changes-summary.md`
-# MAGIC - **Data Dictionary**: `docs/09-data-dictionary.md`
-# MAGIC - **Use Cases**: `docs/10-insights-and-use-cases.md`
+# MAGIC - **Deployment Guide**: `docs/11-deployment.md`
+# MAGIC - **Recent Changes**: `docs/10-recent-changes-summary.md`
+# MAGIC - **Data Dictionary**: `docs/04-data-dictionary.md`
+# MAGIC - **Use Cases**: `docs/07-insights-and-use-cases.md`
 
 # COMMAND ----------

@@ -90,7 +90,7 @@ parameterizer.bootstrap_bronze_tables()
 ```
 
 **What it creates:**
-- `bronze/bronze_tables_bootstrap.sql` - All Bronze tables with CDF enabled
+- `bronze/bronze_tables.sql` - All Bronze tables with CDF enabled
 - Tables for billing, lakeflow, compute, and access data
 
 #### 3.2.2 Deploy Bronze HWM Ingest Job
@@ -311,12 +311,11 @@ print("Available operations:", operations)
 
 - [01-overview.md](01-overview.md) - Solution overview and architecture
 - [03-parameterization.md](03-parameterization.md) - Configuration and SQL management
-- [09-data-dictionary.md](09-data-dictionary.md) - Complete data model documentation
-- [12-hwm-migration-guide.md](12-hwm-migration-guide.md) - HWM migration guide
-- [14-scd2-implementation-guide.md](14-scd2-implementation-guide.md) - SCD2 implementation guide
-- [15-scd2-implementation-summary.md](15-scd2-implementation-summary.md) - SCD2 implementation summary
-- [05-deployment.md](05-deployment.md) - Production deployment and workflow setup
-- [06-improvements.md](06-improvements.md) - Future enhancements and roadmap
+- [04-data-dictionary.md](04-data-dictionary.md) - Complete data model documentation
+- [08-scd2-temporal-join-example.md](08-scd2-temporal-join-example.md) - SCD2 implementation guide
+- [09-task-based-processing.md](09-task-based-processing.md) - Task-based processing guide
+- [10-recent-changes-summary.md](10-recent-changes-summary.md) - Recent changes and migration summary
+- [11-deployment.md](11-deployment.md) - Production deployment and workflow setup
 
 ## Next Steps
 

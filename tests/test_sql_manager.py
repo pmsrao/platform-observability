@@ -31,7 +31,7 @@ class TestSQLManager(unittest.TestCase):
         # Check for expected operations
         expected_operations = [
             'config/bootstrap_catalog_schemas',
-            'bronze/bronze_tables_bootstrap',
+            'bronze/bronze_tables',
             'silver/silver_tables',
             'gold/gold_dimensions'
         ]
@@ -43,7 +43,7 @@ class TestSQLManager(unittest.TestCase):
         """Test getting SQL file paths with explicit folder paths"""
         test_cases = [
             ('config/bootstrap_catalog_schemas', 'sql/config/bootstrap_catalog_schemas.sql'),
-            ('bronze/bronze_tables_bootstrap', 'sql/bronze/bronze_tables_bootstrap.sql'),
+            ('bronze/bronze_tables', 'sql/bronze/bronze_tables.sql'),
             ('silver/silver_tables', 'sql/silver/silver_tables.sql'),
             ('gold/gold_dimensions', 'sql/gold/gold_dimensions.sql'),
             ('bronze/operations/upsert_billing_usage', 'sql/bronze/operations/upsert_billing_usage.sql')

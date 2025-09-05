@@ -49,7 +49,7 @@ if workspace_libs_path not in sys.path:
     sys.path.append(workspace_libs_path)
 
 from config import Config
-from processing_state import get_last_processed_timestamp, commit_processing_state
+from processing_state import get_last_processed_timestamp, commit_processing_state, get_task_name
 from tag_processor import TagProcessor
 from logging import StructuredLogger
 from error_handling import validate_data_quality
@@ -87,6 +87,10 @@ def get_bronze_table_name(table_name: str) -> str:
 def get_silver_table_name(table_name: str) -> str:
     """Get full Silver table name"""
     return f"{config.catalog}.{config.silver_schema}.{table_name}"
+
+def get_silver_task_name(table_name: str) -> str:
+    """Get standardized task name for Silver layer table"""
+    return get_task_name(table_name)
 
 def read_bronze_since_timestamp(spark, table_name: str, last_timestamp: Optional[datetime]) -> 'DataFrame':
     """Read data from Bronze table since last timestamp using CDF"""
@@ -144,7 +148,8 @@ def build_silver_workspace(spark) -> bool:
     
     try:
         # Get last processed timestamp
-        last_ts = get_last_processed_timestamp(spark, "silver_workspace")
+        task_name = get_silver_task_name("slv_workspace")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_workspace", task_name, "silver")
         
         # Read new data from Bronze
         df = read_bronze_since_timestamp(spark, "brz_access_workspaces_latest", last_ts)
@@ -176,7 +181,8 @@ def build_silver_workspace(spark) -> bool:
         # Update processing state
         max_ts = get_max_timestamp(df)
         if max_ts:
-            commit_processing_state(spark, "silver_workspace", max_ts)
+            task_name = get_silver_task_name("slv_workspace")
+            commit_processing_state(spark, "slv_workspace", max_ts, task_name=task_name, layer="silver")
         
         logger.info(f"Successfully built Silver workspace table with {transformed_df.count()} records")
         return True
@@ -191,7 +197,8 @@ def build_silver_entity_latest(spark) -> bool:
     
     try:
         # Get last processed timestamp
-        last_ts = get_last_processed_timestamp(spark, "silver_entity_latest")
+        task_name = get_silver_task_name("slv_entity_latest")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_entity_latest", task_name, "silver")
         
         # Read new data from Bronze
         df = read_bronze_since_timestamp(spark, "brz_lakeflow_jobs", last_ts)
@@ -222,7 +229,8 @@ def build_silver_entity_latest(spark) -> bool:
         # Update processing state
         max_ts = get_max_timestamp(df)
         if max_ts:
-            commit_processing_state(spark, "silver_entity_latest", max_ts)
+            task_name = get_silver_task_name("slv_entity_latest")
+            commit_processing_state(spark, "slv_entity_latest", max_ts, task_name=task_name, layer="silver")
         
         logger.info(f"Successfully built Silver entity latest view with {transformed_df.count()} records")
         return True
@@ -237,7 +245,8 @@ def build_silver_clusters(spark) -> bool:
     
     try:
         # Get last processed timestamp
-        last_ts = get_last_processed_timestamp(spark, "silver_clusters")
+        task_name = get_silver_task_name("slv_clusters")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_clusters", task_name, "silver")
         
         # Read new data from Bronze
         df = read_bronze_since_timestamp(spark, "brz_compute_clusters", last_ts)
@@ -251,21 +260,42 @@ def build_silver_clusters(spark) -> bool:
             logger.error("Data validation failed for Silver clusters table")
             return False
         
-        # Transform data with SCD2 logic
+        # Transform data with SCD2 logic and new schema
         transformed_df = df.select(
-            df.cluster_id,
+            df.account_id,
             df.workspace_id,
+            df.cluster_id,
             df.cluster_name,
-            df.spark_version,
+            df.owned_by,
+            df.create_time,
+            df.delete_time,
+            df.driver_node_type,
+            df.worker_node_type,
+            df.worker_count,
+            df.min_autoscale_workers,
+            df.max_autoscale_workers,
+            df.auto_termination_minutes,
+            df.enable_elastic_disk,
+            df.tags,
             df.cluster_source,
-            df.node_type_id,
-            df.driver_node_type_id,
-            df.creator,
-            df.created_time,
-            df.updated_time
-        ).withColumn("valid_from", df.created_time) \
+            df.init_scripts,
+            df.aws_attributes,
+            df.azure_attributes,
+            df.gcp_attributes,
+            df.driver_instance_pool_id,
+            df.worker_instance_pool_id,
+            df.dbr_version,
+            df.change_time,
+            df.change_date,
+            df.data_security_mode,
+            df.policy_id
+        ).withColumn("valid_from", df.change_time) \
          .withColumn("valid_to", F.lit(None)) \
          .withColumn("is_current", F.lit(True))
+        
+        # Add worker node type category
+        tag_processor = TagProcessor()
+        transformed_df = tag_processor.add_worker_node_type_category(transformed_df)
         
         # Write to Silver table
         silver_table = get_silver_table_name("slv_clusters")
@@ -274,7 +304,8 @@ def build_silver_clusters(spark) -> bool:
         # Update processing state
         max_ts = get_max_timestamp(df)
         if max_ts:
-            commit_processing_state(spark, "silver_clusters", max_ts)
+            task_name = get_silver_task_name("slv_clusters")
+            commit_processing_state(spark, "slv_clusters", max_ts, task_name=task_name, layer="silver")
         
         logger.info(f"Successfully built Silver clusters table with {transformed_df.count()} records")
         return True
@@ -289,7 +320,8 @@ def build_silver_usage_txn(spark) -> bool:
     
     try:
         # Get last processed timestamp
-        last_ts = get_last_processed_timestamp(spark, "silver_usage_txn")
+        task_name = get_silver_task_name("slv_usage_txn")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_usage_txn", task_name, "silver")
         
         # Read new data from Bronze
         df = read_bronze_since_timestamp(spark, "brz_billing_usage", last_ts)
@@ -303,26 +335,37 @@ def build_silver_usage_txn(spark) -> bool:
             logger.error("Data validation failed for Silver usage transaction table")
             return False
         
-        # Transform data
+        # Transform data with all required columns
         transformed_df = df.select(
+            df.record_id,
+            df.account_id,
             df.workspace_id,
-            df.entity_type,
-            df.entity_id,
             df.cloud,
             df.sku_name,
             df.usage_unit,
-            df.usage_quantity,
-            df.list_cost_usd,
-            df.duration_hours,
             df.usage_start_time,
             df.usage_end_time,
+            df.usage_date,
+            df.custom_tags,
+            df.usage_quantity,
+            df.usage_metadata,
+            df.identity_metadata,
+            df.record_type,
+            df.ingestion_date,
+            df.billing_origin_product,
+            df.product_features,
+            df.usage_type,
+            df.entity_type,
+            df.entity_id,
+            df.job_run_id,
             df.date_sk,
-            df.run_id
+            df.list_cost_usd,
+            df.duration_hours
         )
         
-        # Enrich with tags
+        # Enrich with tags and normalize
         tag_processor = TagProcessor()
-        enriched_df = tag_processor.enrich_workflow_hierarchy(transformed_df)
+        enriched_df = tag_processor.enrich_usage(transformed_df)
         
         # Write to Silver table
         silver_table = get_silver_table_name("slv_usage_txn")
@@ -331,7 +374,8 @@ def build_silver_usage_txn(spark) -> bool:
         # Update processing state
         max_ts = get_max_timestamp(df)
         if max_ts:
-            commit_processing_state(spark, "silver_usage_txn", max_ts)
+            task_name = get_silver_task_name("slv_usage_txn")
+            commit_processing_state(spark, "slv_usage_txn", max_ts, task_name=task_name, layer="silver")
         
         logger.info(f"Successfully built Silver usage transaction table with {enriched_df.count()} records")
         return True
@@ -346,7 +390,8 @@ def build_silver_job_run_timeline(spark) -> bool:
     
     try:
         # Get last processed timestamp
-        last_ts = get_last_processed_timestamp(spark, "silver_job_run_timeline")
+        task_name = get_silver_task_name("slv_job_run_timeline")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_job_run_timeline", task_name, "silver")
         
         # Read new data from Bronze
         df = read_bronze_since_timestamp(spark, "brz_lakeflow_job_run_timeline", last_ts)
@@ -380,7 +425,8 @@ def build_silver_job_run_timeline(spark) -> bool:
         # Update processing state
         max_ts = get_max_timestamp(df)
         if max_ts:
-            commit_processing_state(spark, "silver_job_run_timeline", max_ts)
+            task_name = get_silver_task_name("slv_job_run_timeline")
+            commit_processing_state(spark, "slv_job_run_timeline", max_ts, task_name=task_name, layer="silver")
         
         logger.info(f"Successfully built Silver job run timeline table with {transformed_df.count()} records")
         return True
@@ -395,7 +441,8 @@ def build_silver_job_task_run_timeline(spark) -> bool:
     
     try:
         # Get last processed timestamp
-        last_ts = get_last_processed_timestamp(spark, "silver_job_task_run_timeline")
+        task_name = get_silver_task_name("slv_job_task_run_timeline")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_job_task_run_timeline", task_name, "silver")
         
         # Read new data from Bronze
         df = read_bronze_since_timestamp(spark, "brz_lakeflow_job_task_run_timeline", last_ts)
@@ -432,7 +479,8 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         # Update processing state
         max_ts = get_max_timestamp(df)
         if max_ts:
-            commit_processing_state(spark, "silver_job_task_run_timeline", max_ts)
+            task_name = get_silver_task_name("slv_job_task_run_timeline")
+            commit_processing_state(spark, "slv_job_task_run_timeline", max_ts, task_name=task_name, layer="silver")
         
         logger.info(f"Successfully built Silver job task run timeline table with {transformed_df.count()} records")
         return True

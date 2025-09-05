@@ -48,7 +48,7 @@ class SQLParameterizer:
     def bootstrap_bronze_tables(self) -> None:
         """Bootstrap bronze tables with CDF enabled"""
         print("Bootstrapping bronze tables...")
-        self.execute_bootstrap_sql("bronze/bronze_tables_bootstrap")
+        self.execute_bootstrap_sql("bronze/bronze_tables")
         print("✅ Bronze tables created successfully")
     
     def create_processing_state(self) -> None:

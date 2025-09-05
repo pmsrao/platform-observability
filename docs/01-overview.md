@@ -115,6 +115,5 @@ platform_observability.plt_bronze.*  ──────────────�
 
 - [02-getting-started.md](02-getting-started.md) - Step-by-step deployment guide
 - [03-parameterization.md](03-parameterization.md) - Configuration and SQL management
-- [09-data-dictionary.md](09-data-dictionary.md) - Complete data model documentation
-- [05-deployment.md](05-deployment.md) - Production deployment and workflow setup
-- [06-improvements.md](06-improvements.md) - Future enhancements and roadmap
+- [04-data-dictionary.md](04-data-dictionary.md) - Complete data model documentation
+- [11-deployment.md](11-deployment.md) - Production deployment and workflow setup

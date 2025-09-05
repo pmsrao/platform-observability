@@ -57,7 +57,7 @@ platform-observability/
 │  │  ├─ processing_offsets.sql                # CDF and HWM processing offsets
 │  │  └─ performance_optimizations.sql         # Performance tuning & optimizations
 │  ├─ bronze/                                  # Bronze layer DDL
-│  │  └─ bronze_tables_bootstrap.sql           # Bronze tables with CDF enabled
+│  │  └─ bronze_tables.sql           # Bronze tables with CDF enabled
 │  ├─ silver/                                  # Silver layer DDL
 │  │  └─ silver_tables.sql                     # Silver tables (SCD2)
 │  └─ gold/                                    # Gold layer DDL and views
@@ -77,13 +77,13 @@ platform-observability/
 │  ├─ error_handling.py                        # 🆕 Error handling & data quality validation
 │  ├─ monitoring.py                            # 🆕 Monitoring & alerting system
 │  └─ sql_manager.py                           # 🆕 SQL file management utility
-├─ pipelines/
-│  └─ (Legacy DLT pipelines - replaced by HWM jobs)
 ├─ notebooks/
-│  └─ bronze_hwm_ingest_job.py                 # 🆕 Enhanced Bronze ingest Job with monitoring
+│  ├─ bronze_hwm_ingest_job.py                 # 🆕 Enhanced Bronze ingest Job with monitoring
+│  ├─ silver_hwm_build_job.py                  # 🆕 Silver layer HWM build job
+│  ├─ gold_hwm_build_job.py                    # 🆕 Gold layer HWM build job
+│  └─ platform_observability_deployment.py    # 🆕 Main deployment notebook
 ├─ jobs/
-│  ├─ workflow_bronze_job_plus_dlt.json        # Daily workflow: Bronze Job -> DLT
-│  └─ daily_observability_workflow.json        # (optional) legacy DLT-only workflow
+│  └─ daily_observability_workflow.json        # Daily workflow configuration
 ├─ tests/                                       # 🆕 Comprehensive test suite
 │  ├─ test_config.py                           # Configuration tests
 │  ├─ test_logging.py                          # Logging & monitoring tests
@@ -162,7 +162,7 @@ pip install -r requirements.txt
 RUN sql/config/processing_offsets.sql
 
 -- 2. Bootstrap Bronze tables
-RUN sql/bronze/bronze_tables_bootstrap.sql
+RUN sql/bronze/bronze_tables.sql
 
 -- 3. Create Silver tables
 RUN sql/silver/silver_tables.sql

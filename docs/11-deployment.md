@@ -730,11 +730,10 @@ print(processing_state.show())
 - [01-overview.md](01-overview.md) - Solution overview and architecture
 - [02-getting-started.md](02-getting-started.md) - Step-by-step deployment guide
 - [03-parameterization.md](03-parameterization.md) - Configuration and SQL management
-- [09-data-dictionary.md](09-data-dictionary.md) - Complete data model documentation
-- [12-hwm-migration-guide.md](12-hwm-migration-guide.md) - HWM migration guide
-- [14-scd2-implementation-guide.md](14-scd2-implementation-guide.md) - SCD2 implementation guide
-- [15-scd2-implementation-summary.md](15-scd2-implementation-summary.md) - SCD2 implementation summary
-- [06-improvements.md](06-improvements.md) - Future enhancements and roadmap
+- [04-data-dictionary.md](04-data-dictionary.md) - Complete data model documentation
+- [08-scd2-temporal-join-example.md](08-scd2-temporal-join-example.md) - SCD2 implementation guide
+- [09-task-based-processing.md](09-task-based-processing.md) - Task-based processing guide
+- [10-recent-changes-summary.md](10-recent-changes-summary.md) - Recent changes and migration summary
 
 ## Next Steps
 

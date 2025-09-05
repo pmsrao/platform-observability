@@ -13,7 +13,7 @@ class SQLManager:
     
     def get_sql_file_path(self, operation: str) -> Path:
         """Get the full path to a SQL file using explicit path"""
-        # Handle explicit paths (e.g., "config/bootstrap_catalog_schemas", "bronze/bronze_tables_bootstrap")
+        # Handle explicit paths (e.g., "config/bootstrap_catalog_schemas", "bronze/bronze_tables")
         if "/" in operation:
             # Explicit path provided
             sql_file_path = self.sql_directory / f"{operation}.sql"

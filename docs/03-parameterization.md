@@ -85,7 +85,7 @@ sql/
 │   ├── bookmarks.sql
 │   └── performance_optimizations.sql
 ├── bronze/                    # Bronze layer operations
-│   ├── bronze_tables_bootstrap.sql
+│   ├── bronze_tables.sql
 │   └── operations/            # Individual upsert operations
 │       ├── upsert_billing_usage.sql
 │       ├── upsert_lakeflow_jobs.sql
@@ -105,7 +105,7 @@ sql/
 SQL files use placeholders that are automatically replaced:
 
 ```sql
--- Example: sql/bronze/bronze_tables_bootstrap.sql
+-- Example: sql/bronze/bronze_tables.sql
 CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.bronze_sys_billing_usage_raw (
     workspace_id BIGINT,
     cloud STRING,
@@ -156,7 +156,7 @@ print(f"Billing table: {billing_table}")
 from libs.sql_manager import sql_manager
 
 # Execute parameterized SQL
-sql = sql_manager.parameterize_sql_with_catalog_schema("bronze/bronze_tables_bootstrap")
+sql = sql_manager.parameterize_sql_with_catalog_schema("bronze/bronze_tables")
 spark.sql(sql)
 
 # Get available operations
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS platform_observability.plt_bronze.bronze_sys_billing_
 ```python
 # New way - externalized SQL
 from libs.sql_manager import sql_manager
-sql = sql_manager.parameterize_sql_with_catalog_schema("bronze/bronze_tables_bootstrap")
+sql = sql_manager.parameterize_sql_with_catalog_schema("bronze/bronze_tables")
 ```
 
 ### 5.3 Testing Configuration
@@ -257,9 +257,8 @@ for env in environments:
 
 - [01-overview.md](01-overview.md) - Solution overview and architecture
 - [02-getting-started.md](02-getting-started.md) - Step-by-step deployment guide
-- [09-data-dictionary.md](09-data-dictionary.md) - Complete data model documentation
-- [05-deployment.md](05-deployment.md) - Production deployment and workflow setup
-- [06-improvements.md](06-improvements.md) - Future enhancements and roadmap
+- [04-data-dictionary.md](04-data-dictionary.md) - Complete data model documentation
+- [11-deployment.md](11-deployment.md) - Production deployment and workflow setup
 
 ## Troubleshooting
 

@@ -41,36 +41,16 @@ class DataQualityMonitor:
         self._register_default_rules()
     
     def _register_default_rules(self):
-        """Register default data quality rules"""
+        """Register default data quality rules - these are generic rules that apply to all tables"""
         
-        # Non-negative quantity rule
+        # Generic required fields rule (workspace_id is common to all tables)
         self.add_rule(DataQualityRule(
-            name="non_negative_quantity",
-            description="Usage quantity should be non-negative",
-            rule_type="expectation",
-            severity="error",
-            rule_function=self._check_non_negative_quantity,
-            parameters={"column": "usage_quantity"}
-        ))
-        
-        # Valid time range rule
-        self.add_rule(DataQualityRule(
-            name="valid_time_range",
-            description="End time should be after start time",
-            rule_type="expectation", 
-            severity="error",
-            rule_function=self._check_valid_time_range,
-            parameters={"start_col": "usage_start_time", "end_col": "usage_end_time"}
-        ))
-        
-        # Required fields rule
-        self.add_rule(DataQualityRule(
-            name="required_fields",
-            description="Required fields should not be null",
+            name="required_workspace_id",
+            description="Workspace ID should not be null",
             rule_type="validation",
             severity="error",
             rule_function=self._check_required_fields,
-            parameters={"required_columns": ["workspace_id", "sku_name", "usage_quantity"]}
+            parameters={"required_columns": ["workspace_id"]}
         ))
         
         # Data freshness rule
@@ -99,7 +79,11 @@ class DataQualityMonitor:
         results = []
         monitor = PerformanceMonitor(self.logger)
         
-        for rule_name, rule in self.rules.items():
+        # Add entity-specific rules based on table name
+        entity_specific_rules = self._get_entity_specific_rules(table_name)
+        all_rules = {**self.rules, **entity_specific_rules}
+        
+        for rule_name, rule in all_rules.items():
             try:
                 operation_id = monitor.start_operation(f"dq_validation_{rule_name}")
                 
@@ -151,6 +135,81 @@ class DataQualityMonitor:
         
         self.results.extend(results)
         return results
+    
+    def _get_entity_specific_rules(self, table_name: str) -> Dict[str, DataQualityRule]:
+        """Get entity-specific validation rules based on table name"""
+        entity_rules = {}
+        
+        # Billing usage specific rules
+        if "billing_usage" in table_name.lower():
+            entity_rules["non_negative_quantity"] = DataQualityRule(
+                name="non_negative_quantity",
+                description="Usage quantity should be non-negative",
+                rule_type="expectation",
+                severity="error",
+                rule_function=self._check_non_negative_quantity,
+                parameters={"column": "usage_quantity"}
+            )
+            
+            entity_rules["valid_time_range"] = DataQualityRule(
+                name="valid_time_range",
+                description="End time should be after start time",
+                rule_type="expectation", 
+                severity="error",
+                rule_function=self._check_valid_time_range,
+                parameters={"start_col": "usage_start_time", "end_col": "usage_end_time"}
+            )
+            
+            entity_rules["required_billing_fields"] = DataQualityRule(
+                name="required_billing_fields",
+                description="Required billing fields should not be null",
+                rule_type="validation",
+                severity="error",
+                rule_function=self._check_required_fields,
+                parameters={"required_columns": ["sku_name", "usage_quantity", "usage_start_time", "usage_end_time"]}
+            )
+        
+        # Job run timeline specific rules
+        elif "job_run_timeline" in table_name.lower():
+            entity_rules["valid_timeline_range"] = DataQualityRule(
+                name="valid_timeline_range",
+                description="Period end time should be after start time",
+                rule_type="expectation", 
+                severity="error",
+                rule_function=self._check_valid_time_range,
+                parameters={"start_col": "period_start_time", "end_col": "period_end_time"}
+            )
+            
+            entity_rules["required_timeline_fields"] = DataQualityRule(
+                name="required_timeline_fields",
+                description="Required timeline fields should not be null",
+                rule_type="validation",
+                severity="error",
+                rule_function=self._check_required_fields,
+                parameters={"required_columns": ["job_id", "run_id", "period_start_time", "period_end_time"]}
+            )
+        
+        # Compute clusters specific rules
+        elif "compute_clusters" in table_name.lower():
+            entity_rules["valid_cluster_config"] = DataQualityRule(
+                name="valid_cluster_config",
+                description="Cluster configuration should be valid",
+                rule_type="validation",
+                severity="error",
+                rule_function=self._check_cluster_config,
+                parameters={}
+            )
+            
+            entity_rules["required_cluster_fields"] = DataQualityRule(
+                name="required_cluster_fields",
+                description="Required cluster fields should not be null",
+                rule_type="validation",
+                severity="error",
+                rule_function=self._check_required_fields,
+                parameters={"required_columns": ["cluster_id", "cluster_name", "cluster_type"]}
+            )
+        
+        return entity_rules
     
     def _check_non_negative_quantity(self, df: DataFrame, params: Dict[str, Any]) -> DataQualityResult:
         """Check if quantity column has non-negative values"""
@@ -224,6 +283,33 @@ class DataQualityMonitor:
             rule_name="data_freshness",
             passed=failed_count == 0,
             message=f"Data freshness check completed",
+            records_checked=total_count,
+            records_failed=failed_count,
+            records_passed=passed_count
+        )
+    
+    def _check_cluster_config(self, df: DataFrame, params: Dict[str, Any]) -> DataQualityResult:
+        """Check if cluster configuration is valid"""
+        total_count = df.count()
+        failed_count = 0
+        
+        # Check if min_workers <= max_workers
+        if "min_workers" in df.columns and "max_workers" in df.columns:
+            invalid_config = df.filter(col("min_workers") > col("max_workers")).count()
+            failed_count += invalid_config
+        
+        # Check if cluster_type is valid
+        if "cluster_type" in df.columns:
+            valid_types = ["JOB_CLUSTER", "ALL_PURPOSE"]
+            invalid_type = df.filter(~col("cluster_type").isin(valid_types)).count()
+            failed_count += invalid_type
+        
+        passed_count = total_count - failed_count
+        
+        return DataQualityResult(
+            rule_name="valid_cluster_config",
+            passed=failed_count == 0,
+            message=f"Found {failed_count} records with invalid cluster configuration",
             records_checked=total_count,
             records_failed=failed_count,
             records_passed=passed_count

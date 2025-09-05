@@ -7,7 +7,7 @@ This folder contains all Bronze layer SQL operations for the Platform Observabil
 ```
 bronze/
 ├── README.md                           # This file
-├── bronze_tables_bootstrap.sql         # Initial table creation with CDF enabled
+├── bronze_tables.sql         # Initial table creation with CDF enabled
 └── operations/                         # Individual upsert operations
     ├── upsert_billing_usage.sql        # Billing usage data ingestion
     ├── upsert_list_prices.sql          # Pricing data ingestion
