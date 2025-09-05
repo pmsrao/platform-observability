@@ -174,13 +174,20 @@ except Exception as e:
 print("Generated statements with parameters:")
 try:
     # Pass the parameters explicitly
-    statements = sql_manager.parameterize_sql_statements(
-        "config/bootstrap_catalog_schemas",
-        catalog=sql_manager._config.catalog,
-        bronze_schema=sql_manager._config.bronze_schema,
-        silver_schema=sql_manager._config.silver_schema,
-        gold_schema=sql_manager._config.gold_schema
-    )
+    parameters = {
+        "catalog": sql_manager._config.catalog,
+        "bronze_schema": sql_manager._config.bronze_schema,
+        "silver_schema": sql_manager._config.silver_schema,
+        "gold_schema": sql_manager._config.gold_schema
+    }
+    print(f"Parameters being passed: {parameters}")
+    
+    # Test parameterize_sql first
+    parameterized_sql = sql_manager.parameterize_sql("config/bootstrap_catalog_schemas", **parameters)
+    print(f"Parameterized SQL length: {len(parameterized_sql)}")
+    print(f"Parameterized SQL: {repr(parameterized_sql[:200])}...")
+    
+    statements = sql_manager.parameterize_sql_statements("config/bootstrap_catalog_schemas", **parameters)
     print(f"Number of statements: {len(statements)}")
     for i, statement in enumerate(statements):
         print(f"Statement {i+1}: {repr(statement)}")
@@ -188,6 +195,8 @@ try:
         print("---")
 except Exception as e:
     print(f"Error generating statements: {e}")
+    import traceback
+    traceback.print_exc()
 
 # COMMAND ----------
 

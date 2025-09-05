@@ -122,6 +122,7 @@ class SQLManager:
     
     def parameterize_sql_statements(self, operation: str, **kwargs) -> list:
         """Load SQL and return as list of individual statements"""
+        # Pass the kwargs to parameterize_sql
         sql_content = self.parameterize_sql(operation, **kwargs)
         
         # Split by semicolon and clean up
