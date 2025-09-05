@@ -298,62 +298,204 @@ except Exception as e:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.2 Create Processing State Tables
+# MAGIC ### 2.2 Debug: Test SQLParameterizer Method
+
+# COMMAND ----------
+
+# Let's test the SQLParameterizer method to see what's different
+print("🔍 Debugging SQLParameterizer Method:")
+try:
+    # Test the exact method that was failing
+    print("Testing sql_param.bootstrap_catalog_schemas()...")
+    sql_param.bootstrap_catalog_schemas()
+    print("✅ SQLParameterizer method worked!")
+except Exception as e:
+    print(f"❌ SQLParameterizer method failed: {e}")
+    print("This confirms there's still an issue with the SQLParameterizer method")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 2.3 Create Processing State Tables
 
 # COMMAND ----------
 
 # Create processing state tables for HWM tracking
-sql_param.create_processing_state()
+print("🚀 Creating processing state tables...")
+try:
+    statements = sql_param.sql_manager.parameterize_sql_statements(
+        "config/processing_offsets",
+        catalog=sql_param.config.catalog,
+        bronze_schema=sql_param.config.bronze_schema,
+        silver_schema=sql_param.config.silver_schema,
+        gold_schema=sql_param.config.gold_schema
+    )
+    
+    for i, statement in enumerate(statements):
+        if statement.strip():
+            print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+            sql_param.spark.sql(statement)
+            print(f"   ✅ Statement {i+1} executed successfully")
+    
+    print("✅ Processing state tables created successfully")
+except Exception as e:
+    print(f"❌ Processing state creation failed: {e}")
+    raise
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.3 Create Bronze Tables
+# MAGIC ### 2.4 Create Bronze Tables
 
 # COMMAND ----------
 
 # Create bronze layer tables with CDF enabled
-sql_param.bootstrap_bronze_tables()
+print("🚀 Creating bronze layer tables...")
+try:
+    statements = sql_param.sql_manager.parameterize_sql_statements(
+        "bronze/bronze_tables",
+        catalog=sql_param.config.catalog,
+        bronze_schema=sql_param.config.bronze_schema,
+        silver_schema=sql_param.config.silver_schema,
+        gold_schema=sql_param.config.gold_schema
+    )
+    
+    for i, statement in enumerate(statements):
+        if statement.strip():
+            print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+            sql_param.spark.sql(statement)
+            print(f"   ✅ Statement {i+1} executed successfully")
+    
+    print("✅ Bronze layer tables created successfully")
+except Exception as e:
+    print(f"❌ Bronze layer creation failed: {e}")
+    raise
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.4 Create Silver Tables
+# MAGIC ### 2.5 Create Silver Tables
 
 # COMMAND ----------
 
 # Create silver layer tables
-sql_param.create_silver_tables()
+print("🚀 Creating silver layer tables...")
+try:
+    statements = sql_param.sql_manager.parameterize_sql_statements(
+        "silver/silver_tables",
+        catalog=sql_param.config.catalog,
+        bronze_schema=sql_param.config.bronze_schema,
+        silver_schema=sql_param.config.silver_schema,
+        gold_schema=sql_param.config.gold_schema
+    )
+    
+    for i, statement in enumerate(statements):
+        if statement.strip():
+            print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+            sql_param.spark.sql(statement)
+            print(f"   ✅ Statement {i+1} executed successfully")
+    
+    print("✅ Silver layer tables created successfully")
+except Exception as e:
+    print(f"❌ Silver layer creation failed: {e}")
+    raise
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.5 Create Gold Tables
+# MAGIC ### 2.6 Create Gold Tables
 
 # COMMAND ----------
 
 # Create gold layer tables
-sql_param.create_gold_tables()
+print("🚀 Creating gold layer tables...")
+try:
+    # Gold tables are created in multiple steps
+    operations = ["gold/gold_dimensions", "gold/gold_facts"]
+    
+    for operation in operations:
+        print(f"   Processing {operation}...")
+        statements = sql_param.sql_manager.parameterize_sql_statements(
+            operation,
+            catalog=sql_param.config.catalog,
+            bronze_schema=sql_param.config.bronze_schema,
+            silver_schema=sql_param.config.silver_schema,
+            gold_schema=sql_param.config.gold_schema
+        )
+        
+        for i, statement in enumerate(statements):
+            if statement.strip():
+                print(f"     Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+                sql_param.spark.sql(statement)
+                print(f"     ✅ Statement {i+1} executed successfully")
+    
+    print("✅ Gold layer tables created successfully")
+except Exception as e:
+    print(f"❌ Gold layer creation failed: {e}")
+    raise
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.6 Apply Performance Optimizations
+# MAGIC ### 2.7 Apply Performance Optimizations
 
 # COMMAND ----------
 
 # Apply performance optimizations
-sql_param.apply_performance_optimizations()
+print("🚀 Applying performance optimizations...")
+try:
+    statements = sql_param.sql_manager.parameterize_sql_statements(
+        "config/performance_optimizations",
+        catalog=sql_param.config.catalog,
+        bronze_schema=sql_param.config.bronze_schema,
+        silver_schema=sql_param.config.silver_schema,
+        gold_schema=sql_param.config.gold_schema
+    )
+    
+    for i, statement in enumerate(statements):
+        if statement.strip():
+            print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+            sql_param.spark.sql(statement)
+            print(f"   ✅ Statement {i+1} executed successfully")
+    
+    print("✅ Performance optimizations applied successfully")
+except Exception as e:
+    print(f"❌ Performance optimization failed: {e}")
+    raise
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.7 Create Gold Views
+# MAGIC ### 2.8 Create Gold Views
 
 # COMMAND ----------
 
 # Create gold layer views
-sql_param.create_gold_views()
+print("🚀 Creating gold layer views...")
+try:
+    # Gold views are created in multiple steps
+    operations = ["gold/gold_views", "gold/policy_compliance", "gold/gold_chargeback_views"]
+    
+    for operation in operations:
+        print(f"   Processing {operation}...")
+        statements = sql_param.sql_manager.parameterize_sql_statements(
+            operation,
+            catalog=sql_param.config.catalog,
+            bronze_schema=sql_param.config.bronze_schema,
+            silver_schema=sql_param.config.silver_schema,
+            gold_schema=sql_param.config.gold_schema
+        )
+        
+        for i, statement in enumerate(statements):
+            if statement.strip():
+                print(f"     Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+                sql_param.spark.sql(statement)
+                print(f"     ✅ Statement {i+1} executed successfully")
+    
+    print("✅ Gold layer views created successfully")
+except Exception as e:
+    print(f"❌ Gold layer views creation failed: {e}")
+    raise
 
 # COMMAND ----------
 
