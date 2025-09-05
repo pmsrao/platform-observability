@@ -14,12 +14,13 @@ from .sql_manager import sql_manager
 class SQLParameterizer:
     """Utility class for parameterizing and executing SQL files"""
     
-    def __init__(self, spark: SparkSession = None):
+    def __init__(self, spark: SparkSession = None, sql_manager_instance = None):
         if spark is None:
             from pyspark.sql import SparkSession
             spark = SparkSession.builder.getOrCreate()
         self.spark = spark
         self.config = Config.get_config()
+        self.sql_manager = sql_manager_instance if sql_manager_instance is not None else sql_manager
     
     def execute_bootstrap_sql(self, operation: str, **kwargs) -> None:
         """Execute bootstrap SQL operations with proper parameterization"""
@@ -34,7 +35,7 @@ class SQLParameterizer:
             kwargs["gold_schema"] = self.config.gold_schema
         
         # Get parameterized SQL
-        sql = sql_manager.parameterize_sql(operation, **kwargs)
+        sql = self.sql_manager.parameterize_sql(operation, **kwargs)
         
         # Execute SQL
         self.spark.sql(sql)
@@ -118,11 +119,11 @@ class SQLParameterizer:
     
     def get_parameterized_sql(self, operation: str, **kwargs) -> str:
         """Get parameterized SQL content for review"""
-        return sql_manager.parameterize_sql_with_catalog_schema(operation, **kwargs)
+        return self.sql_manager.parameterize_sql_with_catalog_schema(operation, **kwargs)
     
     def list_available_operations(self) -> list:
         """List all available SQL operations"""
-        return sql_manager.get_available_operations()
+        return self.sql_manager.get_available_operations()
 
 
 def bootstrap_platform_observability(spark: SparkSession = None) -> None:

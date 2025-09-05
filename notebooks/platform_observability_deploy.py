@@ -30,11 +30,6 @@
 import sys
 import os
 
-# Add libs to path (cloud-agnostic approach)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
-if libs_dir not in sys.path:
-    sys.path.append(libs_dir)
 
 # For Databricks workspace
 workspace_libs_path = '/Workspace/Repos/platform-observability/libs'
@@ -66,9 +61,12 @@ print(f"   Databricks Host: {config.databricks_host}")
 
 # Import SQL parameterizer for bootstrap
 from libs.sql_parameterizer import SQLParameterizer
-from libs.sql_manager import sql_manager
+from libs.sql_manager import SQLManager
 import os
 from pathlib import Path
+
+# Create a new SQLManager instance to ensure we get the latest path resolution
+sql_manager = SQLManager()
 
 # Debug path configuration
 print("🔍 Debugging Path Configuration:")
@@ -81,10 +79,35 @@ print(f"   Config bronze schema: {sql_manager._config.bronze_schema}")
 print(f"   Config silver schema: {sql_manager._config.silver_schema}")
 print(f"   Config gold schema: {sql_manager._config.gold_schema}")
 
+# Test if we can find the specific file that's failing
+test_operation = "config/bootstrap_catalog_schemas"
+try:
+    test_path = sql_manager.get_sql_file_path(test_operation)
+    print(f"✅ Found SQL file: {test_path}")
+except FileNotFoundError as e:
+    print(f"❌ SQL file not found: {e}")
+    print("🔍 Trying alternative approaches...")
+    
+    # Try to find the file manually
+    from pathlib import Path
+    possible_locations = [
+        Path.cwd() / "sql" / "config" / "bootstrap_catalog_schemas.sql",
+        Path.cwd().parent / "sql" / "config" / "bootstrap_catalog_schemas.sql",
+        Path("/Workspace/Repos/platform-observability/sql/config/bootstrap_catalog_schemas.sql"),
+        Path(__file__).parent.parent / "sql" / "config" / "bootstrap_catalog_schemas.sql"
+    ]
+    
+    for location in possible_locations:
+        if location.exists():
+            print(f"✅ Found file at: {location}")
+            break
+    else:
+        print("❌ File not found in any expected location")
+
 # COMMAND ----------
 
-# Initialize SQL parameterizer
-sql_param = SQLParameterizer()
+# Initialize SQL parameterizer with the new SQLManager instance
+sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
 
 # COMMAND ----------
 

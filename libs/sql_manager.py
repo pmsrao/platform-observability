@@ -8,10 +8,40 @@ class SQLManager:
     
     def __init__(self, sql_directory: str = None):
         if sql_directory is None:
-            # Try to find the sql directory relative to the project root
+            # Try multiple fallback paths to find the sql directory
+            possible_paths = []
+            
+            # Path 1: Relative to current file (libs/sql_manager.py -> project_root/sql)
             current_file = Path(__file__)
-            project_root = current_file.parent.parent  # Go up from libs/ to project root
-            sql_directory = project_root / "sql"
+            project_root = current_file.parent.parent
+            possible_paths.append(project_root / "sql")
+            
+            # Path 2: Current working directory + sql
+            possible_paths.append(Path.cwd() / "sql")
+            
+            # Path 3: Databricks workspace path
+            workspace_path = Path("/Workspace/Repos/platform-observability/sql")
+            possible_paths.append(workspace_path)
+            
+            # Path 4: Try relative to current working directory with different levels
+            cwd = Path.cwd()
+            possible_paths.extend([
+                cwd / "sql",
+                cwd.parent / "sql",
+                cwd.parent.parent / "sql"
+            ])
+            
+            # Find the first path that exists
+            sql_directory = None
+            for path in possible_paths:
+                if path.exists() and path.is_dir():
+                    sql_directory = path
+                    break
+            
+            # If no path found, use the first one (relative to current file) as default
+            if sql_directory is None:
+                sql_directory = possible_paths[0]
+                
         self.sql_directory = Path(sql_directory)
         self._sql_cache: Dict[str, str] = {}
         self._config = Config.get_config()
