@@ -6,8 +6,8 @@
 ## ✨ What This Repo Does
 
 - **Bronze (Job)**: Daily **High-Water Mark (HWM)** ingestion from `system.*` tables with CDF enabled for downstream consumption
-- **Silver (DLT)**: Processes **only new/changed records** via Change Data Feed (CDF) with per-source version bookmarks
-- **Gold**: Incrementally **MERGEs** only **impacted `date_sk`** partitions into facts/dims + views for compliance/latency insights
+- **Silver (HWM)**: Processes **only new/changed records** via Change Data Feed (CDF) with per-source version processing offsets
+- **Gold (HWM)**: Incrementally **updates** only **impacted `date_sk`** partitions into facts/dims + views for compliance/latency insights
 - **Monitoring & Alerting**: Comprehensive observability with structured logging, performance metrics, and automated alerts
 - **Data Quality**: Built-in validation rules and monitoring for data integrity
 - **CI/CD**: Automated deployment pipelines for dev and production environments
@@ -15,22 +15,30 @@
 
 ## 🏗️ Architecture Overview
 
+The solution follows a modern data architecture with three layers with **SCD2 (Slowly Changing Dimension Type 2)** support in the Gold layer:
+
+### **SCD2 Benefits**
+- **Historical Tracking**: Preserve complete history of entity changes (jobs, pipelines, clusters)
+- **Temporal Accuracy**: Ensure facts reference correct dimension versions for each date
+- **Audit Trail**: Maintain complete change history for compliance and analysis
+- **Business Intelligence**: Support time-based analysis and reporting
+
 ```
 System Tables (billing, lakeflow, access, compute)
         │
-        ▼  (DLT Pipeline A — Bronze, CDF enabled)
+        ▼  (HWM Job — Bronze, CDF enabled)
 platform_observability.plt_bronze.*  ───────────────►  Bronze with CDF
         │                                  ▲
-        │                                  │ CDF versions (bookmarks)
+        │                                  │ CDF versions (processing offsets)
         ▼
-(DLT Pipeline B — Silver/Gold, CDF read)
+(HWM Jobs — Silver & Gold, incremental processing)
         │
         ├─► Silver: entity SCD2, pricing, tags, timelines, cluster/node types
         │
-        └─► Gold: dims & facts (MERGE only impacted date_sk)
-                 ├─ dim_date, dim_workspace, dim_entity, dim_sku, dim_run_status, dim_node_type
-                 ├─ fact_usage_priced_day, fact_entity_cost, fact_run_cost
-                 ├─ fact_run_status_cost, fact_runs_finished_day, fact_usage_by_node_type_day
+        └─► Gold: dims & facts (incremental updates by date_sk)
+                 ├─ gld_dim_date, gld_dim_workspace, gld_dim_entity, gld_dim_sku, gld_dim_run_status, gld_dim_node_type
+├─ gld_fact_usage_priced_day, gld_fact_entity_cost, gld_fact_run_cost
+├─ gld_fact_run_status_cost, gld_fact_runs_finished_day, gld_fact_usage_by_node_type_day
                  └─ views: policy compliance, tag coverage, latency trend/anomaly
 ```
 
@@ -45,35 +53,32 @@ platform-observability/
 ├─ docs/
 │  └─ Platform Observability — Solution Overview & Usage Guide (CDF-driven) v0.1.md
 ├─ sql/
-│  ├─ 00_bootstrap_catalog_schemas.sql         # catalog & schema scaffold
-│  ├─ 01_state_bookmarks.sql                   # CDF bookmarks (Silver/Gold)
-│  ├─ 02_bronze_high_watermarks.sql            # HWM bookmarks (Bronze)
-│  ├─ 03_bronze_tables_bootstrap.sql           # empty Bronze tables (CDF ON)
-│  ├─ gold_views.sql                           # trend/anomaly helper views
-│  ├─ policy_compliance.sql                    # policy baseline & compliance views
-│  ├─ performance_optimizations.sql             # 🆕 Performance tuning & optimizations
-│  └─ bronze_operations/                       # 🆕 Externalized SQL operations
-│     ├─ upsert_billing_usage.sql              # Billing usage upsert
-│     ├─ upsert_list_prices.sql                # List prices upsert
-│     ├─ upsert_job_run_timeline.sql           # Job run timeline upsert
-│     ├─ upsert_job_task_run_timeline.sql      # Job task run timeline upsert
-│     ├─ upsert_lakeflow_jobs.sql              # Lakeflow jobs upsert
-│     ├─ upsert_lakeflow_pipelines.sql         # Lakeflow pipelines upsert
-│     ├─ upsert_compute_clusters.sql           # Compute clusters upsert
-│     ├─ upsert_compute_node_types.sql         # Compute node types upsert
-│     └─ upsert_access_workspaces.sql          # Access workspaces upsert
+│  ├─ config/                                  # Configuration and control tables
+│  │  ├─ processing_offsets.sql                # CDF and HWM processing offsets
+│  │  └─ performance_optimizations.sql         # Performance tuning & optimizations
+│  ├─ bronze/                                  # Bronze layer DDL
+│  │  └─ bronze_tables_bootstrap.sql           # Bronze tables with CDF enabled
+│  ├─ silver/                                  # Silver layer DDL
+│  │  └─ silver_tables.sql                     # Silver tables (SCD2)
+│  └─ gold/                                    # Gold layer DDL and views
+│     ├─ gold_dimensions.sql                   # Dimension tables
+│     ├─ gold_facts.sql                        # Fact tables
+│     ├─ gold_views.sql                        # Business-ready views
+│     ├─ gold_chargeback_views.sql             # Cost allocation views
+│     ├─ gold_runtime_analysis_views.sql       # Runtime optimization views
+│     └─ policy_compliance.sql                 # Policy compliance views
 ├─ libs/
 │  ├─ utils.py                                 # utility functions
 │  ├─ cdf.py                                   # CDF operations
-│  ├─ transform.py                             # data transformations
-│  ├─ bookmarks.py                             # bookmark management
+│  ├─ data_enrichment.py                       # data transformations and enrichment
+│  ├─ processing_state.py                      # processing state management
+│  ├─ tag_processor.py                         # tag processing and normalization
 │  ├─ logging.py                               # 🆕 Structured logging & performance monitoring
 │  ├─ error_handling.py                        # 🆕 Error handling & data quality validation
 │  ├─ monitoring.py                            # 🆕 Monitoring & alerting system
 │  └─ sql_manager.py                           # 🆕 SQL file management utility
 ├─ pipelines/
-│  └─ silver_gold/
-│     └─ silver_gold_build_dlt.py              # DLT Pipeline-B (target: plt_silver → builds Gold)
+│  └─ (Legacy DLT pipelines - replaced by HWM jobs)
 ├─ notebooks/
 │  └─ bronze_hwm_ingest_job.py                 # 🆕 Enhanced Bronze ingest Job with monitoring
 ├─ jobs/
@@ -153,26 +158,36 @@ pip install -r requirements.txt
 ### 3. **Database Setup**
 ```sql
 -- Run in sequence:
--- 1. Bootstrap catalog and schemas
-RUN sql/00_bootstrap_catalog_schemas.sql
+-- 1. Create processing offsets tables
+RUN sql/config/processing_offsets.sql
 
--- 2. Create CDF bookmarks
-RUN sql/01_state_bookmarks.sql
+-- 2. Bootstrap Bronze tables
+RUN sql/bronze/bronze_tables_bootstrap.sql
 
--- 3. Create HWM bookmarks
-RUN sql/02_bronze_high_watermarks.sql
+-- 3. Create Silver tables
+RUN sql/silver/silver_tables.sql
 
--- 4. Bootstrap Bronze tables
-RUN sql/03_bronze_tables_bootstrap.sql
+-- 4. Create Gold tables and views
+RUN sql/gold/gold_dimensions.sql
+RUN sql/gold/gold_facts.sql
+RUN sql/gold/gold_views.sql
+RUN sql/gold/gold_chargeback_views.sql
+RUN sql/gold/gold_runtime_analysis_views.sql
+RUN sql/gold/policy_compliance.sql
 
 -- 5. Apply performance optimizations
-RUN sql/performance_optimizations.sql
+RUN sql/config/performance_optimizations.sql
 ```
 
 ### 4. **Create Databricks Resources**
-- **Job**: `notebooks/bronze_hwm_ingest_job.py` (parameter: `overlap_hours`, default: 48)
-- **DLT Pipeline**: `pipelines/silver_gold/silver_gold_build_dlt.py` (target: `plt_silver`)
-- **Workflow**: Import `jobs/workflow_bronze_job_plus_dlt.json`
+- **Jobs**: 
+  - `notebooks/bronze_hwm_ingest_job.py` (configuration-based: `overlap_hours` from config)
+  - `notebooks/silver_hwm_build_job.py` (Silver layer build)
+  - `notebooks/gold_hwm_build_job.py` (Gold layer build with SCD2 support)
+  - `notebooks/performance_optimization_job.py` (Performance optimization)
+  - `notebooks/health_check_job.py` (Health monitoring)
+- **Workflow**: Import `jobs/daily_observability_workflow.json`
+- **Note**: All notebooks can run standalone without job parameters (configuration-based)
 
 ### 5. **Schedule & Monitor**
 - **Schedule**: Daily at 05:30 Asia/Kolkata
@@ -215,9 +230,9 @@ from libs.sql_manager import sql_manager
 
 # Load and parameterize SQL
 sql = sql_manager.parameterize_sql(
-    "upsert_billing_usage",
-    target_table="platform_observability.plt_bronze.bronze_sys_billing_usage_raw",
-    source_table="stg_usage"
+    "gold_facts",
+    catalog="platform_observability",
+    gold_schema="plt_gold"
 )
 
 # Execute SQL
@@ -289,10 +304,10 @@ databricks fs cp sql/ dbfs:/platform-observability/prod/sql/ --recursive
 ### **Manual Optimizations**
 ```sql
 -- Optimize specific tables
-OPTIMIZE plt_gold.fact_usage_priced_day ZORDER BY (workspace_id, date_sk);
+OPTIMIZE plt_gold.gld_fact_usage_priced_day ZORDER BY (workspace_id, date_sk);
 
 -- Collect statistics
-ANALYZE TABLE plt_gold.fact_usage_priced_day COMPUTE STATISTICS FOR ALL COLUMNS;
+ANALYZE TABLE plt_gold.gld_fact_usage_priced_day COMPUTE STATISTICS FOR ALL COLUMNS;
 ```
 
 ## 🚨 Alerting & Notifications
@@ -368,11 +383,17 @@ monitor.add_rule(custom_rule)
 
 ### **SQL File Structure**
 ```
-sql/bronze_operations/
-├─ upsert_billing_usage.sql           # Parameterized with {target_table}, {source_table}
-├─ upsert_list_prices.sql             # Parameterized with {target_table}, {source_table}
-├─ upsert_job_run_timeline.sql        # Parameterized with {target_table}, {source_table}
-└─ ...                                # Additional operations
+sql/
+├─ config/                             # Configuration and control tables
+├─ bronze/                             # Bronze layer DDL
+├─ silver/                             # Silver layer DDL
+└─ gold/                               # Gold layer DDL and views
+    ├─ gold_dimensions.sql             # Dimension tables
+    ├─ gold_facts.sql                  # Fact tables
+    ├─ gold_views.sql                  # Business views
+    ├─ gold_chargeback_views.sql       # Cost allocation views
+    ├─ gold_runtime_analysis_views.sql # Runtime optimization views
+    └─ policy_compliance.sql           # Policy compliance views
 ```
 
 ### **SQL Parameterization**

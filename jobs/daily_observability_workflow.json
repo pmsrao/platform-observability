@@ -1,30 +1,98 @@
 {
-  "name": "Platform Observability \u2014 Daily CDF Build",
-  "schedule": {
-    "quartz_cron_expression": "0 30 5 ? * *",
-    "timezone_id": "Asia/Kolkata",
-    "pause_status": "UNPAUSED"
+  "_comment": "Daily Platform Observability Workflow - Updated for HWM Jobs with SCD2 Support",
+  "_architecture": "HWM-based jobs (Bronze → Silver → Gold) with configuration-based parameters",
+  "_scd2_support": "Gold layer preserves historical entity versions for temporal analysis",
+  "name": "Daily Platform Observability Workflow",
+  "email_notifications": {
+    "on_success": ["admin@company.com"],
+    "on_failure": ["admin@company.com", "data-team@company.com"]
   },
   "max_concurrent_runs": 1,
+  "schedule": {
+    "quartz_cron_expression": "0 30 5 * * ?",
+    "timezone_id": "Asia/Kolkata"
+  },
   "tasks": [
     {
-      "task_key": "bronze_dlt",
-      "pipeline_task": {
-        "pipeline_id": "BRONZE_PIPELINE_ID",
-        "full_refresh": false
-      }
+      "task_key": "bronze_ingest",
+      "description": "Ingest data from system tables to Bronze layer using HWM approach (configuration-based)",
+      "existing_cluster_id": "{{existing_cluster_id}}",
+      "notebook_task": {
+        "notebook_path": "/Repos/platform-observability/notebooks/bronze_hwm_ingest_job"
+      },
+      "timeout_seconds": 3600,
+      "retry_on_timeout": false,
+      "max_retries": 2
     },
     {
-      "task_key": "silver_gold_dlt",
+      "task_key": "silver_build",
+      "description": "Build Silver layer from Bronze using HWM approach (configuration-based)",
+      "existing_cluster_id": "{{existing_cluster_id}}",
+      "notebook_task": {
+        "notebook_path": "/Repos/platform-observability/notebooks/silver_hwm_build_job"
+      },
+      "timeout_seconds": 7200,
+      "retry_on_timeout": false,
+      "max_retries": 2,
       "depends_on": [
         {
-          "task_key": "bronze_dlt"
+          "task_key": "bronze_ingest"
         }
-      ],
-      "pipeline_task": {
-        "pipeline_id": "SILVER_GOLD_PIPELINE_ID",
-        "full_refresh": false
-      }
+      ]
+    },
+    {
+      "task_key": "gold_build",
+      "description": "Build Gold layer from Silver using HWM approach with SCD2 support (configuration-based)",
+      "existing_cluster_id": "{{existing_cluster_id}}",
+      "notebook_task": {
+        "notebook_path": "/Repos/platform-observability/notebooks/gold_hwm_build_job"
+      },
+      "timeout_seconds": 7200,
+      "retry_on_timeout": false,
+      "max_retries": 2,
+      "depends_on": [
+        {
+          "task_key": "silver_build"
+        }
+      ]
+    },
+    {
+      "task_key": "performance_optimization",
+      "description": "Apply performance optimizations to all layers (configuration-based)",
+      "existing_cluster_id": "{{existing_cluster_id}}",
+      "notebook_task": {
+        "notebook_path": "/Repos/platform-observability/notebooks/performance_optimization_job"
+      },
+      "timeout_seconds": 1800,
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "depends_on": [
+        {
+          "task_key": "gold_build"
+        }
+      ]
+    },
+    {
+      "task_key": "health_check",
+      "description": "Perform health checks and send summary report (configuration-based)",
+      "existing_cluster_id": "{{existing_cluster_id}}",
+      "notebook_task": {
+        "notebook_path": "/Repos/platform-observability/notebooks/health_check_job"
+      },
+      "timeout_seconds": 900,
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "depends_on": [
+        {
+          "task_key": "performance_optimization"
+        }
+      ]
+    }
+  ],
+  "parameters": [
+    {
+      "name": "existing_cluster_id",
+      "default": "{{existing_cluster_id}}"
     }
   ]
 }

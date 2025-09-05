@@ -1,21 +1,48 @@
+"""
+Bronze Layer High Water Mark (HWM) Ingest Job
+
+This notebook implements the Bronze layer ingestion strategy using High Water Mark (HWM) 
+tracking for incremental data processing. It reads from Databricks system tables and 
+loads data into Bronze tables with CDF enabled for downstream consumption.
+
+Key Features:
+- Incremental processing using HWM processing state
+- Data quality validation with built-in rules
+- Performance monitoring and structured logging
+- Externalized SQL operations for maintainability
+- Configurable overlap hours for data consistency
+
+Pipeline Flow:
+1. Read system tables (billing, lakeflow, access, compute)
+2. Apply HWM filtering for incremental processing
+3. Validate data quality
+4. Execute upsert operations using external SQL
+5. Update processing state for next run
+
+Author: Platform Observability Team
+Version: 1.0
+"""
+
 # Databricks notebook source
-# Widgets (job params)
-dbutils.widgets.text("overlap_hours", "48")
-dbutils.widgets.text("environment", "dev")
+# Configuration-based parameters (no widgets required for standalone execution)
 
 # Import configuration and utilities
 from config import config
 from libs.logging import StructuredLogger, PerformanceMonitor, performance_monitor
 from libs.error_handling import safe_execute, validate_data_quality
 from libs.monitoring import pipeline_monitor
-from libs.bookmarks import ensure_table, get_last_ts, commit_last_ts
+from libs.processing_state import ensure_table, get_last_processed_timestamp, commit_processing_state
 from libs.sql_manager import sql_manager
 
 from pyspark.sql import functions as F
 import time
 from datetime import datetime
 
-# Initialize logging and monitoring
+# =============================================================================
+# INITIALIZATION & CONFIGURATION
+# =============================================================================
+
+# Initialize logging and monitoring with job context
 logger = StructuredLogger("bronze_hwm_ingest_job")
 logger.set_context(
     job_id=dbutils.jobs.taskValues.getCurrent().get("job_id", "unknown"),
@@ -24,8 +51,9 @@ logger.set_context(
     environment=config.ENV
 )
 
-# Override overlap hours from config if not provided via widget
-OVERLAP_HOURS = int(dbutils.widgets.get("overlap_hours")) if dbutils.widgets.get("overlap_hours") != "48" else config.overlap_hours
+# Use overlap hours from configuration
+# Overlap hours ensure we don't miss data due to timing issues
+OVERLAP_HOURS = config.overlap_hours
 
 logger.info("Bronze HWM ingest job started", {
     "overlap_hours": OVERLAP_HOURS,
@@ -34,21 +62,65 @@ logger.info("Bronze HWM ingest job started", {
     "bronze_schema": config.bronze_schema
 })
 
-# Initialize monitoring
+# Initialize monitoring for pipeline health tracking
 pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"))
 
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
 def window_start(last_ts):
-    """Calculate window start time with overlap"""
+    """
+    Calculate window start time with overlap for incremental processing.
+    
+    Args:
+        last_ts: Last processed timestamp from processing state
+        
+    Returns:
+        Timestamp representing the start of the processing window
+        
+    The overlap ensures we don't miss data due to:
+    - Clock synchronization issues
+    - Data arrival delays
+    - Processing time variations
+    """
     if last_ts is None:
         return F.to_timestamp(F.lit("1900-01-01"))
     return F.expr(f"timestampadd(HOUR, -{OVERLAP_HOURS}, timestamp('{last_ts}'))")
 
 def sha256_concat(cols):
-    """Generate SHA256 hash for row change detection"""
+    """
+    Generate SHA256 hash for row change detection.
+    
+    Args:
+        cols: List of column names to include in hash
+        
+    Returns:
+        SHA256 hash string for change detection
+        
+    This hash is used to:
+    - Detect when data has actually changed
+    - Avoid unnecessary updates
+    - Maintain data lineage
+    """
     return F.sha2(F.concat_ws("||", *[F.coalesce(F.col(c).cast("string"), F.lit("")) for c in cols]), 256)
 
 def execute_sql_operation(operation: str, target_table: str, staging_view: str, logger: StructuredLogger):
-    """Execute SQL operation using external SQL files"""
+    """
+    Execute SQL operation using external SQL files.
+    
+    Args:
+        operation: Name of the SQL operation (e.g., "upsert_billing_usage")
+        target_table: Target table for the operation
+        staging_view: Staging view containing source data
+        logger: Logger instance for operation tracking
+        
+    This function:
+    1. Loads SQL from external files
+    2. Parameterizes the SQL with table names
+    3. Executes the SQL operation
+    4. Logs success/failure for monitoring
+    """
     try:
         # Load and parameterize SQL
         sql = sql_manager.parameterize_sql(
@@ -76,19 +148,46 @@ def execute_sql_operation(operation: str, target_table: str, staging_view: str, 
         })
         raise
 
+# =============================================================================
+# DATA INGESTION FUNCTIONS
+# =============================================================================
+# Each function follows the same pattern:
+# 1. Read from system table with HWM filtering
+# 2. Apply business logic and transformations
+# 3. Validate data quality
+# 4. Execute upsert operation
+    # 5. Update processing state
+
 @performance_monitor("upsert_billing_usage")
 @safe_execute(logger, "upsert_billing_usage")
 def upsert_billing_usage():
-    """Upsert billing usage data with data quality validation"""
+    """
+    Upsert billing usage data with data quality validation.
+    
+    Sources: system.billing.usage
+            Target: brz_billing_usage
+    
+    Business Logic:
+    - Filters by usage_end_time for incremental processing
+    - Generates row hash for change detection
+    - Validates data quality before processing
+    - Updates processing state after successful processing
+    
+    Data Quality Rules:
+    - Usage quantities must be non-negative
+    - End time must be after start time
+    - Required fields must be present
+    """
     src = "system.billing.usage"
-    tgt = config.get_table_name("bronze", "bronze_sys_billing_usage_raw")
+            tgt = config.get_table_name("bronze", "brz_billing_usage")
     
     logger.info(f"Processing billing usage from {src} to {tgt}")
     
-    last = get_last_ts(src)
+    # Get last processed timestamp and calculate window start
+    last = get_last_processed_timestamp(spark, src)
     ws = window_start(last)
     
-    # Read and process data
+    # Read and process data with HWM filtering
     stg = (spark.table(src)
            .where(F.col("usage_end_time") > ws)
            .withColumn("row_hash", sha256_concat([
@@ -106,11 +205,11 @@ def upsert_billing_usage():
     stg.createOrReplaceTempView("stg_usage")
     execute_sql_operation("upsert_billing_usage", tgt, "stg_usage", logger)
     
-    # Update bookmark
+    # Update processing state for next incremental run
     mx = stg.select(F.max("usage_end_time").alias("mx")).first().mx
     if mx is not None:
-        commit_last_ts(src, mx)
-        logger.info(f"Updated bookmark for {src} to {mx}")
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} billing usage records")
@@ -119,13 +218,23 @@ def upsert_billing_usage():
 @performance_monitor("upsert_list_prices")
 @safe_execute(logger, "upsert_list_prices")
 def upsert_list_prices():
-    """Upsert list prices data"""
+    """
+    Upsert list prices data for cost calculations.
+    
+    Sources: system.billing.list_prices
+            Target: brz_billing_list_prices
+    
+    Business Logic:
+    - Filters by price_start_time for incremental processing
+    - Handles price changes over time
+    - Used downstream for cost calculations
+    """
     src = "system.billing.list_prices"
-    tgt = config.get_table_name("bronze", "bronze_sys_billing_list_prices_raw")
+            tgt = config.get_table_name("bronze", "brz_billing_list_prices")
     
     logger.info(f"Processing list prices from {src} to {tgt}")
     
-    last = get_last_ts(src)
+    last = get_last_processed_timestamp(spark, src)
     ws = window_start(last)
     
     stg = spark.table(src).where(F.col("price_start_time") > ws)
@@ -140,8 +249,8 @@ def upsert_list_prices():
     
     mx = stg.select(F.max("price_start_time").alias("mx")).first().mx
     if mx is not None:
-        commit_last_ts(src, mx)
-        logger.info(f"Updated bookmark for {src} to {mx}")
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} list price records")
@@ -150,13 +259,23 @@ def upsert_list_prices():
 @performance_monitor("upsert_job_run_timeline")
 @safe_execute(logger, "upsert_job_run_timeline")
 def upsert_job_run_timeline():
-    """Upsert job run timeline data"""
+    """
+    Upsert job run timeline data for performance analysis.
+    
+    Sources: system.lakeflow.job_run_timeline
+            Target: brz_lakeflow_job_run_timeline
+    
+    Business Logic:
+    - Filters by period_end_time for incremental processing
+    - Tracks job execution status and timing
+    - Used for cost allocation and performance monitoring
+    """
     src = "system.lakeflow.job_run_timeline"
-    tgt = config.get_table_name("bronze", "bronze_lakeflow_job_run_timeline_raw")
+            tgt = config.get_table_name("bronze", "brz_lakeflow_job_run_timeline")
     
     logger.info(f"Processing job run timeline from {src} to {tgt}")
     
-    last = get_last_ts(src)
+    last = get_last_processed_timestamp(spark, src)
     ws = window_start(last)
     
     stg = (spark.table(src)
@@ -175,8 +294,8 @@ def upsert_job_run_timeline():
     
     mx = stg.select(F.max("period_end_time").alias("mx")).first().mx
     if mx is not None:
-        commit_last_ts(src, mx)
-        logger.info(f"Updated bookmark for {src} to {mx}")
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} job run timeline records")
@@ -185,13 +304,23 @@ def upsert_job_run_timeline():
 @performance_monitor("upsert_job_task_run_timeline")
 @safe_execute(logger, "upsert_job_task_run_timeline")
 def upsert_job_task_run_timeline():
-    """Upsert job task run timeline data"""
+    """
+    Upsert job task run timeline data for granular performance analysis.
+    
+    Sources: system.lakeflow.job_task_run_timeline
+            Target: brz_lakeflow_job_task_run_timeline
+    
+    Business Logic:
+    - Filters by period_end_time for incremental processing
+    - Provides task-level execution insights
+    - Used for performance optimization and debugging
+    """
     src = "system.lakeflow.job_task_run_timeline"
-    tgt = config.get_table_name("bronze", "bronze_lakeflow_job_task_run_timeline_raw")
+            tgt = config.get_table_name("bronze", "brz_lakeflow_job_task_run_timeline")
     
     logger.info(f"Processing job task run timeline from {src} to {tgt}")
     
-    last = get_last_ts(src)
+    last = get_last_processed_timestamp(spark, src)
     ws = window_start(last)
     
     stg = (spark.table(src)
@@ -210,8 +339,8 @@ def upsert_job_task_run_timeline():
     
     mx = stg.select(F.max("period_end_time").alias("mx")).first().mx
     if mx is not None:
-        commit_last_ts(src, mx)
-        logger.info(f"Updated bookmark for {src} to {mx}")
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} job task run timeline records")
@@ -220,13 +349,23 @@ def upsert_job_task_run_timeline():
 @performance_monitor("upsert_lakeflow_jobs")
 @safe_execute(logger, "upsert_lakeflow_jobs")
 def upsert_lakeflow_jobs():
-    """Upsert lakeflow jobs data"""
+    """
+    Upsert lakeflow jobs metadata for entity tracking.
+    
+    Sources: system.lakeflow.jobs
+            Target: brz_lakeflow_jobs
+    
+    Business Logic:
+    - Filters by change_time for incremental processing
+    - Tracks job configuration changes
+    - Used for entity identification and cost allocation
+    """
     src = "system.lakeflow.jobs"
-    tgt = config.get_table_name("bronze", "bronze_lakeflow_jobs_raw")
+            tgt = config.get_table_name("bronze", "bronze_lakeflow_jobs")
     
     logger.info(f"Processing lakeflow jobs from {src} to {tgt}")
     
-    last = get_last_ts(src)
+    last = get_last_processed_timestamp(spark, src)
     ws = window_start(last)
     
     stg = (spark.table(src)
@@ -245,8 +384,8 @@ def upsert_lakeflow_jobs():
     
     mx = stg.select(F.max("change_time").alias("mx")).first().mx
     if mx is not None:
-        commit_last_ts(src, mx)
-        logger.info(f"Updated bookmark for {src} to {mx}")
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} lakeflow jobs records")
@@ -255,13 +394,23 @@ def upsert_lakeflow_jobs():
 @performance_monitor("upsert_lakeflow_pipelines")
 @safe_execute(logger, "upsert_lakeflow_pipelines")
 def upsert_lakeflow_pipelines():
-    """Upsert lakeflow pipelines data"""
+    """
+    Upsert lakeflow pipelines metadata for entity tracking.
+    
+    Sources: system.lakeflow.pipelines
+            Target: brz_lakeflow_pipelines
+    
+    Business Logic:
+    - Filters by change_time for incremental processing
+    - Tracks pipeline configuration changes
+    - Used for entity identification and cost allocation
+    """
     src = "system.lakeflow.pipelines"
-    tgt = config.get_table_name("bronze", "bronze_lakeflow_pipelines_raw")
+            tgt = config.get_table_name("bronze", "brz_lakeflow_pipelines")
     
     logger.info(f"Processing lakeflow pipelines from {src} to {tgt}")
     
-    last = get_last_ts(src)
+    last = get_last_processed_timestamp(spark, src)
     ws = window_start(last)
     
     stg = (spark.table(src)
@@ -280,8 +429,8 @@ def upsert_lakeflow_pipelines():
     
     mx = stg.select(F.max("change_time").alias("mx")).first().mx
     if mx is not None:
-        commit_last_ts(src, mx)
-        logger.info(f"Updated bookmark for {src} to {mx}")
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} lakeflow pipelines records")
@@ -290,13 +439,23 @@ def upsert_lakeflow_pipelines():
 @performance_monitor("upsert_compute_clusters")
 @safe_execute(logger, "upsert_compute_clusters")
 def upsert_compute_clusters():
-    """Upsert compute clusters data"""
+    """
+    Upsert compute clusters data for infrastructure tracking.
+    
+    Sources: system.compute.clusters
+            Target: brz_compute_clusters
+    
+    Business Logic:
+    - Filters by created_time for incremental processing
+    - Tracks cluster configuration and status
+    - Used for cost allocation and policy compliance
+    """
     src = "system.compute.clusters"
-    tgt = config.get_table_name("bronze", "bronze_system_compute_clusters_raw")
+            tgt = config.get_table_name("bronze", "brz_compute_clusters")
     
     logger.info(f"Processing compute clusters from {src} to {tgt}")
     
-    last = get_last_ts(src)
+    last = get_last_processed_timestamp(spark, src)
     ws = window_start(last)
     
     stg = (spark.table(src)
@@ -316,8 +475,8 @@ def upsert_compute_clusters():
     
     mx = stg.select(F.max("created_time").alias("mx")).first().mx
     if mx is not None:
-        commit_last_ts(src, mx)
-        logger.info(f"Updated bookmark for {src} to {mx}")
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} compute clusters records")
@@ -326,9 +485,19 @@ def upsert_compute_clusters():
 @performance_monitor("upsert_compute_node_types")
 @safe_execute(logger, "upsert_compute_node_types")
 def upsert_compute_node_types():
-    """Upsert compute node types data (full upsert)"""
+    """
+    Upsert compute node types data (full upsert).
+    
+    Sources: system.compute.node_types
+            Target: brz_compute_node_types
+    
+    Business Logic:
+    - Full upsert (no HWM filtering) since node types are reference data
+    - Tracks node type specifications and capabilities
+    - Used for cost calculations and capacity planning
+    """
     src = "system.compute.node_types"
-    tgt = config.get_table_name("bronze", "bronze_system_compute_node_types_raw")
+            tgt = config.get_table_name("bronze", "bronze_compute_node_types")
     
     logger.info(f"Processing compute node types from {src} to {tgt}")
     
@@ -351,9 +520,19 @@ def upsert_compute_node_types():
 @performance_monitor("upsert_access_workspaces")
 @safe_execute(logger, "upsert_access_workspaces")
 def upsert_access_workspaces():
-    """Upsert access workspaces data"""
+    """
+    Upsert access workspaces data for workspace tracking.
+    
+    Sources: system.access.workspaces_latest
+            Target: brz_access_workspaces
+    
+    Business Logic:
+    - Full upsert (no HWM filtering) since workspace data is reference data
+    - Tracks workspace metadata and access information
+    - Used for workspace identification and cost allocation
+    """
     src = "system.access.workspaces_latest"
-    tgt = config.get_table_name("bronze", "bronze_access_workspaces_latest_raw")
+            tgt = config.get_table_name("bronze", "brz_access_workspaces_latest")
     
     logger.info(f"Processing access workspaces from {src} to {tgt}")
     
@@ -373,23 +552,41 @@ def upsert_access_workspaces():
     logger.info(f"Successfully processed {record_count} access workspaces records")
     return record_count
 
-# Main execution
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+
 def main():
-    """Main execution function"""
+    """
+    Main execution function orchestrating the entire bronze ingestion process.
+    
+    Execution Flow:
+    1. Validate available SQL operations
+    2. Ensure processing state table exists
+    3. Process all data sources sequentially
+    4. Monitor pipeline completion
+    5. Log final results and metrics
+    
+    Error Handling:
+    - Individual source failures are logged but don't stop the pipeline
+    - Overall pipeline failure is tracked for monitoring
+    - Performance metrics are captured for optimization
+    """
     start_time = time.time()
     total_records = 0
     
     try:
         logger.info("Starting bronze HWM ingest job")
         
-        # Validate SQL operations are available
+        # Validate SQL operations are available before processing
         available_operations = sql_manager.get_available_operations()
         logger.info(f"Available SQL operations: {available_operations}")
         
-        # Ensure bookmark table exists
+        # Ensure processing state table exists for HWM tracking
         ensure_table()
         
-        # Process all sources
+        # Define all data sources and their processing functions
+        # Each source is processed independently for fault isolation
         sources = [
             ("billing_usage", upsert_billing_usage),
             ("list_prices", upsert_list_prices),
@@ -402,6 +599,7 @@ def main():
             ("access_workspaces", upsert_access_workspaces)
         ]
         
+        # Process each source sequentially
         for source_name, source_func in sources:
             try:
                 logger.info(f"Processing source: {source_name}")
@@ -414,7 +612,7 @@ def main():
         
         duration = time.time() - start_time
         
-        # Monitor pipeline completion
+        # Monitor pipeline completion for health tracking
         pipeline_monitor.monitor_pipeline_completion(
             pipeline_name="bronze_hwm_ingest",
             run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
@@ -434,7 +632,7 @@ def main():
     except Exception as e:
         duration = time.time() - start_time
         
-        # Monitor pipeline failure
+        # Monitor pipeline failure for alerting
         pipeline_monitor.monitor_pipeline_completion(
             pipeline_name="bronze_hwm_ingest",
             run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
@@ -450,6 +648,6 @@ def main():
         })
         raise
 
-# Execute main function
+# Execute main function when notebook is run
 if __name__ == "__main__":
     main()

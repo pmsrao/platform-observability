@@ -26,7 +26,6 @@ class TestConfig:
         with patch.dict(os.environ, {"ENVIRONMENT": "dev"}, clear=True):
             config = Config.get_config()
             
-            assert config.ENV == "dev"
             assert config.overlap_hours == 72
             assert config.log_level == "DEBUG"
             assert config.enable_alerts is False
@@ -36,7 +35,6 @@ class TestConfig:
         with patch.dict(os.environ, {"ENVIRONMENT": "prod"}, clear=True):
             config = Config.get_config()
             
-            assert config.ENV == "prod"
             assert config.overlap_hours == 48
             assert config.log_level == "INFO"
             assert config.enable_alerts is True
@@ -54,18 +52,6 @@ class TestConfig:
             assert config.overlap_hours == 96
             assert config.timezone == "UTC"
             assert config.log_level == "ERROR"
-    
-    def test_get_table_name(self):
-        """Test table name generation"""
-        with patch.dict(os.environ, {"ENVIRONMENT": "dev"}, clear=True):
-            table_name = Config.get_table_name("bronze", "test_table")
-            assert table_name == "platform_observability.plt_bronze.test_table"
-    
-    def test_get_schema_name(self):
-        """Test schema name generation"""
-        with patch.dict(os.environ, {"ENVIRONMENT": "dev"}, clear=True):
-            schema_name = Config.get_schema_name("bronze")
-            assert schema_name == "platform_observability.plt_bronze"
     
     def test_invalid_environment(self):
         """Test handling of invalid environment"""
@@ -99,3 +85,48 @@ class TestConfig:
         assert config.log_level == "DEBUG"
         assert config.enable_monitoring is True
         assert config.enable_alerts is False
+    
+    def test_environment_config_table_name_methods(self):
+        """Test EnvironmentConfig table and schema name methods"""
+        config = EnvironmentConfig(
+            catalog="test_catalog",
+            bronze_schema="test_bronze",
+            silver_schema="test_silver",
+            gold_schema="test_gold",
+            overlap_hours=24,
+            timezone="UTC",
+            log_level="DEBUG",
+            enable_monitoring=True,
+            enable_alerts=False
+        )
+        
+        # Test table name generation
+        assert config.get_table_name("bronze", "test_table") == "test_catalog.test_bronze.test_table"
+        assert config.get_table_name("silver", "test_table") == "test_catalog.test_silver.test_table"
+        assert config.get_table_name("gold", "test_table") == "test_catalog.test_gold.test_table"
+        
+        # Test schema name generation
+        assert config.get_schema_name("bronze") == "test_catalog.test_bronze"
+        assert config.get_schema_name("silver") == "test_catalog.test_silver"
+        assert config.get_schema_name("gold") == "test_catalog.test_gold"
+    
+    def test_invalid_schema_name(self):
+        """Test error handling for invalid schema names"""
+        config = EnvironmentConfig(
+            catalog="test_catalog",
+            bronze_schema="test_bronze",
+            silver_schema="test_silver",
+            gold_schema="test_gold",
+            overlap_hours=24,
+            timezone="UTC",
+            log_level="DEBUG",
+            enable_monitoring=True,
+            enable_alerts=False
+        )
+        
+        # Test invalid schema names
+        with pytest.raises(ValueError, match="Invalid schema 'invalid'. Must be one of: bronze, silver, gold"):
+            config.get_table_name("invalid", "test_table")
+        
+        with pytest.raises(ValueError, match="Invalid schema 'invalid'. Must be one of: bronze, silver, gold"):
+            config.get_schema_name("invalid")

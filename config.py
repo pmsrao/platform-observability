@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
 @dataclass
@@ -14,6 +14,23 @@ class EnvironmentConfig:
     log_level: str
     enable_monitoring: bool
     enable_alerts: bool
+    # Gold layer processing configuration
+    gold_complete_refresh: bool
+    gold_processing_strategy: str
+    
+    def get_table_name(self, schema: str, table: str) -> str:
+        """Get fully qualified table name from config instance"""
+        schema_attr = f"{schema}_schema"
+        if not hasattr(self, schema_attr):
+            raise ValueError(f"Invalid schema '{schema}'. Must be one of: bronze, silver, gold")
+        return f"{self.catalog}.{getattr(self, schema_attr)}.{table}"
+    
+    def get_schema_name(self, schema: str) -> str:
+        """Get fully qualified schema name from config instance"""
+        schema_attr = f"{schema}_schema"
+        if not hasattr(self, schema_attr):
+            raise ValueError(f"Invalid schema '{schema}'. Must be one of: bronze, silver, gold")
+        return f"{self.catalog}.{getattr(self, schema_attr)}"
 
 class Config:
     """Centralized configuration management"""
@@ -31,7 +48,10 @@ class Config:
         "timezone": "Asia/Kolkata",
         "log_level": "INFO",
         "enable_monitoring": True,
-        "enable_alerts": True
+        "enable_alerts": True,
+        # Gold layer processing configuration
+        "gold_complete_refresh": False,
+        "gold_processing_strategy": "updated_time"
     }
     
     # Environment-specific overrides
@@ -40,11 +60,15 @@ class Config:
             "overlap_hours": 72,  # More overlap in dev for testing
             "log_level": "DEBUG",
             "enable_alerts": False,  # No alerts in dev
+            "gold_complete_refresh": True,  # Complete refresh in dev for testing
+            "gold_processing_strategy": "hybrid",  # Use hybrid strategy in dev
         },
         "prod": {
             "overlap_hours": 48,
             "log_level": "INFO", 
             "enable_alerts": True,
+            "gold_complete_refresh": False,  # Incremental processing in prod
+            "gold_processing_strategy": "updated_time",  # Use updated_time strategy in prod
         }
     }
     
@@ -56,32 +80,7 @@ class Config:
         if cls.ENV in cls.ENV_OVERRIDES:
             config.update(cls.ENV_OVERRIDES[cls.ENV])
         
-        # Environment variable overrides (highest priority)
-        config.update({
-            "catalog": os.getenv("CATALOG", config["catalog"]),
-            "bronze_schema": os.getenv("BRONZE_SCHEMA", config["bronze_schema"]),
-            "silver_schema": os.getenv("SILVER_SCHEMA", config["silver_schema"]),
-            "gold_schema": os.getenv("GOLD_SCHEMA", config["gold_schema"]),
-            "overlap_hours": int(os.getenv("OVERLAP_HOURS", config["overlap_hours"])),
-            "timezone": os.getenv("TIMEZONE", config["timezone"]),
-            "log_level": os.getenv("LOG_LEVEL", config["log_level"]),
-            "enable_monitoring": os.getenv("ENABLE_MONITORING", str(config["enable_monitoring"])).lower() == "true",
-            "enable_alerts": os.getenv("ENABLE_ALERTS", str(config["enable_alerts"])).lower() == "true"
-        })
-        
         return EnvironmentConfig(**config)
-    
-    @classmethod
-    def get_table_name(cls, schema: str, table: str) -> str:
-        """Get fully qualified table name"""
-        config = cls.get_config()
-        return f"{config.catalog}.{getattr(config, f'{schema}_schema')}.{table}"
-    
-    @classmethod
-    def get_schema_name(cls, schema: str) -> str:
-        """Get fully qualified schema name"""
-        config = cls.get_config()
-        return f"{config.catalog}.{getattr(config, f'{schema}_schema')}"
 
 # Global config instance
 config = Config.get_config()

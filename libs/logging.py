@@ -6,7 +6,10 @@ from datetime import datetime
 from typing import Dict, Any, Optional, Callable
 from functools import wraps
 from dataclasses import dataclass, asdict
-from pyspark.sql import SparkSession
+from config import Config
+
+# Get configuration
+config = Config.get_config()
 
 @dataclass
 class LogContext:
@@ -37,57 +40,102 @@ class PerformanceMetrics:
         return self
 
 class StructuredLogger:
-    """Structured logger for Databricks platform observability"""
+    """Structured logging with JSON format and performance monitoring"""
     
-    def __init__(self, name: str, spark: Optional[SparkSession] = None):
-        self.logger = logging.getLogger(name)
-        self.spark = spark
-        self.context: Optional[LogContext] = None
+    def __init__(self, name: str = None):
+        self.name = name or f"{config.catalog}_observability"
+        self.logger = logging.getLogger(self.name)
+        self._setup_logging()
+    
+    def _setup_logging(self):
+        """Setup logging configuration"""
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+            self.logger.setLevel(getattr(logging, config.log_level.upper()))
+    
+    def _make_serializable(self, obj):
+        """Convert object to JSON-serializable format"""
+        if obj is None:
+            return None
+        elif isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, (list, tuple)):
+            return [self._make_serializable(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {str(k): self._make_serializable(v) for k, v in obj.items()}
+        elif hasattr(obj, '__dict__'):
+            # Handle objects with __dict__ attribute
+            return self._make_serializable(obj.__dict__)
+        else:
+            # Convert to string for non-serializable objects
+            return str(obj)
+    
+    def _log_structured(self, level: str, message: str, **kwargs):
+        """Log structured message with additional context"""
+        # Ensure all kwargs are serializable
+        serializable_kwargs = self._make_serializable(kwargs)
         
-    def set_context(self, job_id: str, run_id: str, pipeline_name: str, environment: str):
-        """Set logging context for the current execution"""
-        self.context = LogContext(
-            job_id=job_id,
-            run_id=run_id,
-            pipeline_name=pipeline_name,
-            environment=environment,
-            timestamp=datetime.utcnow().isoformat(),
-            correlation_id=str(uuid.uuid4())
-        )
-    
-    def _format_message(self, level: str, message: str, extra: Optional[Dict[str, Any]] = None) -> str:
-        """Format log message as structured JSON"""
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),
-            "level": level,
+            "level": level.upper(),
             "message": message,
-            "extra": extra or {}
+            "application": self.name,
+            "environment": config.ENV,
+            **serializable_kwargs
         }
         
-        if self.context:
-            log_entry.update(asdict(self.context))
-        
-        return json.dumps(log_entry)
+        try:
+            json_log = json.dumps(log_entry)
+            if level.upper() == "DEBUG":
+                self.logger.debug(json_log)
+            elif level.upper() == "INFO":
+                self.logger.info(json_log)
+            elif level.upper() == "WARNING":
+                self.logger.warning(json_log)
+            elif level.upper() == "ERROR":
+                self.logger.error(json_log)
+            elif level.upper() == "CRITICAL":
+                self.logger.critical(json_log)
+        except Exception as e:
+            # Fallback to simple logging if JSON serialization fails
+            fallback_msg = f"{message} | {str(serializable_kwargs)}"
+            if level.upper() == "DEBUG":
+                self.logger.debug(fallback_msg)
+            elif level.upper() == "INFO":
+                self.logger.info(fallback_msg)
+            elif level.upper() == "WARNING":
+                self.logger.warning(fallback_msg)
+            elif level.upper() == "ERROR":
+                self.logger.error(fallback_msg)
+            elif level.upper() == "CRITICAL":
+                self.logger.critical(fallback_msg)
     
-    def info(self, message: str, extra: Optional[Dict[str, Any]] = None):
-        """Log info message"""
-        self.logger.info(self._format_message("INFO", message, extra))
-    
-    def warning(self, message: str, extra: Optional[Dict[str, Any]] = None):
-        """Log warning message"""
-        self.logger.warning(self._format_message("WARNING", message, extra))
-    
-    def error(self, message: str, extra: Optional[Dict[str, Any]] = None):
-        """Log error message"""
-        self.logger.error(self._format_message("ERROR", message, extra))
-    
-    def debug(self, message: str, extra: Optional[Dict[str, Any]] = None):
+    def debug(self, message: str, **kwargs):
         """Log debug message"""
-        self.logger.debug(self._format_message("DEBUG", message, extra))
+        self._log_structured("DEBUG", message, **kwargs)
     
-    def critical(self, message: str, extra: Optional[Dict[str, Any]] = None):
+    def info(self, message: str, **kwargs):
+        """Log info message"""
+        self._log_structured("INFO", message, **kwargs)
+    
+    def warning(self, message: str, **kwargs):
+        """Log warning message"""
+        self._log_structured("WARNING", message, **kwargs)
+    
+    def error(self, message: str, **kwargs):
+        """Log error message"""
+        self._log_structured("ERROR", message, **kwargs)
+    
+    def critical(self, message: str, **kwargs):
         """Log critical message"""
-        self.logger.critical(self._format_message("CRITICAL", message, extra))
+        self._log_structured("CRITICAL", message, **kwargs)
 
 class PerformanceMonitor:
     """Monitor and track performance metrics"""
@@ -153,16 +201,8 @@ def performance_monitor(operation_name: str):
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Extract logger from args if available
-            logger = None
-            for arg in args:
-                if hasattr(arg, 'logger') and isinstance(arg.logger, StructuredLogger):
-                    logger = arg.logger
-                    break
-            
-            if not logger:
-                # Create default logger
-                logger = StructuredLogger(f"{func.__module__}.{func.__name__}")
+            # Create default logger for the operation
+            logger = StructuredLogger(f"{func.__module__}.{func.__name__}")
             
             monitor = PerformanceMonitor(logger)
             operation_id = monitor.start_operation(operation_name)

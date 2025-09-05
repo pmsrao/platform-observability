@@ -1,24 +1,26 @@
 {
-  "name": "Platform Observability \u2014 Bronze Job + DLT Silver/Gold",
+  "_comment": "Legacy workflow - Use daily_observability_workflow.json for full HWM approach",
+  "_status": "DEPRECATED - Replaced by daily_observability_workflow.json",
+  "_reason": "Full migration to HWM jobs with SCD2 support",
+  "name": "Platform Observability — Legacy Bronze Job + DLT Silver/Gold (DEPRECATED)",
   "schedule": {
     "quartz_cron_expression": "0 30 5 ? * *",
     "timezone_id": "Asia/Kolkata",
-    "pause_status": "UNPAUSED"
+    "pause_status": "PAUSED"
   },
   "max_concurrent_runs": 1,
   "tasks": [
     {
       "task_key": "bronze_hwm_job",
+      "description": "DEPRECATED - Use daily_observability_workflow.json",
       "notebook_task": {
-        "notebook_path": "/Repos/<your-repo-path>/notebooks/bronze_hwm_ingest_job.py",
-        "base_parameters": {
-          "overlap_hours": "48"
-        }
+        "notebook_path": "/Repos/<your-repo-path>/notebooks/bronze_hwm_ingest_job.py"
       },
       "existing_cluster_id": "<CLUSTER_ID>"
     },
     {
       "task_key": "silver_gold_dlt",
+      "description": "DEPRECATED - Use daily_observability_workflow.json",
       "depends_on": [
         {
           "task_key": "bronze_hwm_job"

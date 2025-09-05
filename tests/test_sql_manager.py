@@ -7,24 +7,31 @@ from unittest.mock import patch, mock_open
 from libs.sql_manager import SQLManager
 
 class TestSQLManager:
-    """Test SQL file manager functionality"""
+    """Test cases for SQLManager class"""
     
-    def test_sql_manager_initialization(self):
-        """Test SQL manager initialization"""
+    def test_init(self):
+        """Test SQLManager initialization"""
         manager = SQLManager("test_sql_dir")
         assert manager.sql_directory == Path("test_sql_dir")
         assert manager._sql_cache == {}
     
     def test_get_sql_file_path(self):
-        """Test SQL file path generation"""
+        """Test getting SQL file path"""
         manager = SQLManager("test_sql_dir")
         path = manager.get_sql_file_path("test_operation")
-        expected = Path("test_sql_dir") / "bronze_operations" / "test_operation.sql"
+        expected = Path("test_sql_dir") / "bronze" / "test_operation.sql"
+        assert path == expected
+    
+    def test_get_sql_file_path_not_found(self):
+        """Test getting SQL file path when file doesn't exist"""
+        manager = SQLManager("test_sql_dir")
+        path = manager.get_sql_file_path("nonexistent")
+        expected = Path("test_sql_dir") / "nonexistent.sql"
         assert path == expected
     
     def test_load_sql_file_not_found(self):
-        """Test loading non-existent SQL file"""
-        manager = SQLManager("nonexistent_dir")
+        """Test loading SQL file that doesn't exist"""
+        manager = SQLManager("test_sql_dir")
         
         with pytest.raises(FileNotFoundError):
             manager.load_sql("test_operation")
@@ -33,7 +40,7 @@ class TestSQLManager:
         """Test successful SQL file loading"""
         # Create temporary directory with SQL file
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
+            sql_dir = Path(temp_dir) / "bronze"
             sql_dir.mkdir()
             
             sql_file = sql_dir / "test_operation.sql"
@@ -49,7 +56,7 @@ class TestSQLManager:
     def test_load_sql_caching(self):
         """Test SQL file caching"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
+            sql_dir = Path(temp_dir) / "bronze"
             sql_dir.mkdir()
             
             sql_file = sql_dir / "test_operation.sql"
@@ -73,7 +80,7 @@ class TestSQLManager:
     def test_parameterize_sql(self):
         """Test SQL parameterization"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
+            sql_dir = Path(temp_dir) / "bronze"
             sql_dir.mkdir()
             
             sql_file = sql_dir / "test_operation.sql"
@@ -93,7 +100,7 @@ class TestSQLManager:
     def test_parameterize_sql_no_parameters(self):
         """Test SQL parameterization with no parameters"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
+            sql_dir = Path(temp_dir) / "bronze"
             sql_dir.mkdir()
             
             sql_file = sql_dir / "test_operation.sql"
@@ -108,7 +115,7 @@ class TestSQLManager:
     def test_get_available_operations(self):
         """Test getting available SQL operations"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
+            sql_dir = Path(temp_dir) / "bronze"
             sql_dir.mkdir()
             
             # Create multiple SQL files
@@ -130,117 +137,128 @@ class TestSQLManager:
             
             assert available_ops == []
     
-    def test_validate_sql(self):
-        """Test SQL validation"""
+    def test_get_available_operations_mixed_directories(self):
+        """Test getting operations from mixed directory structure"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
-            sql_dir.mkdir()
+            # Create bronze directory with SQL files
+            bronze_dir = Path(temp_dir) / "bronze"
+            bronze_dir.mkdir()
             
-            sql_file = sql_dir / "test_operation.sql"
-            sql_file.write_text("SELECT * FROM test_table")
+            bronze_ops = ["bronze_op1", "bronze_op2"]
+            for op in bronze_ops:
+                sql_file = bronze_dir / f"{op}.sql"
+                sql_file.write_text(f"-- {op} SQL")
+            
+            # Create root SQL directory with SQL files
+            root_sql_dir = Path(temp_dir)
+            root_ops = ["root_op1", "root_op2"]
+            for op in root_ops:
+                sql_file = root_sql_dir / f"{op}.sql"
+                sql_file.write_text(f"-- {op} SQL")
             
             manager = SQLManager(temp_dir)
+            available_ops = manager.get_available_operations()
             
-            # Valid operation
-            assert manager.validate_sql("test_operation") is True
-            
-            # Invalid operation
-            assert manager.validate_sql("nonexistent_operation") is False
+            expected_ops = bronze_ops + root_ops
+            assert set(available_ops) == set(expected_ops)
     
-    def test_reload_sql_specific_operation(self):
-        """Test reloading specific SQL operation"""
+    def test_clear_cache(self):
+        """Test clearing SQL cache"""
+        manager = SQLManager("test_sql_dir")
+        
+        # Add some items to cache
+        manager._sql_cache["test1"] = "content1"
+        manager._sql_cache["test2"] = "content2"
+        
+        assert len(manager._sql_cache) == 2
+        
+        # Clear cache
+        manager.clear_cache()
+        
+        assert len(manager._sql_cache) == 0
+    
+    def test_parameterize_sql_with_complex_parameters(self):
+        """Test SQL parameterization with complex parameter values"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
+            sql_dir = Path(temp_dir) / "bronze"
             sql_dir.mkdir()
             
             sql_file = sql_dir / "test_operation.sql"
-            sql_file.write_text("SELECT * FROM test_table")
-            
-            manager = SQLManager(temp_dir)
-            
-            # Load SQL to populate cache
-            manager.load_sql("test_operation")
-            assert "test_operation" in manager._sql_cache
-            
-            # Reload specific operation
-            manager.reload_sql("test_operation")
-            assert "test_operation" not in manager._sql_cache
-    
-    def test_reload_sql_all_operations(self):
-        """Test reloading all SQL operations"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
-            sql_dir.mkdir()
-            
-            sql_file = sql_dir / "test_operation.sql"
-            sql_file.write_text("SELECT * FROM test_table")
-            
-            manager = SQLManager(temp_dir)
-            
-            # Load SQL to populate cache
-            manager.load_sql("test_operation")
-            assert len(manager._sql_cache) > 0
-            
-            # Reload all operations
-            manager.reload_sql()
-            assert len(manager._sql_cache) == 0
-    
-    def test_parameterize_sql_with_special_characters(self):
-        """Test SQL parameterization with special characters"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
-            sql_dir.mkdir()
-            
-            sql_file = sql_dir / "test_operation.sql"
-            sql_content = "SELECT * FROM {table_name} WHERE id = {id}"
+            sql_content = """
+            SELECT * FROM {table_name} 
+            WHERE {date_column} >= '{start_date}' 
+            AND {date_column} <= '{end_date}'
+            AND {status_column} IN ({status_values})
+            """
             sql_file.write_text(sql_content)
             
             manager = SQLManager(temp_dir)
             parameterized_sql = manager.parameterize_sql(
                 "test_operation",
-                table_name="test.table",
-                id="123"
+                table_name="my_table",
+                date_column="created_date",
+                start_date="2023-01-01",
+                end_date="2023-12-31",
+                status_column="status",
+                status_values="'active', 'pending'"
             )
             
-            expected = "SELECT * FROM test.table WHERE id = 123"
-            assert parameterized_sql == expected
+            expected = """
+            SELECT * FROM my_table 
+            WHERE created_date >= '2023-01-01' 
+            AND created_date <= '2023-12-31'
+            AND status IN ('active', 'pending')
+            """
+            assert parameterized_sql.strip() == expected.strip()
     
     def test_parameterize_sql_missing_parameters(self):
         """Test SQL parameterization with missing parameters"""
         with tempfile.TemporaryDirectory() as temp_dir:
-            sql_dir = Path(temp_dir) / "bronze_operations"
+            sql_dir = Path(temp_dir) / "bronze"
             sql_dir.mkdir()
             
             sql_file = sql_dir / "test_operation.sql"
-            sql_content = "SELECT * FROM {target_table} JOIN {source_table}"
+            sql_content = "SELECT * FROM {table_name} WHERE {condition}"
             sql_file.write_text(sql_content)
             
             manager = SQLManager(temp_dir)
-            parameterized_sql = manager.parameterize_sql(
-                "test_operation",
-                target_table="test.target"
-                # Missing source_table parameter
-            )
             
-            # Should leave placeholder unchanged
-            expected = "SELECT * FROM test.target JOIN {source_table}"
-            assert parameterized_sql == expected
+            # Should raise KeyError for missing parameters
+            with pytest.raises(KeyError):
+                manager.parameterize_sql("test_operation", table_name="test_table")
     
-    def test_sql_manager_with_relative_paths(self):
-        """Test SQL manager with relative paths"""
-        manager = SQLManager(".")
-        path = manager.get_sql_file_path("test_operation")
-        expected = Path(".") / "bronze_operations" / "test_operation.sql"
-        assert path == expected
-    
-    def test_sql_manager_with_absolute_paths(self):
-        """Test SQL manager with absolute paths"""
-        temp_dir = tempfile.mkdtemp()
-        try:
+    def test_sql_file_path_resolution_order(self):
+        """Test SQL file path resolution order (bronze first, then root)"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create both directories
+            bronze_dir = Path(temp_dir) / "bronze"
+            bronze_dir.mkdir()
+            
+            # Create file in bronze directory
+            bronze_file = bronze_dir / "test_operation.sql"
+            bronze_file.write_text("-- Bronze operation")
+            
+            # Create file with same name in root directory
+            root_file = Path(temp_dir) / "test_operation.sql"
+            root_file.write_text("-- Root operation")
+            
             manager = SQLManager(temp_dir)
             path = manager.get_sql_file_path("test_operation")
-            expected = Path(temp_dir) / "bronze_operations" / "test_operation.sql"
+            
+            # Should return bronze directory path (priority)
+            expected = Path(temp_dir) / "bronze" / "test_operation.sql"
             assert path == expected
-        finally:
-            import shutil
-            shutil.rmtree(temp_dir)
+    
+    def test_sql_file_path_fallback_to_root(self):
+        """Test SQL file path fallback to root when not in bronze directory"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create only root SQL file
+            root_file = Path(temp_dir) / "test_operation.sql"
+            root_file.write_text("-- Root operation")
+            
+            manager = SQLManager(temp_dir)
+            path = manager.get_sql_file_path("test_operation")
+            
+            # Should return root directory path
+            expected = Path(temp_dir) / "test_operation.sql"
+            assert path == expected

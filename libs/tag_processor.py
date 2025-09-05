@@ -8,20 +8,36 @@ class TagProcessor:
     REQUIRED_TAGS: Dict[str, str] = {
         "project": "line_of_business",
         "sub_project": "department",
+        "cost_center": "cost_center",
         "environment": "environment",
         "data_product": "use_case",
         "job_pipeline": "pipeline_name",
         "cluster_name": "cluster_identifier",
+        # NEW: Workflow hierarchy tags
+        "workflow_level": "workflow_level",
+        "parent_workflow": "parent_workflow_name",
+        # NEW: Runtime and infrastructure tags
+        "runtime_version": "databricks_runtime",
+        "node_type": "compute_node_type",
+        "cluster_size": "cluster_worker_count",
     }
 
     # Defaults per your request
     DEFAULTS: Dict[str, str] = {
         "line_of_business": "Unknown",
         "department": "general",
+        "cost_center": "unallocated",
         "environment": "dev",
         "use_case": "Unknown",
         "pipeline_name": "system",
         "cluster_identifier": "Unknown",
+        # NEW: Workflow defaults
+        "workflow_level": "STANDALONE",
+        "parent_workflow": "None",
+        # NEW: Runtime and infrastructure defaults
+        "databricks_runtime": "Unknown",
+        "compute_node_type": "Unknown",
+        "cluster_worker_count": "Unknown",
     }
 
     VALID_ENVS = ["prod", "stage", "uat", "dev", "production", "staging", "development", "user_acceptance"]
@@ -115,11 +131,55 @@ class TagProcessor:
                 "|",
                 F.col("line_of_business"),
                 F.col("department"),
+                F.col("cost_center"),
                 F.col("environment"),
                 F.col("use_case"),
                 F.col("pipeline_name"),
                 F.col("cluster_identifier"),
+                F.col("workflow_level"),
+                F.col("parent_workflow_name"),
             )
+        )
+
+    @classmethod
+    def enrich_workflow_hierarchy(cls, df: DataFrame) -> DataFrame:
+        """
+        Enrich with workflow hierarchy information
+        """
+        return df.withColumn(
+            "workflow_level",
+            F.when(F.col("is_parent_workflow"), F.lit("PARENT"))
+             .when(F.col("is_sub_workflow"), F.lit("SUB_WORKFLOW"))
+             .otherwise(F.lit("STANDALONE"))
+        ).withColumn(
+            "parent_workflow_name",
+            F.when(F.col("parent_workflow_id").isNotNull(), 
+                   F.concat_ws("_", F.lit("WF"), F.col("parent_workflow_id")))
+             .otherwise(F.lit("None"))
+        )
+
+    @classmethod
+    def enrich_cluster_with_job_tags(cls, cluster_df: DataFrame, job_df: DataFrame) -> DataFrame:
+        """
+        Enrich cluster data with job-level tags for cost attribution
+        """
+        return cluster_df.join(
+            job_df,
+            (cluster_df.workspace_id == job_df.workspace_id) &
+            (cluster_df.associated_entity_id == job_df.job_id) &
+            (cluster_df.associated_entity_type == F.lit("JOB")) &
+            (job_df.is_current == True),
+            "left"
+        ).select(
+            cluster_df["*"],
+            # Inherit job tags for cost attribution
+            F.col("job.line_of_business").alias("inherited_line_of_business"),
+            F.col("job.department").alias("inherited_department"),
+            F.col("job.cost_center").alias("inherited_cost_center"),
+            F.col("job.environment").alias("inherited_environment"),
+            F.col("job.use_case").alias("inherited_use_case"),
+            F.col("job.workflow_level").alias("inherited_workflow_level"),
+            F.col("job.parent_workflow_name").alias("inherited_parent_workflow")
         )
 
     @classmethod
