@@ -235,6 +235,41 @@ except Exception as e:
 
 # COMMAND ----------
 
+# Let's test the SQLParameterizer execution step by step
+print("🧪 Testing SQLParameterizer Execution:")
+try:
+    # Get the statements using the same method as SQLParameterizer
+    statements = sql_param.sql_manager.parameterize_sql_statements(
+        "config/bootstrap_catalog_schemas",
+        catalog=sql_param.config.catalog,
+        bronze_schema=sql_param.config.bronze_schema,
+        silver_schema=sql_param.config.silver_schema,
+        gold_schema=sql_param.config.gold_schema
+    )
+    
+    print(f"SQLParameterizer got {len(statements)} statements")
+    
+    # Execute each statement manually using the same spark instance
+    for i, statement in enumerate(statements):
+        print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
+        print(f"   Full statement: {repr(statement)}")
+        try:
+            sql_param.spark.sql(statement)
+            print(f"   ✅ Statement {i+1} executed successfully")
+        except Exception as e:
+            print(f"   ❌ Statement {i+1} failed: {e}")
+            print(f"   Statement content: {repr(statement)}")
+            raise
+            
+    print("✅ All statements executed successfully via manual loop!")
+    
+except Exception as e:
+    print(f"❌ Manual SQLParameterizer execution failed: {e}")
+    import traceback
+    traceback.print_exc()
+
+# COMMAND ----------
+
 # Bootstrap catalog and schemas
 sql_param.bootstrap_catalog_schemas()
 
