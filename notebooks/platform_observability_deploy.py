@@ -65,8 +65,11 @@ from libs.sql_manager import SQLManager
 import os
 from pathlib import Path
 
-# Create a new SQLManager instance to ensure we get the latest path resolution
-sql_manager = SQLManager()
+# Create a new SQLManager instance with explicit path based on current working directory
+# From the debug output, we know we're in /Workspace/Users/podilapalls@gmail.com/platform-observability/notebooks
+# So the sql directory should be at /Workspace/Users/podilapalls@gmail.com/platform-observability/sql
+explicit_sql_path = "/Workspace/Users/podilapalls@gmail.com/platform-observability/sql"
+sql_manager = SQLManager(sql_directory=explicit_sql_path)
 
 # Debug path configuration
 print("🔍 Debugging Path Configuration:")
@@ -94,8 +97,14 @@ except FileNotFoundError as e:
         Path.cwd() / "sql" / "config" / "bootstrap_catalog_schemas.sql",
         Path.cwd().parent / "sql" / "config" / "bootstrap_catalog_schemas.sql",
         Path("/Workspace/Repos/platform-observability/sql/config/bootstrap_catalog_schemas.sql"),
-        Path(__file__).parent.parent / "sql" / "config" / "bootstrap_catalog_schemas.sql"
+        Path("/Workspace/Users/podilapalls@gmail.com/platform-observability/sql/config/bootstrap_catalog_schemas.sql")
     ]
+    
+    # Try to add __file__ based path if available
+    try:
+        possible_locations.append(Path(__file__).parent.parent / "sql" / "config" / "bootstrap_catalog_schemas.sql")
+    except NameError:
+        pass
     
     for location in possible_locations:
         if location.exists():

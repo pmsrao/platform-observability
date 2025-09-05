@@ -11,25 +11,44 @@ class SQLManager:
             # Try multiple fallback paths to find the sql directory
             possible_paths = []
             
-            # Path 1: Relative to current file (libs/sql_manager.py -> project_root/sql)
-            current_file = Path(__file__)
-            project_root = current_file.parent.parent
-            possible_paths.append(project_root / "sql")
+            # Path 1: Try relative to current file (only if __file__ is available)
+            try:
+                current_file = Path(__file__)
+                project_root = current_file.parent.parent
+                possible_paths.append(project_root / "sql")
+            except NameError:
+                # __file__ is not available in Databricks notebooks
+                pass
             
             # Path 2: Current working directory + sql
             possible_paths.append(Path.cwd() / "sql")
             
-            # Path 3: Databricks workspace path
-            workspace_path = Path("/Workspace/Repos/platform-observability/sql")
-            possible_paths.append(workspace_path)
+            # Path 3: Databricks workspace paths (multiple possible locations)
+            workspace_paths = [
+                Path("/Workspace/Repos/platform-observability/sql"),
+                Path("/Workspace/Users/podilapalls@gmail.com/platform-observability/sql"),
+                Path("/Workspace/Repos/platform-observability/platform-observability/sql")
+            ]
+            possible_paths.extend(workspace_paths)
             
             # Path 4: Try relative to current working directory with different levels
             cwd = Path.cwd()
             possible_paths.extend([
                 cwd / "sql",
                 cwd.parent / "sql",
-                cwd.parent.parent / "sql"
+                cwd.parent.parent / "sql",
+                cwd.parent.parent.parent / "sql"
             ])
+            
+            # Path 5: Try absolute paths based on current working directory
+            if "platform-observability" in str(cwd):
+                # We're in the project directory, try to find sql relative to project root
+                parts = cwd.parts
+                for i, part in enumerate(parts):
+                    if part == "platform-observability":
+                        project_root = Path(*parts[:i+1])
+                        possible_paths.append(project_root / "sql")
+                        break
             
             # Find the first path that exists
             sql_directory = None
@@ -38,9 +57,9 @@ class SQLManager:
                     sql_directory = path
                     break
             
-            # If no path found, use the first one (relative to current file) as default
+            # If no path found, use the first one as default
             if sql_directory is None:
-                sql_directory = possible_paths[0]
+                sql_directory = possible_paths[0] if possible_paths else Path("sql")
                 
         self.sql_directory = Path(sql_directory)
         self._sql_cache: Dict[str, str] = {}
