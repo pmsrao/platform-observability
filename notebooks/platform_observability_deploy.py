@@ -67,12 +67,19 @@ print(f"   Databricks Host: {config.databricks_host}")
 # Import SQL parameterizer for bootstrap
 from libs.sql_parameterizer import SQLParameterizer
 from libs.sql_manager import sql_manager
+import os
+from pathlib import Path
 
 # Debug path configuration
 print("🔍 Debugging Path Configuration:")
-debug_info = sql_manager.debug_paths()
-for key, value in debug_info.items():
-    print(f"   {key}: {value}")
+print(f"   Current working directory: {os.getcwd()}")
+print(f"   SQL directory: {sql_manager.sql_directory}")
+print(f"   SQL directory exists: {sql_manager.sql_directory.exists()}")
+print(f"   Available SQL files: {sql_manager.get_available_operations()}")
+print(f"   Config catalog: {sql_manager._config.catalog}")
+print(f"   Config bronze schema: {sql_manager._config.bronze_schema}")
+print(f"   Config silver schema: {sql_manager._config.silver_schema}")
+print(f"   Config gold schema: {sql_manager._config.gold_schema}")
 
 # COMMAND ----------
 
