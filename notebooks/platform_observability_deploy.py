@@ -30,11 +30,25 @@
 import sys
 import os
 
+# Add libs to path (cloud-agnostic approach)
+try:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
+    if libs_dir not in sys.path:
+        sys.path.append(libs_dir)
+except NameError:
+    # __file__ is not available in Databricks notebooks
+    pass
 
-# For Databricks workspace
-workspace_libs_path = '/Workspace/Repos/platform-observability/libs'
-if workspace_libs_path not in sys.path:
-    sys.path.append(workspace_libs_path)
+# For Databricks workspace - try multiple possible paths
+workspace_paths = [
+    '/Workspace/Repos/platform-observability/libs',
+    '/Workspace/Users/podilapalls@gmail.com/platform-observability/libs'
+]
+
+for workspace_libs_path in workspace_paths:
+    if workspace_libs_path not in sys.path:
+        sys.path.append(workspace_libs_path)
 
 # Import configuration
 from config import Config
@@ -60,18 +74,12 @@ print(f"   Databricks Host: {config.databricks_host}")
 # COMMAND ----------
 
 # Import SQL parameterizer for bootstrap
-import importlib
-import libs.sql_parameterizer
-import libs.sql_manager
-
-# Reload modules to ensure we get the latest changes
-importlib.reload(libs.sql_parameterizer)
-importlib.reload(libs.sql_manager)
-
-from libs.sql_parameterizer import SQLParameterizer
-from libs.sql_manager import SQLManager
 import os
 from pathlib import Path
+
+# Direct import - the modules should be up to date
+from libs.sql_parameterizer import SQLParameterizer
+from libs.sql_manager import SQLManager
 
 # Create a new SQLManager instance with explicit path based on current working directory
 # From the debug output, we know we're in /Workspace/Users/podilapalls@gmail.com/platform-observability/notebooks
