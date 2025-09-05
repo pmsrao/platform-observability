@@ -159,6 +159,19 @@ sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
 
 # Debug: Let's see what SQL statements are being generated
 print("🔍 Debugging SQL Generation:")
+
+# First, let's see the raw SQL content
+print("Raw SQL content:")
+try:
+    raw_sql = sql_manager.parameterize_sql("config/bootstrap_catalog_schemas")
+    print(f"Raw SQL length: {len(raw_sql)}")
+    print(f"Raw SQL content: {repr(raw_sql)}")
+    print("---")
+except Exception as e:
+    print(f"Error getting raw SQL: {e}")
+
+# Now let's see the statements
+print("Generated statements:")
 try:
     statements = sql_manager.parameterize_sql_statements("config/bootstrap_catalog_schemas")
     print(f"Number of statements: {len(statements)}")

@@ -128,12 +128,14 @@ class SQLManager:
         statements = []
         for statement in sql_content.split(';'):
             statement = statement.strip()
-            # Remove comments and empty statements
-            if statement and not statement.startswith('--') and not statement.startswith('/*'):
-                # Remove any trailing comments
+            # Only skip completely empty statements or pure comments
+            if statement and not statement.startswith('--'):
+                # Remove any trailing comments but keep the statement
                 if '--' in statement:
                     statement = statement.split('--')[0].strip()
-                statements.append(statement)
+                # Only add if there's still content after removing comments
+                if statement:
+                    statements.append(statement)
         
         return statements
     
