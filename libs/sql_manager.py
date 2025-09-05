@@ -139,19 +139,41 @@ class SQLManager:
             print(f"  Is empty: {not statement}")
             print(f"  Starts with --: {statement.startswith('--') if statement else False}")
             
-            # Only skip completely empty statements or pure comments
-            if statement and not statement.startswith('--'):
-                # Remove any trailing comments but keep the statement
-                if '--' in statement:
-                    statement = statement.split('--')[0].strip()
-                # Only add if there's still content after removing comments
-                if statement:
-                    statements.append(statement)
-                    print(f"  ✅ Added statement: {repr(statement[:100])}...")
+            # Skip empty statements
+            if not statement:
+                print(f"  ❌ Skipped empty statement")
+                print("  ---")
+                continue
+            
+            # If statement starts with comments, try to find the actual SQL
+            if statement.startswith('--'):
+                # Look for the first line that doesn't start with --
+                lines = statement.split('\n')
+                sql_lines = []
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('--'):
+                        sql_lines.append(line)
+                
+                if sql_lines:
+                    # Join the SQL lines
+                    statement = ' '.join(sql_lines)
+                    print(f"  Found SQL after comments: {repr(statement[:100])}...")
                 else:
-                    print(f"  ❌ Statement became empty after comment removal")
+                    print(f"  ❌ No SQL found after comments")
+                    print("  ---")
+                    continue
+            
+            # Remove any trailing comments but keep the statement
+            if '--' in statement:
+                statement = statement.split('--')[0].strip()
+            
+            # Only add if there's still content after processing
+            if statement:
+                statements.append(statement)
+                print(f"  ✅ Added statement: {repr(statement[:100])}...")
             else:
-                print(f"  ❌ Skipped statement")
+                print(f"  ❌ Statement became empty after processing")
             print("  ---")
         
         return statements
