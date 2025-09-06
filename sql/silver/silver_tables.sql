@@ -62,6 +62,27 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_pipelines_scd (
     is_current BOOLEAN
 ) USING DELTA;
 
+-- Entity Latest View (Unified entity view from jobs and pipelines)
+CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_entity_latest (
+    account_id STRING,                      -- Account identifier for multi-tenant support
+    workspace_id STRING,
+    entity_id STRING,                       -- Standardized ID (job_id or pipeline_id)
+    entity_type STRING,                     -- 'JOB' or 'PIPELINE'
+    name STRING,                            -- Standardized name
+    run_as STRING,
+    -- Pipeline-specific attributes (NULL for jobs)
+    pipeline_type STRING,                   -- Pipeline type (DLT, streaming, batch, etc.)
+    -- Job-specific workflow attributes (NULL for pipelines)
+    is_parent_workflow BOOLEAN,             -- Whether this job is a parent workflow
+    is_sub_workflow BOOLEAN,                -- Whether this job is a sub-workflow
+    workflow_level STRING,                  -- Workflow hierarchy level
+    parent_workflow_name STRING,            -- Name of parent workflow
+    -- Common attributes
+    created_time TIMESTAMP,
+    updated_time TIMESTAMP,
+    _loaded_at TIMESTAMP
+) USING DELTA;
+
 -- Price Table (Type 2 - Historical pricing)
 CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_price_scd (
     account_id STRING,
@@ -283,5 +304,3 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     valid_to TIMESTAMP,
     is_current BOOLEAN
 ) USING DELTA;
-
-

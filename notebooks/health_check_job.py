@@ -453,7 +453,7 @@ def check_processing_offsets(spark) -> Dict[str, Any]:
         
         # Check CDF offsets
         try:
-            cdf_offsets = spark.table(f"{config.catalog}.{config.bronze_schema}._cdf_processing_offsets")
+            cdf_offsets = spark.table(f"{config.catalog}.{config.silver_schema}._cdf_processing_offsets")
             cdf_count = cdf_offsets.count()
             
             if cdf_count > 0:

@@ -192,47 +192,106 @@ def build_silver_workspace(spark) -> bool:
         return False
 
 def build_silver_entity_latest(spark) -> bool:
-    """Build Silver entity latest view"""
-    logger.info("Building Silver entity latest view")
+    """Build unified Silver entity latest view from JOB and PIPELINE sources"""
+    logger.info("Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     try:
         # Get last processed timestamp
         task_name = get_silver_task_name("slv_entity_latest")
         last_ts, _ = get_last_processed_timestamp(spark, "slv_entity_latest", task_name, "silver")
         
-        # Read new data from Bronze
-        df = read_bronze_since_timestamp(spark, "brz_lakeflow_jobs", last_ts)
+        # Process JOBS
+        logger.info("Processing JOB entities from brz_lakeflow_jobs")
+        jobs_df = read_bronze_since_timestamp(spark, "brz_lakeflow_jobs", last_ts)
         
-        if df.count() == 0:
+        # Process PIPELINES
+        logger.info("Processing PIPELINE entities from brz_lakeflow_pipelines")
+        pipelines_df = read_bronze_since_timestamp(spark, "brz_lakeflow_pipelines", last_ts)
+        
+        # Transform JOB data
+        jobs_entities = None
+        if jobs_df.count() > 0:
+            jobs_entities = jobs_df.select(
+                jobs_df.account_id,
+                jobs_df.workspace_id,
+                jobs_df.job_id.alias("entity_id"),
+                jobs_df.job_name.alias("name"),
+                jobs_df.run_as,
+                # Pipeline-specific attributes (NULL for jobs)
+                F.lit(None).cast("string").alias("pipeline_type"),
+                # Job-specific workflow attributes
+                jobs_df.is_parent_workflow,
+                jobs_df.is_sub_workflow,
+                jobs_df.workflow_level,
+                jobs_df.parent_workflow_name,
+                # Common attributes
+                jobs_df.created_time,
+                jobs_df.updated_time,
+                F.current_timestamp().alias("_loaded_at")
+            ).withColumn("entity_type", F.lit("JOB"))
+            logger.info(f"Transformed {jobs_entities.count()} JOB entities")
+        
+        # Transform PIPELINE data
+        pipelines_entities = None
+        if pipelines_df.count() > 0:
+            pipelines_entities = pipelines_df.select(
+                pipelines_df.account_id,
+                pipelines_df.workspace_id,
+                pipelines_df.pipeline_id.alias("entity_id"),
+                pipelines_df.name,
+                pipelines_df.run_as,
+                # Pipeline-specific attributes
+                pipelines_df.pipeline_type,
+                # Job-specific workflow attributes (NULL for pipelines)
+                F.lit(None).cast("boolean").alias("is_parent_workflow"),
+                F.lit(None).cast("boolean").alias("is_sub_workflow"),
+                F.lit(None).cast("string").alias("workflow_level"),
+                F.lit(None).cast("string").alias("parent_workflow_name"),
+                # Common attributes
+                pipelines_df.created_time,
+                pipelines_df.updated_time,
+                F.current_timestamp().alias("_loaded_at")
+            ).withColumn("entity_type", F.lit("PIPELINE"))
+            logger.info(f"Transformed {pipelines_entities.count()} PIPELINE entities")
+        
+        # Union both sources
+        unified_entities = None
+        if jobs_entities is not None and pipelines_entities is not None:
+            unified_entities = jobs_entities.union(pipelines_entities)
+        elif jobs_entities is not None:
+            unified_entities = jobs_entities
+        elif pipelines_entities is not None:
+            unified_entities = pipelines_entities
+        else:
             logger.info("No new data for Silver entity latest view")
             return True
         
         # Validate data
-        if not validate_silver_data(df, "silver_entity_latest"):
+        if not validate_silver_data(unified_entities, "silver_entity_latest"):
             logger.error("Data validation failed for Silver entity latest view")
             return False
         
-        # Transform data
-        transformed_df = df.select(
-            df.workspace_id,
-            df.job_id.alias("entity_id"),
-            df.job_name.alias("name"),
-            df.run_as,
-            df.created_time,
-            df.updated_time
-        ).withColumn("entity_type", F.lit("JOB"))
-        
         # Write to Silver table
         silver_table = get_silver_table_name("slv_entity_latest")
-        transformed_df.write.mode("overwrite").saveAsTable(silver_table)
+        unified_entities.write.mode("overwrite").saveAsTable(silver_table)
         
-        # Update processing state
-        max_ts = get_max_timestamp(df)
+        # Update processing state (use max timestamp from both sources)
+        max_ts_jobs = get_max_timestamp(jobs_df) if jobs_df.count() > 0 else None
+        max_ts_pipelines = get_max_timestamp(pipelines_df) if pipelines_df.count() > 0 else None
+        
+        max_ts = None
+        if max_ts_jobs and max_ts_pipelines:
+            max_ts = max(max_ts_jobs, max_ts_pipelines)
+        elif max_ts_jobs:
+            max_ts = max_ts_jobs
+        elif max_ts_pipelines:
+            max_ts = max_ts_pipelines
+        
         if max_ts:
             task_name = get_silver_task_name("slv_entity_latest")
             commit_processing_state(spark, "slv_entity_latest", max_ts, task_name=task_name, layer="silver")
         
-        logger.info(f"Successfully built Silver entity latest view with {transformed_df.count()} records")
+        logger.info(f"Successfully built unified Silver entity latest view with {unified_entities.count()} records")
         return True
         
     except Exception as e:
