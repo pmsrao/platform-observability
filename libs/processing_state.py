@@ -42,10 +42,11 @@ def get_processing_state_table(layer="bronze"):
         >>> get_processing_state_table("silver")
         'platform_observability.plt_silver._cdf_processing_offsets'
     """
+    config = Config.get_config()
     if layer == "bronze":
-        return Config.get_table_name("bronze", "_bronze_hwm_processing_offsets")
+        return config.get_table_name("bronze", "_bronze_hwm_processing_offsets")
     elif layer == "silver":
-        return Config.get_table_name("silver", "_cdf_processing_offsets")
+        return config.get_table_name("silver", "_cdf_processing_offsets")
     else:
         raise ValueError(f"Unsupported layer: {layer}")
 

@@ -636,7 +636,7 @@ def main():
         logger.info(f"Available SQL operations: {available_operations}")
         
         # Ensure processing state table exists for HWM tracking
-        ensure_table()
+        ensure_table(spark)
         
         # Define all data sources and their processing functions
         # Each source is processed independently for fault isolation
