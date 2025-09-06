@@ -53,24 +53,30 @@ OVERLAP_HOURS = config.overlap_hours
 # INITIALIZATION FUNCTIONS
 # =============================================================================
 
+def get_job_context():
+    """
+    Get job context information for logging.
+    """
+    return {
+        "job_id": dbutils.jobs.taskValues.getCurrent().get("job_id", "unknown"),
+        "run_id": dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
+        "pipeline_name": "bronze_hwm_ingest",
+        "environment": config.ENV
+    }
+
 def setup_logging():
     """
     Setup logging context and initial logging.
     This function is called at runtime, not at import time.
     """
-    logger.set_context(
-        job_id=dbutils.jobs.taskValues.getCurrent().get("job_id", "unknown"),
-        run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
-        pipeline_name="bronze_hwm_ingest",
-        environment=config.ENV
-    )
+    job_context = get_job_context()
     
-    logger.info("Bronze HWM ingest job started", {
-        "overlap_hours": OVERLAP_HOURS,
-        "environment": config.ENV,
-        "catalog": config.catalog,
-        "bronze_schema": config.bronze_schema
-    })
+    logger.info("Bronze HWM ingest job started", 
+                overlap_hours=OVERLAP_HOURS,
+                environment=config.ENV,
+                catalog=config.catalog,
+                bronze_schema=config.bronze_schema,
+                **job_context)
     
     # Initialize monitoring for pipeline health tracking
     pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"))
