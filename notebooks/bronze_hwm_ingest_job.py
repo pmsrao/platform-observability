@@ -31,12 +31,7 @@ from config import Config
 # Create our own config instance to avoid conflicts with global config
 config = Config.get_config()
 
-# Debug: Verify Config.ENV is accessible
-print(f"Debug: Config.ENV = {Config.ENV}")
-print(f"Debug: config type = {type(config)}")
-print(f"Debug: config has ENV attribute: {hasattr(config, 'ENV')}")
-
-# Ensure we're using the correct Config class
+# Verify Config.ENV is accessible
 assert hasattr(Config, 'ENV'), "Config class should have ENV attribute"
 assert not hasattr(config, 'ENV'), "config instance should NOT have ENV attribute"
 from libs.logging import StructuredLogger, PerformanceMonitor, performance_monitor
@@ -673,7 +668,7 @@ def main():
         job_context = get_job_context()
         pipeline_monitor.monitor_pipeline_completion(
             pipeline_name="bronze_hwm_ingest",
-            run_id=job_context["run_id"],
+            job_run_id=job_context["run_id"],
             success=True,
             duration_seconds=duration,
             records_processed=total_records
@@ -693,7 +688,7 @@ def main():
         job_context = get_job_context()
         pipeline_monitor.monitor_pipeline_completion(
             pipeline_name="bronze_hwm_ingest",
-            run_id=job_context["run_id"],
+            job_run_id=job_context["run_id"],
             success=False,
             duration_seconds=duration,
             records_processed=total_records
