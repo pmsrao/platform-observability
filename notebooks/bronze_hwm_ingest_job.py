@@ -89,7 +89,7 @@ def get_job_context():
         "job_id": job_id,
         "run_id": run_id,
         "pipeline_name": "bronze_hwm_ingest",
-        "environment": config.ENV
+        "environment": Config.ENV
     }
 
 def setup_logging():
@@ -101,7 +101,7 @@ def setup_logging():
     
     logger.info("Bronze HWM ingest job started", 
                 overlap_hours=OVERLAP_HOURS,
-                environment=config.ENV,
+                environment=Config.ENV,
                 catalog=config.catalog,
                 bronze_schema=config.bronze_schema,
                 **job_context)

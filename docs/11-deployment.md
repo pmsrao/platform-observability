@@ -592,7 +592,7 @@ Create a dashboard with:
 # Check job configuration
 from config import Config
 config = Config.get_config()
-print(f"Environment: {config.ENV}")
+print(f"Environment: {Config.ENV}")
 print(f"Gold Complete Refresh: {config.gold_complete_refresh}")
 print(f"Gold Processing Strategy: {config.gold_processing_strategy}")
 
@@ -666,7 +666,7 @@ print(resource_usage.show())
 # Verify configuration
 from config import Config
 config = Config.get_config()
-print(f"Environment: {config.ENV}")
+print(f"Environment: {Config.ENV}")
 print(f"Catalog: {config.catalog}")
 print(f"Bronze Schema: {config.bronze_schema}")
 

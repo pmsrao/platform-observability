@@ -156,5 +156,5 @@ if __name__ == "__main__":
     print(f"  Bronze Schema: {config.bronze_schema}")
     print(f"  Silver Schema: {config.silver_schema}")
     print(f"  Gold Schema: {config.gold_schema}")
-    print(f"  Environment: {config.ENV}")
+    print(f"  Environment: {Config.ENV}")
     print(f"  Log Level: {config.log_level}")
