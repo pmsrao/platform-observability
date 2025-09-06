@@ -66,11 +66,10 @@ class DataQualityMonitor:
     def add_rule(self, rule: DataQualityRule):
         """Add a custom data quality rule"""
         self.rules[rule.name] = rule
-        self.logger.info(f"Added data quality rule: {rule.name}", {
-            "rule_name": rule.name,
-            "rule_type": rule.rule_type,
-            "severity": rule.severity
-        })
+        self.logger.info(f"Added data quality rule: {rule.name}", 
+                        rule_name=rule.name,
+                        rule_type=rule.rule_type,
+                        severity=rule.severity)
     
     def validate_dataframe(self, df: DataFrame, table_name: str) -> List[DataQualityResult]:
         """Validate DataFrame against all registered rules"""
@@ -115,11 +114,10 @@ class DataQualityMonitor:
                 )
                 
             except Exception as e:
-                self.logger.error(f"Error executing data quality rule: {rule_name}", {
-                    "table_name": table_name,
-                    "rule_name": rule_name,
-                    "error": str(e)
-                })
+                self.logger.error(f"Error executing data quality rule: {rule_name}", 
+                                table_name=table_name,
+                                rule_name=rule_name,
+                                error=str(e))
                 
                 # Create failed result
                 failed_result = DataQualityResult(
@@ -362,18 +360,16 @@ def validate_data_quality(df: DataFrame, table_name: str, logger: StructuredLogg
     critical_failures = [r for r in results if not r.passed and r.rule_name in ["non_negative_quantity", "valid_time_range", "required_fields"]]
     
     if critical_failures:
-        logger.error(f"Critical data quality failures detected for table: {table_name}", {
-            "table_name": table_name,
-            "critical_failures": [r.rule_name for r in critical_failures],
-            "total_failures": len(critical_failures)
-        })
+        logger.error(f"Critical data quality failures detected for table: {table_name}", 
+                    table_name=table_name,
+                    critical_failures=[r.rule_name for r in critical_failures],
+                    total_failures=len(critical_failures))
         return False
     
     # Log summary
     summary = monitor.get_summary()
-    logger.info(f"Data quality validation completed for table: {table_name}", {
-        "table_name": table_name,
-        "summary": summary
-    })
+    logger.info(f"Data quality validation completed for table: {table_name}", 
+                table_name=table_name,
+                summary=summary)
     
     return True

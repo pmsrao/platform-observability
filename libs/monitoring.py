@@ -99,11 +99,10 @@ class MonitoringSystem:
             except Exception as e:
                 self.logger.error(f"Error in alert handler {handler.__name__}: {str(e)}")
         
-        self.logger.info(f"Created alert: {title}", {
-            "alert_id": alert.id,
-            "severity": alert.severity.value,
-            "source": alert.source
-        })
+        self.logger.info(f"Created alert: {title}", 
+                        alert_id=alert.id,
+                        severity=alert.severity.value,
+                        source=alert.source)
         
         return alert
     
@@ -175,11 +174,10 @@ class MonitoringSystem:
                 alert.acknowledged_by = user
                 alert.acknowledged_at = datetime.utcnow()
                 
-                self.logger.info(f"Alert acknowledged: {alert.title}", {
-                    "alert_id": alert.id,
-                    "acknowledged_by": user,
-                    "acknowledged_at": alert.acknowledged_at.isoformat()
-                })
+                self.logger.info(f"Alert acknowledged: {alert.title}", 
+                                alert_id=alert.id,
+                                acknowledged_by=user,
+                                acknowledged_at=alert.acknowledged_at.isoformat())
                 break
     
     def resolve_alert(self, alert_id: str, user: str):
@@ -190,11 +188,10 @@ class MonitoringSystem:
                 alert.resolved_by = user
                 alert.resolved_at = datetime.utcnow()
                 
-                self.logger.info(f"Alert resolved: {alert.title}", {
-                    "alert_id": alert.id,
-                    "resolved_by": user,
-                    "resolved_at": alert.resolved_at.isoformat()
-                })
+                self.logger.info(f"Alert resolved: {alert.title}", 
+                                alert_id=alert.id,
+                                resolved_by=user,
+                                resolved_at=alert.resolved_at.isoformat())
                 break
 
 class PipelineMonitor:
@@ -207,11 +204,10 @@ class PipelineMonitor:
     
     def monitor_pipeline_start(self, pipeline_name: str, job_run_id: str):
         """Monitor pipeline start"""
-        self.logger.info(f"Pipeline started: {pipeline_name}", {
-            "pipeline_name": pipeline_name,
-            "job_run_id": job_run_id,
-            "event": "pipeline_start"
-        })
+        self.logger.info(f"Pipeline started: {pipeline_name}", 
+                        pipeline_name=pipeline_name,
+                        job_run_id=job_run_id,
+                        event="pipeline_start")
         
         # Create metric for pipeline start
         self.monitoring.create_metric(
@@ -228,14 +224,13 @@ class PipelineMonitor:
         """Monitor pipeline completion"""
         status = "success" if success else "failure"
         
-        self.logger.info(f"Pipeline completed: {pipeline_name}", {
-            "pipeline_name": pipeline_name,
-            "job_run_id": job_run_id,
-            "status": status,
-            "duration_seconds": duration_seconds,
-            "records_processed": records_processed,
-            "event": "pipeline_completion"
-        })
+        self.logger.info(f"Pipeline completed: {pipeline_name}", 
+                        pipeline_name=pipeline_name,
+                        job_run_id=job_run_id,
+                        status=status,
+                        duration_seconds=duration_seconds,
+                        records_processed=records_processed,
+                        event="pipeline_completion")
         
         # Create metrics
         self.monitoring.create_metric(

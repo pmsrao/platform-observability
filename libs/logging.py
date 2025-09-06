@@ -151,10 +151,9 @@ class PerformanceMonitor:
             start_time=datetime.utcnow()
         )
         
-        self.logger.info(f"Started operation: {operation_name}", {
-            "operation_id": operation_id,
-            "operation_name": operation_name
-        })
+        self.logger.info(f"Started operation: {operation_name}", 
+                        operation_id=operation_id,
+                        operation_name=operation_name)
         
         return operation_id
     
@@ -175,10 +174,9 @@ class PerformanceMonitor:
             
             completed_metrics = metrics.complete()
             
-            self.logger.info(f"Completed operation: {operation_id}", {
-                "operation_id": operation_id,
-                "performance_metrics": asdict(completed_metrics)
-            })
+            self.logger.info(f"Completed operation: {operation_id}", 
+                            operation_id=operation_id,
+                            performance_metrics=asdict(completed_metrics))
             
             # Log performance summary
             self._log_performance_summary(operation_id, completed_metrics)
@@ -188,13 +186,12 @@ class PerformanceMonitor:
         if metrics.duration_seconds:
             throughput = metrics.records_processed / metrics.duration_seconds if metrics.duration_seconds > 0 else 0
             
-            self.logger.info("Performance Summary", {
-                "operation_id": operation_id,
-                "duration_seconds": round(metrics.duration_seconds, 2),
-                "records_per_second": round(throughput, 2),
-                "success_rate": round((metrics.records_success / max(metrics.records_processed, 1)) * 100, 2),
-                "error_rate": round((metrics.records_failed / max(metrics.records_processed, 1)) * 100, 2)
-            })
+            self.logger.info("Performance Summary", 
+                            operation_id=operation_id,
+                            duration_seconds=round(metrics.duration_seconds, 2),
+                            records_per_second=round(throughput, 2),
+                            success_rate=round((metrics.records_success / max(metrics.records_processed, 1)) * 100, 2),
+                            error_rate=round((metrics.records_failed / max(metrics.records_processed, 1)) * 100, 2))
 
 def performance_monitor(operation_name: str):
     """Decorator to automatically monitor function performance"""
@@ -234,10 +231,9 @@ def performance_monitor(operation_name: str):
                     operation_id=operation_id,
                     error_count=1
                 )
-                logger.error(f"Operation failed: {operation_name}", {
-                    "error": str(e),
-                    "operation_id": operation_id
-                })
+                logger.error(f"Operation failed: {operation_name}", 
+                            error=str(e),
+                            operation_id=operation_id)
                 raise
         
         return wrapper
