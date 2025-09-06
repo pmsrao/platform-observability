@@ -30,7 +30,7 @@ from typing import Dict, List, Optional
 sys.path.append('/Workspace/Repos/platform-observability/libs')
 
 from config import Config
-from logging import get_logger
+from libs.logging import StructuredLogger
 
 # COMMAND ----------
 
@@ -41,15 +41,14 @@ from logging import get_logger
 
 # Get configuration
 config = Config.get_config()
-logger = get_logger(__name__, config.log_level)
+logger = StructuredLogger("performance_optimization_job")
 
-logger.info("Starting performance optimization job", extra={
-    "catalog": config.catalog,
-    "bronze_schema": config.bronze_schema,
-    "silver_schema": config.silver_schema,
-    "gold_schema": config.gold_schema,
-    "environment": config.environment
-})
+logger.info("Starting performance optimization job", 
+            catalog=config.catalog,
+            bronze_schema=config.bronze_schema,
+            silver_schema=config.silver_schema,
+            gold_schema=config.gold_schema,
+            environment=Config.ENV)
 
 # COMMAND ----------
 

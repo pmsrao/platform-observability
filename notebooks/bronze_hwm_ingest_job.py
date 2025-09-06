@@ -110,10 +110,11 @@ def setup_logging():
                 environment=Config.ENV,
                 catalog=config.catalog,
                 bronze_schema=config.bronze_schema,
-                **job_context)
+                job_id=job_context["job_id"],
+                run_id=job_context["run_id"],
+                pipeline_name=job_context["pipeline_name"])
     
     # Initialize monitoring for pipeline health tracking
-    job_context = get_job_context()
     pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", job_context["run_id"])
 
 # =============================================================================
