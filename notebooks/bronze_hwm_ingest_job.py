@@ -48,7 +48,7 @@ logger.set_context(
     job_id=dbutils.jobs.taskValues.getCurrent().get("job_id", "unknown"),
     run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
     pipeline_name="bronze_hwm_ingest",
-    environment=config.ENV
+    environment=Config.ENV
 )
 
 # Use overlap hours from configuration
@@ -57,7 +57,7 @@ OVERLAP_HOURS = config.overlap_hours
 
 logger.info("Bronze HWM ingest job started", {
     "overlap_hours": OVERLAP_HOURS,
-    "environment": config.ENV,
+    "environment": Config.ENV,
     "catalog": config.catalog,
     "bronze_schema": config.bronze_schema
 })

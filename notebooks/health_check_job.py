@@ -61,7 +61,7 @@ logger.info("Starting health check job", {
     "bronze_schema": config.bronze_schema,
     "silver_schema": config.silver_schema,
     "gold_schema": config.gold_schema,
-    "environment": config.ENV
+    "environment": Config.ENV
 })
 
 # COMMAND ----------

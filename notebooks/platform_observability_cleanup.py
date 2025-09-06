@@ -57,7 +57,7 @@ if workspace_libs_path not in sys.path:
     sys.path.append(workspace_libs_path)
 
 from config import Config
-from logging import StructuredLogger
+from libs.logging import StructuredLogger
 
 # COMMAND ----------
 
@@ -70,13 +70,13 @@ from logging import StructuredLogger
 config = Config.get_config()
 logger = StructuredLogger("platform_observability_cleanup")
 
-logger.info("Platform Observability Cleanup Script initialized", {
-    "catalog": config.catalog,
-    "bronze_schema": config.bronze_schema,
-    "silver_schema": config.silver_schema,
-    "gold_schema": config.gold_schema,
-    "environment": config.ENV
-})
+logger.info("Platform Observability Cleanup Script initialized", 
+    catalog=config.catalog,
+    bronze_schema=config.bronze_schema,
+    silver_schema=config.silver_schema,
+    gold_schema=config.gold_schema,
+    environment=Config.ENV
+)
 
 # COMMAND ----------
 
@@ -336,13 +336,13 @@ if __name__ == "__main__":
     print("\n" + "="*80)
     
     # Log final results
-    logger.info("Cleanup completed", {
-        "mode": mode,
-        "scope": CLEANUP_SCOPE,
-        "deleted_count": len(results['deleted']),
-        "skipped_count": len(results['skipped']),
-        "error_count": len(results['errors'])
-    })
+    logger.info("Cleanup completed", 
+        mode=mode,
+        scope=CLEANUP_SCOPE,
+        deleted_count=len(results['deleted']),
+        skipped_count=len(results['skipped']),
+        error_count=len(results['errors'])
+    )
     
     if DRY_RUN:
         print("\n🔍 This was a DRY RUN. No data was actually deleted.")

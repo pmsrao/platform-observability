@@ -87,7 +87,7 @@ class StructuredLogger:
             "level": level.upper(),
             "message": message,
             "application": self.name,
-            "environment": config.ENV,
+            "environment": Config.ENV,
             **serializable_kwargs
         }
         

@@ -70,7 +70,7 @@ logger.info("Starting Silver layer HWM build job", {
     "catalog": config.catalog,
     "bronze_schema": config.bronze_schema,
     "silver_schema": config.silver_schema,
-    "environment": config.ENV
+    "environment": Config.ENV
 })
 
 # COMMAND ----------
