@@ -9,7 +9,7 @@ SELECT
     e.entity_type,
     e.entity_id,
     SUM(f.list_cost_usd) as daily_cost,
-    AVG(f.list_cost_usd) OVER (PARTITION BY w.workspace_id, e.entity_type, e.entity_id ORDER BY f.date_key ROWS 7 PRECEDING) as rolling_7day_avg_cost
+    AVG(SUM(f.list_cost_usd)) OVER (PARTITION BY w.workspace_id, e.entity_type, e.entity_id ORDER BY f.date_key ROWS 7 PRECEDING) as rolling_7day_avg_cost
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
 JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key

@@ -44,26 +44,36 @@ from datetime import datetime
 
 # Initialize logging and monitoring with job context
 logger = StructuredLogger("bronze_hwm_ingest_job")
-logger.set_context(
-    job_id=dbutils.jobs.taskValues.getCurrent().get("job_id", "unknown"),
-    run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
-    pipeline_name="bronze_hwm_ingest",
-    environment=Config.ENV
-)
 
 # Use overlap hours from configuration
 # Overlap hours ensure we don't miss data due to timing issues
 OVERLAP_HOURS = config.overlap_hours
 
-logger.info("Bronze HWM ingest job started", {
-    "overlap_hours": OVERLAP_HOURS,
-    "environment": Config.ENV,
-    "catalog": config.catalog,
-    "bronze_schema": config.bronze_schema
-})
+# =============================================================================
+# INITIALIZATION FUNCTIONS
+# =============================================================================
 
-# Initialize monitoring for pipeline health tracking
-pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"))
+def setup_logging():
+    """
+    Setup logging context and initial logging.
+    This function is called at runtime, not at import time.
+    """
+    logger.set_context(
+        job_id=dbutils.jobs.taskValues.getCurrent().get("job_id", "unknown"),
+        run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
+        pipeline_name="bronze_hwm_ingest",
+        environment=config.ENV
+    )
+    
+    logger.info("Bronze HWM ingest job started", {
+        "overlap_hours": OVERLAP_HOURS,
+        "environment": config.ENV,
+        "catalog": config.catalog,
+        "bronze_schema": config.bronze_schema
+    })
+    
+    # Initialize monitoring for pipeline health tracking
+    pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"))
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -576,6 +586,9 @@ def main():
     total_records = 0
     
     try:
+        # Setup logging context
+        setup_logging()
+        
         logger.info("Starting bronze HWM ingest job")
         
         # Validate SQL operations are available before processing

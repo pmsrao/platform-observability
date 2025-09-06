@@ -363,6 +363,9 @@ class HealthChecker:
         return health_status
 
 # Global monitoring instance
-monitoring_system = MonitoringSystem(logger)
-pipeline_monitor = PipelineMonitor(logger, monitoring_system)
-health_checker = HealthChecker(logger, monitoring_system)
+# Create a default logger for the monitoring system
+_default_logger = StructuredLogger("monitoring_system")
+
+monitoring_system = MonitoringSystem(_default_logger)
+pipeline_monitor = PipelineMonitor(_default_logger, monitoring_system)
+health_checker = HealthChecker(_default_logger, monitoring_system)
