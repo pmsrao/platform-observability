@@ -5,22 +5,20 @@
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cost_allocation AS
 SELECT 
     f.date_key,
-    workspace_id,
-    workspace_name,
-    entity_type,
-    entity_id,
-    entity_name,
+    w.workspace_id,
+    w.workspace_name,
+    e.entity_type,
+    e.entity_id,
+    e.name as entity_name,
     SUM(list_cost_usd) as total_cost_usd,
     SUM(usage_quantity) as total_usage_quantity,
     SUM(duration_hours) as total_duration_hours,
     COUNT(DISTINCT job_run_id) as total_runs,
     AVG(list_cost_usd) as avg_cost_per_run
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace_id
-JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.workspace_id = e.workspace_id 
-    AND f.entity_type = e.entity_type 
-    AND f.entity_id = e.entity_id
-GROUP BY f.date_key, workspace_id, workspace_name, entity_type, entity_id, entity_name;
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+GROUP BY f.date_key, w.workspace_id, w.workspace_name, e.entity_type, e.entity_id, e.name;
 
 -- Department Cost Summary View (Tag-based, not workspace prefix)
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_department_cost_summary AS
@@ -29,29 +27,29 @@ SELECT
     w.workspace_name,
     f.date_key,
     SUM(f.list_cost_usd) as department_total_cost,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces
+    COUNT(DISTINCT w.workspace_id) as active_workspaces
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace_id
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.department, w.workspace_name, f.date_key;
 
 -- Cost Trend by SKU View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_sku_cost_trends AS
 SELECT 
     f.date_key,
-    cloud,
-    sku_name,
-    usage_unit,
-    SUM(list_cost_usd) as total_cost_usd,
-    SUM(usage_quantity) as total_usage_quantity,
-    AVG(list_cost_usd / NULLIF(usage_quantity, 0)) as avg_cost_per_unit,
-    COUNT(DISTINCT workspace_id) as active_workspaces
+    f.cloud,
+    s.sku_name,
+    f.usage_unit,
+    SUM(f.list_cost_usd) as total_cost_usd,
+    SUM(f.usage_quantity) as total_usage_quantity,
+    AVG(f.list_cost_usd / NULLIF(f.usage_quantity, 0)) as avg_cost_per_unit,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.gld_dim_sku s ON f.cloud = s.cloud 
-    AND f.sku_name = s.sku_name 
-    AND f.usage_unit = s.usage_unit
-GROUP BY f.date_key, cloud, sku_name, usage_unit;
+JOIN {catalog}.{gold_schema}.gld_dim_sku s ON f.sku_key = s.sku_key
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+GROUP BY f.date_key, f.cloud, s.sku_name, f.usage_unit;
 
 -- Enhanced Tag-Based Chargeback Views
 
@@ -62,12 +60,14 @@ SELECT
     f.line_of_business,
     f.department,
     f.environment,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.date_key, f.line_of_business, f.department, f.environment;
 
 -- Environment Cost Analysis
@@ -76,12 +76,14 @@ SELECT
     f.date_key,
     f.environment,
     f.line_of_business,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.date_key, f.environment, f.line_of_business;
 
 -- Use Case Cost Analysis
@@ -91,12 +93,14 @@ SELECT
     f.use_case,
     f.line_of_business,
     f.department,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.date_key, f.use_case, f.line_of_business, f.department;
 
 -- Cluster Cost Analysis
@@ -106,22 +110,24 @@ SELECT
     f.cluster_identifier,
     f.line_of_business,
     f.department,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.date_key, f.cluster_identifier, f.line_of_business, f.department;
 
 -- Tag Quality and Missing Tags Visibility View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_tag_quality_analysis AS
 SELECT 
     f.date_key,
-    f.workspace_id,
+    w.workspace_id,
     w.workspace_name,
-    f.entity_type,
-    f.entity_id,
+    e.entity_type,
+    e.entity_id,
     -- Tag completeness indicators (based on default values)
     CASE WHEN f.line_of_business = 'Unknown' THEN 'Missing' ELSE 'Present' END as line_of_business_status,
     CASE WHEN f.department = 'unknown' THEN 'Missing' ELSE 'Present' END as department_status,
@@ -157,7 +163,8 @@ SELECT
     f.usage_quantity,
     f.duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace_id;
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key;
 
 -- Tag Coverage Summary View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_tag_coverage_summary AS
@@ -198,12 +205,14 @@ SELECT
     f.cost_center,
     f.line_of_business,
     f.department,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.date_key, f.cost_center, f.line_of_business, f.department;
 
 -- Workflow Hierarchy Cost Analysis
@@ -214,12 +223,14 @@ SELECT
     f.parent_workflow_name,
     f.cost_center,
     f.line_of_business,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.date_key, f.workflow_level, f.parent_workflow_name, f.cost_center, f.line_of_business;
 
 -- Cluster Cost Attribution by Workflow
@@ -230,10 +241,12 @@ SELECT
     f.workflow_level,
     f.parent_workflow_name,
     f.cost_center,
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     SUM(f.list_cost_usd) as total_cost_usd,
     AVG(f.list_cost_usd) as avg_cost_per_entity,
     SUM(f.duration_hours) as total_duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 GROUP BY f.date_key, f.cluster_identifier, f.workflow_level, f.parent_workflow_name, f.cost_center;

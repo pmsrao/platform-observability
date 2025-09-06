@@ -20,8 +20,8 @@ SELECT
     f.cost_center,
     f.environment,
     -- Usage metrics
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     COUNT(DISTINCT c.cluster_id) as active_clusters,
     SUM(f.list_cost_usd) as total_cost_usd,
     SUM(f.usage_quantity) as total_usage_quantity,
@@ -36,7 +36,10 @@ SELECT
         ELSE 'LOW - Current and Supported'
     END as upgrade_priority
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+JOIN {catalog}.{gold_schema}.gld_dim_cluster cl ON f.cluster_key = cl.cluster_key
+JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
 GROUP BY f.date_key,          c.dbr_version, c.major_version, c.minor_version,
          c.cluster_source, c.is_lts, c.is_current, c.runtime_age_months,
          c.months_to_eos, c.is_supported, f.line_of_business, f.department, f.cost_center, f.environment;
@@ -64,8 +67,8 @@ SELECT
     f.department,
     f.cost_center,
     -- Usage metrics
-    COUNT(DISTINCT f.workspace_id) as active_workspaces,
-    COUNT(DISTINCT f.entity_id) as active_entities,
+    COUNT(DISTINCT w.workspace_id) as active_workspaces,
+    COUNT(DISTINCT e.entity_id) as active_entities,
     COUNT(DISTINCT c.cluster_id) as active_clusters,
     SUM(f.list_cost_usd) as total_cost_usd,
     SUM(f.usage_quantity) as total_usage_quantity,
@@ -79,7 +82,10 @@ SELECT
         ELSE 'Optimal Configuration'
     END as optimization_suggestion
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+JOIN {catalog}.{gold_schema}.gld_dim_cluster cl ON f.cluster_key = cl.cluster_key
+JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
 GROUP BY f.date_key, c.driver_node_type_id, c.node_type_id,
          c.min_autoscale_workers, c.max_autoscale_workers, c.autoscale_enabled,
          f.line_of_business, f.department, f.cost_center;
@@ -135,7 +141,10 @@ SELECT
         ELSE 'Low - Current configuration is optimal'
     END as potential_savings
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+JOIN {catalog}.{gold_schema}.gld_dim_cluster cl ON f.cluster_key = cl.cluster_key
+JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
 WHERE c.dbr_version IS NOT NULL
 GROUP BY f.date_key, c.workspace_id, c.cluster_id, c.cluster_name,
          c.dbr_version, c.major_version, c.minor_version,
@@ -153,7 +162,7 @@ SELECT
     c.cluster_source,
     c.worker_node_type,
     -- Performance metrics
-    COUNT(DISTINCT f.entity_id) as active_jobs,
+    COUNT(DISTINCT e.entity_id) as active_jobs,
     SUM(f.list_cost_usd) as total_cost_usd,
     SUM(f.usage_quantity) as total_usage_quantity,
     SUM(f.duration_hours) as total_duration_hours,
@@ -170,7 +179,10 @@ SELECT
     -- Node type efficiency (from Silver layer)
     c.worker_node_type_category as node_optimization_type
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+JOIN {catalog}.{gold_schema}.gld_dim_cluster cl ON f.cluster_key = cl.cluster_key
+JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
 WHERE c.dbr_version IS NOT NULL
 GROUP BY f.date_key, c.dbr_version, c.major_version, c.minor_version,
          c.cluster_source, c.node_type_id;
@@ -188,7 +200,7 @@ SELECT
     c.max_autoscale_workers,
     c.autoscale_enabled,
     -- Current usage patterns
-    COUNT(DISTINCT f.entity_id) as active_jobs,
+    COUNT(DISTINCT e.entity_id) as active_jobs,
     SUM(f.list_cost_usd) as total_cost_usd,
     SUM(f.duration_hours) as total_duration_hours,
     AVG(f.list_cost_usd / NULLIF(f.duration_hours, 0)) as cost_per_hour,
@@ -212,6 +224,9 @@ SELECT
         ELSE 'Low - Current configuration is optimal'
     END as optimization_potential
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
+JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+JOIN {catalog}.{gold_schema}.gld_dim_cluster cl ON f.cluster_key = cl.cluster_key
+JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
 GROUP BY f.date_key, c.workspace_id, c.cluster_id, c.cluster_name,
          c.worker_node_type, c.min_autoscale_workers, c.max_autoscale_workers, c.autoscale_enabled;
