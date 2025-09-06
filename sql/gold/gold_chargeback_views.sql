@@ -4,7 +4,7 @@
 -- Cost Allocation by Entity View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cost_allocation AS
 SELECT 
-    date_sk,
+    f.date_key,
     workspace_id,
     workspace_name,
     entity_type,
@@ -20,7 +20,7 @@ JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace
 JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.workspace_id = e.workspace_id 
     AND f.entity_type = e.entity_type 
     AND f.entity_id = e.entity_id
-GROUP BY date_sk, workspace_id, workspace_name, entity_type, entity_id, entity_name;
+GROUP BY f.date_key, workspace_id, workspace_name, entity_type, entity_id, entity_name;
 
 -- Department Cost Summary View (Tag-based, not workspace prefix)
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_department_cost_summary AS
@@ -34,12 +34,12 @@ SELECT
     COUNT(DISTINCT f.workspace_id) as active_workspaces
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_id = w.workspace_id
-GROUP BY f.department, w.workspace_name, f.date_sk;
+GROUP BY f.department, w.workspace_name, f.date_key;
 
 -- Cost Trend by SKU View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_sku_cost_trends AS
 SELECT 
-    date_sk,
+    f.date_key,
     cloud,
     sku_name,
     usage_unit,
@@ -51,7 +51,7 @@ FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_sku s ON f.cloud = s.cloud 
     AND f.sku_name = s.sku_name 
     AND f.usage_unit = s.usage_unit
-GROUP BY date_sk, cloud, sku_name, usage_unit;
+GROUP BY f.date_key, cloud, sku_name, usage_unit;
 
 -- Enhanced Tag-Based Chargeback Views
 
@@ -187,7 +187,7 @@ SELECT
     -- Total cost for context
     SUM(f.list_cost_usd) as total_cost_usd
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-GROUP BY f.date_sk;
+GROUP BY f.date_key;
 
 -- Enhanced Chargeback Views with New Tags
 

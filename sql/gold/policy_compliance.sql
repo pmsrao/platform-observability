@@ -43,17 +43,17 @@ SELECT
     f.daily_cost,
     f.avg_duration,
     f.failure_rate,
-    f.date_sk
+    f.date_key
 FROM {catalog}.{gold_schema}.policy_baseline p
 CROSS JOIN (
     SELECT 
-        date_sk,
+        f.date_key,
         SUM(list_cost_usd) as daily_cost,
         AVG(duration_hours) as avg_duration,
         SUM(CASE WHEN result_state = 'FAILED' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as failure_rate
     FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-    LEFT JOIN {catalog}.{gold_schema}.fact_runs_finished_day r 
-        ON f.date_sk = r.date_sk AND f.workspace_id = r.workspace_id
-    GROUP BY date_sk
+    LEFT JOIN {catalog}.{gold_schema}.gld_fact_runs_finished_day r 
+        ON f.date_key = r.date_key AND f.workspace_id = r.workspace_id
+    GROUP BY f.date_key
 ) f
 WHERE p.is_active = true;

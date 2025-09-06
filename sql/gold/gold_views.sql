@@ -4,14 +4,14 @@
 -- Cost Trend Analysis View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cost_trends AS
 SELECT 
-    date_sk,
+    date_key,
     workspace_id,
     entity_type,
     entity_id,
     SUM(list_cost_usd) as daily_cost,
-    AVG(list_cost_usd) OVER (PARTITION BY workspace_id, entity_type, entity_id ORDER BY date_sk ROWS 7 PRECEDING) as rolling_7day_avg_cost
+    AVG(list_cost_usd) OVER (PARTITION BY workspace_id, entity_type, entity_id ORDER BY date_key ROWS 7 PRECEDING) as rolling_7day_avg_cost
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day
-GROUP BY date_sk, workspace_id, entity_type, entity_id;
+GROUP BY date_key, workspace_id, entity_type, entity_id;
 
 -- Anomaly Detection View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cost_anomalies AS
