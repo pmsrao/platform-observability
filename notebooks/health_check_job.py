@@ -56,13 +56,12 @@ from logging import StructuredLogger
 config = Config.get_config()
 logger = StructuredLogger("health_check_job")
 
-logger.info("Starting health check job", {
-    "catalog": config.catalog,
-    "bronze_schema": config.bronze_schema,
-    "silver_schema": config.silver_schema,
-    "gold_schema": config.gold_schema,
-    "environment": Config.ENV
-})
+logger.info("Starting health check job", 
+            catalog=config.catalog,
+            bronze_schema=config.bronze_schema,
+            silver_schema=config.silver_schema,
+            gold_schema=config.gold_schema,
+            environment=Config.ENV)
 
 # COMMAND ----------
 

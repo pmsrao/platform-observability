@@ -66,12 +66,11 @@ from utils import yyyymmdd
 config = Config.get_config()
 logger = StructuredLogger("silver_hwm_build_job")
 
-logger.info("Starting Silver layer HWM build job", {
-    "catalog": config.catalog,
-    "bronze_schema": config.bronze_schema,
-    "silver_schema": config.silver_schema,
-    "environment": Config.ENV
-})
+logger.info("Starting Silver layer HWM build job", 
+            catalog=config.catalog,
+            bronze_schema=config.bronze_schema,
+            silver_schema=config.silver_schema,
+            environment=Config.ENV)
 
 # COMMAND ----------
 

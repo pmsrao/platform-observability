@@ -49,6 +49,16 @@ logger = StructuredLogger("bronze_hwm_ingest_job")
 # Overlap hours ensure we don't miss data due to timing issues
 OVERLAP_HOURS = config.overlap_hours
 
+# Ensure spark session is available
+try:
+    # Check if spark is available (it should be in Databricks environment)
+    if 'spark' not in globals():
+        from pyspark.sql import SparkSession
+        spark = SparkSession.builder.appName("bronze_hwm_ingest").getOrCreate()
+except Exception as e:
+    logger.error(f"Failed to initialize Spark session: {str(e)}")
+    raise
+
 # =============================================================================
 # INITIALIZATION FUNCTIONS
 # =============================================================================
@@ -56,10 +66,28 @@ OVERLAP_HOURS = config.overlap_hours
 def get_job_context():
     """
     Get job context information for logging.
+    Works both when run manually and as part of a Databricks job.
     """
+    try:
+        # Check if dbutils is available (only in Databricks environment)
+        if 'dbutils' in globals():
+            # Try to get job context from Databricks job environment
+            # This will work when running as part of a Databricks job
+            context = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
+            job_id = context.jobId().get() if context.jobId().isDefined() else "manual_run"
+            run_id = context.runId().get() if context.runId().isDefined() else f"manual_{int(time.time())}"
+        else:
+            # dbutils not available - running outside Databricks
+            job_id = "manual_run"
+            run_id = f"manual_{int(time.time())}"
+    except Exception:
+        # Fallback for any other issues
+        job_id = "manual_run"
+        run_id = f"manual_{int(time.time())}"
+    
     return {
-        "job_id": dbutils.jobs.taskValues.getCurrent().get("job_id", "unknown"),
-        "run_id": dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
+        "job_id": job_id,
+        "run_id": run_id,
         "pipeline_name": "bronze_hwm_ingest",
         "environment": config.ENV
     }
@@ -79,7 +107,8 @@ def setup_logging():
                 **job_context)
     
     # Initialize monitoring for pipeline health tracking
-    pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"))
+    job_context = get_job_context()
+    pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", job_context["run_id"])
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -630,9 +659,10 @@ def main():
         duration = time.time() - start_time
         
         # Monitor pipeline completion for health tracking
+        job_context = get_job_context()
         pipeline_monitor.monitor_pipeline_completion(
             pipeline_name="bronze_hwm_ingest",
-            run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
+            run_id=job_context["run_id"],
             success=True,
             duration_seconds=duration,
             records_processed=total_records
@@ -649,9 +679,10 @@ def main():
         duration = time.time() - start_time
         
         # Monitor pipeline failure for alerting
+        job_context = get_job_context()
         pipeline_monitor.monitor_pipeline_completion(
             pipeline_name="bronze_hwm_ingest",
-            run_id=dbutils.jobs.taskValues.getCurrent().get("run_id", "unknown"),
+            run_id=job_context["run_id"],
             success=False,
             duration_seconds=duration,
             records_processed=total_records
