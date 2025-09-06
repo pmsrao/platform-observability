@@ -86,7 +86,7 @@ JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspac
 JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 JOIN {catalog}.{gold_schema}.gld_dim_cluster cl ON f.cluster_key = cl.cluster_key
 JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
-GROUP BY f.date_key, c.driver_node_type_id, c.node_type_id,
+GROUP BY f.date_key, c.worker_node_type, c.driver_node_type, c.worker_node_type_category,
          c.min_autoscale_workers, c.max_autoscale_workers, c.autoscale_enabled,
          f.line_of_business, f.department, f.cost_center;
 
@@ -148,7 +148,7 @@ JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
 WHERE c.dbr_version IS NOT NULL
 GROUP BY f.date_key, c.workspace_id, c.cluster_id, c.cluster_name,
          c.dbr_version, c.major_version, c.minor_version,
-         c.cluster_source, c.node_type_id, c.driver_node_type_id,
+         c.cluster_source, c.worker_node_type, c.driver_node_type,
          c.min_autoscale_workers, c.max_autoscale_workers, c.autoscale_enabled,
          f.line_of_business, f.department, f.cost_center;
 
@@ -185,7 +185,7 @@ JOIN {catalog}.{gold_schema}.gld_dim_cluster cl ON f.cluster_key = cl.cluster_ke
 JOIN {catalog}.{silver_schema}.slv_clusters c ON cl.cluster_id = c.cluster_id
 WHERE c.dbr_version IS NOT NULL
 GROUP BY f.date_key, c.dbr_version, c.major_version, c.minor_version,
-         c.cluster_source, c.node_type_id;
+         c.cluster_source, c.worker_node_type, c.worker_node_type_category;
 
 -- Cluster Sizing Optimization View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_cluster_sizing_optimization AS
@@ -193,7 +193,6 @@ SELECT
     f.date_key,
     c.workspace_id,
     c.cluster_id,
-    c.cluster_name,
     c.cluster_name,
     c.worker_node_type,
     c.min_autoscale_workers,

@@ -10,11 +10,11 @@ SELECT
     e.entity_type,
     e.entity_id,
     e.name as entity_name,
-    SUM(list_cost_usd) as total_cost_usd,
-    SUM(usage_quantity) as total_usage_quantity,
-    SUM(duration_hours) as total_duration_hours,
-    COUNT(DISTINCT job_run_id) as total_runs,
-    AVG(list_cost_usd) as avg_cost_per_run
+    SUM(f.list_cost_usd) as total_cost_usd,
+    SUM(f.usage_quantity) as total_usage_quantity,
+    SUM(f.duration_hours) as total_duration_hours,
+    COUNT(DISTINCT f.job_run_id) as total_runs,
+    AVG(f.list_cost_usd) as avg_cost_per_run
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
 JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
