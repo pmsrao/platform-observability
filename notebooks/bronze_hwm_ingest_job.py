@@ -145,11 +145,10 @@ def execute_sql_operation(operation: str, target_table: str, staging_view: str, 
             source_table=staging_view
         )
         
-        logger.debug(f"Executing SQL operation: {operation}", {
-            "target_table": target_table,
-            "staging_view": staging_view,
-            "sql_length": len(sql)
-        })
+        logger.debug(f"Executing SQL operation: {operation}", 
+                    target_table=target_table,
+                    staging_view=staging_view,
+                    sql_length=len(sql))
         
         # Execute the SQL
         spark.sql(sql)
@@ -157,11 +156,10 @@ def execute_sql_operation(operation: str, target_table: str, staging_view: str, 
         logger.info(f"Successfully executed SQL operation: {operation}")
         
     except Exception as e:
-        logger.error(f"Failed to execute SQL operation: {operation}", {
-            "error": str(e),
-            "target_table": target_table,
-            "staging_view": staging_view
-        })
+        logger.error(f"Failed to execute SQL operation: {operation}", 
+                    error=str(e),
+                    target_table=target_table,
+                    staging_view=staging_view)
         raise
 
 # =============================================================================
@@ -640,11 +638,10 @@ def main():
             records_processed=total_records
         )
         
-        logger.info("Bronze HWM ingest job completed successfully", {
-            "total_records_processed": total_records,
-            "duration_seconds": round(duration, 2),
-            "overlap_hours": OVERLAP_HOURS
-        })
+        logger.info("Bronze HWM ingest job completed successfully", 
+                    total_records_processed=total_records,
+                    duration_seconds=round(duration, 2),
+                    overlap_hours=OVERLAP_HOURS)
         
         return total_records
         
@@ -660,11 +657,10 @@ def main():
             records_processed=total_records
         )
         
-        logger.error(f"Bronze HWM ingest job failed: {str(e)}", {
-            "total_records_processed": total_records,
-            "duration_seconds": round(duration, 2),
-            "error": str(e)
-        })
+        logger.error(f"Bronze HWM ingest job failed: {str(e)}", 
+                    total_records_processed=total_records,
+                    duration_seconds=round(duration, 2),
+                    error=str(e))
         raise
 
 # Execute main function when notebook is run

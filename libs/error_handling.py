@@ -334,23 +334,24 @@ class DataQualityMonitor:
             "data_quality_score": round(((total_records - total_failed) / max(total_records, 1)) * 100, 2)
         }
 
-def safe_execute(func: Callable, logger: StructuredLogger, operation_name: str):
+def safe_execute(logger: StructuredLogger, operation_name: str):
     """Decorator for safe function execution with error handling"""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            logger.info(f"Starting {operation_name}")
-            result = func(*args, **kwargs)
-            logger.info(f"Successfully completed {operation_name}")
-            return result
-        except Exception as e:
-            logger.error(f"Error in {operation_name}: {str(e)}", {
-                "operation_name": operation_name,
-                "error_type": type(e).__name__,
-                "error_message": str(e)
-            })
-            raise
-    return wrapper
+    def decorator(func: Callable):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                logger.info(f"Starting {operation_name}")
+                result = func(*args, **kwargs)
+                logger.info(f"Successfully completed {operation_name}")
+                return result
+            except Exception as e:
+                logger.error(f"Error in {operation_name}: {str(e)}", 
+                           operation_name=operation_name,
+                           error_type=type(e).__name__,
+                           error_message=str(e))
+                raise
+        return wrapper
+    return decorator
 
 def validate_data_quality(df: DataFrame, table_name: str, logger: StructuredLogger) -> bool:
     """Validate DataFrame data quality and return success status"""
