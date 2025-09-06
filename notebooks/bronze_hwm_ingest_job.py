@@ -261,7 +261,7 @@ def upsert_billing_usage():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_usage")
-    execute_sql_operation("upsert_billing_usage", tgt, "stg_usage", logger)
+    execute_sql_operation("bronze/operations/upsert_billing_usage", tgt, "stg_usage", logger)
     
     # Update processing state for next incremental run
     mx = stg.select(F.max("usage_end_time").alias("mx")).first().mx
@@ -306,7 +306,7 @@ def upsert_list_prices():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_prices")
-    execute_sql_operation("upsert_list_prices", tgt, "stg_prices", logger)
+    execute_sql_operation("bronze/operations/upsert_list_prices", tgt, "stg_prices", logger)
     
     mx = stg.select(F.max("price_start_time").alias("mx")).first().mx
     if mx is not None:
@@ -354,7 +354,7 @@ def upsert_job_run_timeline():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_job_run")
-    execute_sql_operation("upsert_job_run_timeline", tgt, "stg_job_run", logger)
+    execute_sql_operation("bronze/operations/upsert_job_run_timeline", tgt, "stg_job_run", logger)
     
     mx = stg.select(F.max("period_end_time").alias("mx")).first().mx
     if mx is not None:
@@ -402,7 +402,7 @@ def upsert_job_task_run_timeline():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_job_task_run")
-    execute_sql_operation("upsert_job_task_run_timeline", tgt, "stg_job_task_run", logger)
+    execute_sql_operation("bronze/operations/upsert_job_task_run_timeline", tgt, "stg_job_task_run", logger)
     
     mx = stg.select(F.max("period_end_time").alias("mx")).first().mx
     if mx is not None:
@@ -450,7 +450,7 @@ def upsert_lakeflow_jobs():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_jobs")
-    execute_sql_operation("upsert_lakeflow_jobs", tgt, "stg_jobs", logger)
+    execute_sql_operation("bronze/operations/upsert_lakeflow_jobs", tgt, "stg_jobs", logger)
     
     mx = stg.select(F.max("change_time").alias("mx")).first().mx
     if mx is not None:
@@ -498,7 +498,7 @@ def upsert_lakeflow_pipelines():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_pipelines")
-    execute_sql_operation("upsert_lakeflow_pipelines", tgt, "stg_pipelines", logger)
+    execute_sql_operation("bronze/operations/upsert_lakeflow_pipelines", tgt, "stg_pipelines", logger)
     
     mx = stg.select(F.max("change_time").alias("mx")).first().mx
     if mx is not None:
@@ -547,7 +547,7 @@ def upsert_compute_clusters():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_clusters")
-    execute_sql_operation("upsert_compute_clusters", tgt, "stg_clusters", logger)
+    execute_sql_operation("bronze/operations/upsert_compute_clusters", tgt, "stg_clusters", logger)
     
     mx = stg.select(F.max("created_time").alias("mx")).first().mx
     if mx is not None:
@@ -590,7 +590,7 @@ def upsert_compute_node_types():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_node_types")
-    execute_sql_operation("upsert_compute_node_types", tgt, "stg_node_types", logger)
+    execute_sql_operation("bronze/operations/upsert_compute_node_types", tgt, "stg_node_types", logger)
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} compute node types records")
@@ -628,7 +628,7 @@ def upsert_access_workspaces():
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_workspaces")
-    execute_sql_operation("upsert_access_workspaces", tgt, "stg_workspaces", logger)
+    execute_sql_operation("bronze/operations/upsert_access_workspaces", tgt, "stg_workspaces", logger)
     
     record_count = stg.count()
     logger.info(f"Successfully processed {record_count} access workspaces records")
