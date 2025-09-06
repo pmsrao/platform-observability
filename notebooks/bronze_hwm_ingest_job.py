@@ -27,7 +27,18 @@ Version: 1.0
 # Configuration-based parameters (no widgets required for standalone execution)
 
 # Import configuration and utilities
-from config import config
+from config import Config
+# Create our own config instance to avoid conflicts with global config
+config = Config.get_config()
+
+# Debug: Verify Config.ENV is accessible
+print(f"Debug: Config.ENV = {Config.ENV}")
+print(f"Debug: config type = {type(config)}")
+print(f"Debug: config has ENV attribute: {hasattr(config, 'ENV')}")
+
+# Ensure we're using the correct Config class
+assert hasattr(Config, 'ENV'), "Config class should have ENV attribute"
+assert not hasattr(config, 'ENV'), "config instance should NOT have ENV attribute"
 from libs.logging import StructuredLogger, PerformanceMonitor, performance_monitor
 from libs.error_handling import safe_execute, validate_data_quality
 from libs.monitoring import pipeline_monitor
