@@ -247,14 +247,17 @@ def upsert_billing_usage():
                "usage_quantity"
            ])))
     
-    # Validate data quality before upsert
+    # Validate data quality before upsert (LENIENT MODE FOR TESTING)
+    print("DEBUG: About to validate data quality for billing usage...")
     try:
         if not validate_data_quality(stg, "billing_usage", logger):
             logger.warning("Data quality validation failed for billing usage - continuing with processing")
+            print("DEBUG: Data quality validation failed - continuing anyway")
             # For initial testing, we'll continue processing even if validation fails
             # In production, you might want to raise an error here
     except Exception as e:
         logger.warning(f"Data quality validation error for billing usage: {str(e)} - continuing with processing")
+        print(f"DEBUG: Data quality validation error - continuing anyway: {str(e)}")
     
     # Create staging view and execute SQL operation
     stg.createOrReplaceTempView("stg_usage")
