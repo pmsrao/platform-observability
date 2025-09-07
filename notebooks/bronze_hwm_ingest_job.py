@@ -409,7 +409,7 @@ def upsert_job_task_run_timeline():
     stg = (spark.table(src)
            .where(F.col("period_end_time") > ws)
            .withColumn("row_hash", sha256_concat([
-               "workspace_id","job_id","run_id","task_key","period_start_time","period_end_time","result_state","retry_attempt"
+               "workspace_id","job_id","run_id","task_key","period_start_time","period_end_time","result_state"
            ])))
     
     # Validate data quality
