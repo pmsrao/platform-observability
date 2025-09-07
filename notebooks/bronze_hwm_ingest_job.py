@@ -1,9 +1,11 @@
 """
-Bronze Layer High Water Mark (HWM) Ingest Job
+Bronze Layer High Water Mark (HWM) Ingest Job - CACHE REFRESH VERSION
 
 This notebook implements the Bronze layer ingestion strategy using High Water Mark (HWM) 
 tracking for incremental data processing. It reads from Databricks system tables and 
 loads data into Bronze tables with CDF enabled for downstream consumption.
+
+UPDATED: Fixed SQL operation paths to use full directory structure (bronze/operations/)
 
 Key Features:
 - Incremental processing using HWM processing state
@@ -656,6 +658,9 @@ def main():
     """
     start_time = time.time()
     total_records = 0
+    
+    # DEBUG: Confirm new code is running
+    print("🚀 DEBUG: Starting Bronze HWM Ingest Job - UPDATED VERSION WITH FIXED SQL PATHS")
     
     try:
         # Setup logging context
