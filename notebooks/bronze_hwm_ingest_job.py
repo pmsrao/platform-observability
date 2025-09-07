@@ -539,7 +539,7 @@ def upsert_compute_clusters():
             Target: brz_compute_clusters
     
     Business Logic:
-    - Filters by created_time for incremental processing
+    - Filters by create_time for incremental processing
     - Tracks cluster configuration and status
     - Used for cost allocation and policy compliance
     """
@@ -569,7 +569,7 @@ def upsert_compute_clusters():
     stg.createOrReplaceTempView("stg_clusters")
     execute_sql_operation("bronze/operations/upsert_compute_clusters", tgt, "stg_clusters", logger)
     
-    mx = stg.select(F.max("created_time").alias("mx")).first().mx
+    mx = stg.select(F.max("create_time").alias("mx")).first().mx
     if mx is not None:
         commit_processing_state(spark, src, mx)
         logger.info(f"Updated processing state for {src} to {mx}")
