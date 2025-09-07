@@ -106,13 +106,32 @@ print("🔄 Module cache cleared - ready for fresh imports")
 config = Config.get_config()
 logger = StructuredLogger("silver_hwm_build_job")
 
-# Configure Spark for schema evolution with Table ACLs
-# This allows mergeSchema to work even with Table ACLs enabled
-spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
-logger.info("Enabled Delta Lake schema auto-merge for Table ACL compatibility")
-
 # Initialize error capture system
 error_capture = ErrorCapture(spark)
+
+# Helper function to handle schema evolution with Table ACLs
+def write_with_schema_handling(df, table_name, mode="append"):
+    """
+    Write DataFrame to table with proper schema handling for Table ACLs.
+    Falls back to overwrite mode if mergeSchema fails due to Table ACLs.
+    """
+    try:
+        # Try append with mergeSchema first (preferred for incremental processing)
+        if mode == "append":
+            df.write.mode("append").option("mergeSchema", "true").saveAsTable(table_name)
+            logger.info(f"Successfully wrote to {table_name} with append mode and mergeSchema")
+        else:
+            df.write.mode(mode).option("mergeSchema", "true").saveAsTable(table_name)
+            logger.info(f"Successfully wrote to {table_name} with {mode} mode and mergeSchema")
+    except Exception as e:
+        if "Table ACLs are enabled" in str(e) or "automatic schema migration is not allowed" in str(e):
+            logger.warning(f"Table ACLs prevent mergeSchema for {table_name}, using overwrite mode")
+            # Fall back to overwrite mode when Table ACLs prevent schema evolution
+            df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(table_name)
+            logger.info(f"Successfully wrote to {table_name} with overwrite mode and overwriteSchema")
+        else:
+            # Re-raise if it's a different error
+            raise e
 
 logger.info("Starting Silver layer HWM build job", 
             catalog=config.catalog,
@@ -224,10 +243,9 @@ def build_silver_workspace(spark) -> bool:
             F.current_timestamp().alias("_loaded_at")
         ).distinct()
         
-        # Write to Silver table with append mode for incremental processing
-        # Use mergeSchema to handle schema evolution
+        # Write to Silver table with proper schema handling
         silver_table = get_silver_table_name("slv_workspace")
-        transformed_df.write.mode("append").option("mergeSchema", "true").saveAsTable(silver_table)
+        write_with_schema_handling(transformed_df, silver_table, mode="append")
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -329,10 +347,9 @@ def build_silver_entity_latest(spark) -> bool:
         #     return False
         logger.info("Data validation temporarily disabled - processing data")
         
-        # Write to Silver table with append mode for incremental processing
-        # Use mergeSchema to handle schema evolution
+        # Write to Silver table with proper schema handling
         silver_table = get_silver_table_name("slv_entity_latest")
-        unified_entities.write.mode("append").option("mergeSchema", "true").saveAsTable(silver_table)
+        write_with_schema_handling(unified_entities, silver_table, mode="append")
         
         # Update processing state (use max timestamp from both sources)
         max_ts_jobs = get_max_timestamp(jobs_df) if jobs_df.count() > 0 else None
@@ -423,10 +440,9 @@ def build_silver_clusters(spark) -> bool:
         tag_processor = TagProcessor()
         transformed_df = tag_processor.add_worker_node_type_category(transformed_df)
         
-        # Write to Silver table with append mode for incremental processing
-        # Use mergeSchema to handle schema evolution
+        # Write to Silver table with proper schema handling
         silver_table = get_silver_table_name("slv_clusters")
-        transformed_df.write.mode("append").option("mergeSchema", "true").saveAsTable(silver_table)
+        write_with_schema_handling(transformed_df, silver_table, mode="append")
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -504,10 +520,9 @@ def build_silver_usage_txn(spark) -> bool:
         tag_processor = TagProcessor()
         enriched_df = tag_processor.enrich_usage(transformed_df)
         
-        # Write to Silver table with append mode for incremental processing
-        # Use mergeSchema to handle schema evolution
+        # Write to Silver table with proper schema handling
         silver_table = get_silver_table_name("slv_usage_txn")
-        enriched_df.write.mode("append").option("mergeSchema", "true").saveAsTable(silver_table)
+        write_with_schema_handling(enriched_df, silver_table, mode="append")
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -570,10 +585,9 @@ def build_silver_job_run_timeline(spark) -> bool:
             F.current_timestamp().alias("_loaded_at")
         )
         
-        # Write to Silver table with append mode for incremental processing
-        # Use mergeSchema to handle schema evolution
+        # Write to Silver table with proper schema handling
         silver_table = get_silver_table_name("slv_job_run_timeline")
-        transformed_df.write.mode("append").option("mergeSchema", "true").saveAsTable(silver_table)
+        write_with_schema_handling(transformed_df, silver_table, mode="append")
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -637,10 +651,9 @@ def build_silver_job_task_run_timeline(spark) -> bool:
          .withColumn("valid_to", F.lit(None)) \
          .withColumn("is_current", F.lit(True))
         
-        # Write to Silver table with append mode for incremental processing
-        # Use mergeSchema to handle schema evolution
+        # Write to Silver table with proper schema handling
         silver_table = get_silver_table_name("slv_job_task_run_timeline")
-        transformed_df.write.mode("append").option("mergeSchema", "true").saveAsTable(silver_table)
+        write_with_schema_handling(transformed_df, silver_table, mode="append")
         
         # Update processing state
         max_ts = get_max_timestamp(df)
