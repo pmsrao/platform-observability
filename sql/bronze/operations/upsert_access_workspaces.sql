@@ -8,13 +8,15 @@ WHEN MATCHED AND T.row_hash != S.row_hash THEN
     UPDATE SET
         T.workspace_name = S.workspace_name,
         T.workspace_url = S.workspace_url,
+        T.create_time = S.create_time,
+        T.status = S.status,
         T._loaded_at = CURRENT_TIMESTAMP()
 WHEN NOT MATCHED THEN
     INSERT (
-        workspace_id, workspace_name, workspace_url,
-        row_hash, _loaded_at
+        account_id, workspace_id, workspace_name, workspace_url,
+        create_time, status, row_hash, _loaded_at
     )
     VALUES (
-        S.workspace_id, S.workspace_name, S.workspace_url,
-        S.row_hash, CURRENT_TIMESTAMP()
+        S.account_id, S.workspace_id, S.workspace_name, S.workspace_url,
+        S.create_time, S.status, S.row_hash, CURRENT_TIMESTAMP()
     )

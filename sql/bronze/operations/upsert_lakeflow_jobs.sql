@@ -9,20 +9,18 @@ ON T.workspace_id = S.workspace_id
 WHEN MATCHED AND T.row_hash != S.row_hash THEN
     UPDATE SET
         T.name = S.name,
-        T.run_as = S.run_as,
-        T.parent_workflow_id = S.parent_workflow_id,
-        T.workflow_type = S.workflow_type,
-        T.cluster_id = S.cluster_id,
+        T.description = S.description,
+        T.creator_id = S.creator_id,
         T.tags = S.tags,
+        T.delete_time = S.delete_time,
+        T.run_as = S.run_as,
         T._loaded_at = CURRENT_TIMESTAMP()
 WHEN NOT MATCHED THEN
     INSERT (
-        workspace_id, job_id, name, run_as, change_time,
-        parent_workflow_id, workflow_type, cluster_id, tags,
-        row_hash, _loaded_at
+        account_id, workspace_id, job_id, name, description, creator_id,
+        tags, change_time, delete_time, run_as, row_hash, _loaded_at
     )
     VALUES (
-        S.workspace_id, S.job_id, S.name, S.run_as, S.change_time,
-        S.parent_workflow_id, S.workflow_type, S.cluster_id, S.tags,
-        S.row_hash, CURRENT_TIMESTAMP()
+        S.account_id, S.workspace_id, S.job_id, S.name, S.description, S.creator_id,
+        S.tags, S.change_time, S.delete_time, S.run_as, S.row_hash, CURRENT_TIMESTAMP()
     )

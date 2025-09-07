@@ -552,10 +552,10 @@ def upsert_compute_clusters():
     ws = window_start(last_ts)
     
     stg = (spark.table(src)
-           .where(F.col("created_time") > ws)
+           .where(F.col("create_time") > ws)
            .withColumn("row_hash", sha256_concat([
-               "cluster_id","cluster_name","cluster_source","policy_id","spark_version","data_security_mode",
-               "driver_node_type_id","node_type_id","min_workers","max_workers","num_workers"
+               "cluster_id","cluster_name","cluster_source","policy_id","dbr_version","data_security_mode",
+               "driver_node_type","worker_node_type","min_autoscale_workers","max_autoscale_workers","worker_count"
            ])))
     
     # Validate data quality
@@ -598,7 +598,7 @@ def upsert_compute_node_types():
     logger.info(f"Processing compute node types from {src} to {tgt}")
     
     stg = spark.table(src).withColumn("row_hash", sha256_concat([
-        "node_type_id","node_info.instance_type","node_info.memory_mb","node_info.num_cores"
+        "node_type","core_count","memory_mb","gpu_count"
     ]))
     
     # Validate data quality
