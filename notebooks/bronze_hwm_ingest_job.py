@@ -254,12 +254,31 @@ def upsert_billing_usage():
     # Read and process data with HWM filtering
     stg = (spark.table(src)
            .where(F.col("usage_end_time") > ws)
+           # Data quality cleaning: handle negative quantities and invalid time ranges
+           .withColumn("usage_quantity", 
+                       F.when(F.col("usage_quantity") < 0, F.lit(0.0))
+                        .otherwise(F.col("usage_quantity")))
+           .withColumn("usage_end_time", 
+                       F.when(F.col("usage_end_time") <= F.col("usage_start_time"),
+                              F.col("usage_start_time") + F.expr("INTERVAL 1 SECOND"))
+                        .otherwise(F.col("usage_end_time")))
            .withColumn("row_hash", sha256_concat([
                "workspace_id", "cloud", "sku_name", "usage_unit",
                "usage_start_time", "usage_end_time",
                "usage_metadata.job_run_id", "usage_metadata.dlt_pipeline_id",
                "usage_quantity"
            ])))
+    
+    # Log data quality cleaning results
+    total_records = stg.count()
+    negative_quantity_count = stg.filter(F.col("usage_quantity") == 0.0).count()
+    invalid_time_count = stg.filter(F.col("usage_end_time") == F.col("usage_start_time") + F.expr("INTERVAL 1 SECOND")).count()
+    
+    if negative_quantity_count > 0 or invalid_time_count > 0:
+        logger.info(f"Data quality cleaning applied to billing usage", 
+                   total_records=total_records,
+                   negative_quantities_cleaned=negative_quantity_count,
+                   invalid_times_cleaned=invalid_time_count)
     
     # Validate data quality before upsert (LENIENT MODE FOR TESTING)
     print("DEBUG: About to validate data quality for billing usage...")

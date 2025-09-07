@@ -253,7 +253,18 @@ class DataQualityMonitor:
         
         for col_name in required_columns:
             if col_name in df.columns:
-                null_count = df.filter(col(col_name).isNull() | isnan(col(col_name)) | isnull(col(col_name))).count()
+                # Get column data type to determine appropriate null checks
+                col_type = dict(df.dtypes)[col_name]
+                
+                # For numeric types, check for both null and NaN values
+                if col_type in ['int', 'bigint', 'float', 'double', 'decimal']:
+                    null_count = df.filter(col(col_name).isNull() | isnan(col(col_name)) | isnull(col(col_name))).count()
+                else:
+                    # For non-numeric types (string, timestamp, date, etc.), only check for null values
+                    # isnan() only works with numeric types, so we exclude it for all other types
+                    # This prevents CAST_INVALID_INPUT errors when isnan() is applied to non-numeric columns
+                    null_count = df.filter(col(col_name).isNull() | isnull(col(col_name))).count()
+                
                 failed_count += null_count
         
         passed_count = total_count - failed_count
