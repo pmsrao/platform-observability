@@ -64,8 +64,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_billing_usage (
         is_serverless:BOOLEAN,
         is_photon:BOOLEAN,
         serving_type:STRING,
-        offering_type:STRING,
-        networking:STRUCT<connectivity_type:STRING>
+        networking:STRUCT<connectivity_type:STRING>,
+        ai_runtime:STRUCT<compute_type:STRING>,
+        model_serving:STRUCT<offering_type:STRING>,
+        ai_gateway:STRUCT<feature_type:STRING>,
+        serverless_gpu:STRUCT<workload_type:STRING>
     >,
     usage_type STRING,
     row_hash STRING,

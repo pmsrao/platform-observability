@@ -140,7 +140,19 @@ def window_start(last_ts):
     """
     if last_ts is None:
         return F.to_timestamp(F.lit("1900-01-01"))
-    return F.expr(f"timestampadd(HOUR, -{OVERLAP_HOURS}, timestamp('{last_ts}'))")
+    
+    # Handle malformed timestamps gracefully
+    try:
+        # Try to parse the timestamp to validate it
+        if isinstance(last_ts, str) and ('None' in last_ts or last_ts.strip() == ''):
+            logger.warning(f"Malformed timestamp detected: '{last_ts}', using default start time")
+            return F.to_timestamp(F.lit("1900-01-01"))
+        
+        # Use try_cast to handle any remaining malformed timestamps
+        return F.expr(f"timestampadd(HOUR, -{OVERLAP_HOURS}, try_cast('{last_ts}' as timestamp))")
+    except Exception as e:
+        logger.warning(f"Error processing timestamp '{last_ts}': {str(e)}, using default start time")
+        return F.to_timestamp(F.lit("1900-01-01"))
 
 def sha256_concat(cols):
     """
@@ -236,8 +248,8 @@ def upsert_billing_usage():
     logger.info(f"Processing billing usage from {src} to {tgt}")
     
     # Get last processed timestamp and calculate window start
-    last = get_last_processed_timestamp(spark, src)
-    ws = window_start(last)
+    last_ts, last_version = get_last_processed_timestamp(spark, src)
+    ws = window_start(last_ts)
     
     # Read and process data with HWM filtering
     stg = (spark.table(src)
@@ -294,8 +306,8 @@ def upsert_list_prices():
     
     logger.info(f"Processing list prices from {src} to {tgt}")
     
-    last = get_last_processed_timestamp(spark, src)
-    ws = window_start(last)
+    last_ts, last_version = get_last_processed_timestamp(spark, src)
+    ws = window_start(last_ts)
     
     stg = spark.table(src).where(F.col("price_start_time") > ws)
     
@@ -338,8 +350,8 @@ def upsert_job_run_timeline():
     
     logger.info(f"Processing job run timeline from {src} to {tgt}")
     
-    last = get_last_processed_timestamp(spark, src)
-    ws = window_start(last)
+    last_ts, last_version = get_last_processed_timestamp(spark, src)
+    ws = window_start(last_ts)
     
     stg = (spark.table(src)
            .where(F.col("period_end_time") > ws)
@@ -386,8 +398,8 @@ def upsert_job_task_run_timeline():
     
     logger.info(f"Processing job task run timeline from {src} to {tgt}")
     
-    last = get_last_processed_timestamp(spark, src)
-    ws = window_start(last)
+    last_ts, last_version = get_last_processed_timestamp(spark, src)
+    ws = window_start(last_ts)
     
     stg = (spark.table(src)
            .where(F.col("period_end_time") > ws)
@@ -434,8 +446,8 @@ def upsert_lakeflow_jobs():
     
     logger.info(f"Processing lakeflow jobs from {src} to {tgt}")
     
-    last = get_last_processed_timestamp(spark, src)
-    ws = window_start(last)
+    last_ts, last_version = get_last_processed_timestamp(spark, src)
+    ws = window_start(last_ts)
     
     stg = (spark.table(src)
            .where(F.col("change_time") > ws)
@@ -482,8 +494,8 @@ def upsert_lakeflow_pipelines():
     
     logger.info(f"Processing lakeflow pipelines from {src} to {tgt}")
     
-    last = get_last_processed_timestamp(spark, src)
-    ws = window_start(last)
+    last_ts, last_version = get_last_processed_timestamp(spark, src)
+    ws = window_start(last_ts)
     
     stg = (spark.table(src)
            .where(F.col("change_time") > ws)
@@ -530,8 +542,8 @@ def upsert_compute_clusters():
     
     logger.info(f"Processing compute clusters from {src} to {tgt}")
     
-    last = get_last_processed_timestamp(spark, src)
-    ws = window_start(last)
+    last_ts, last_version = get_last_processed_timestamp(spark, src)
+    ws = window_start(last_ts)
     
     stg = (spark.table(src)
            .where(F.col("created_time") > ws)
