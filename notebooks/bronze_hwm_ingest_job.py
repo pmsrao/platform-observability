@@ -402,6 +402,7 @@ def upsert_job_task_run_timeline():
     tgt = config.get_table_name("bronze", "brz_lakeflow_job_task_run_timeline")
     
     logger.info(f"Processing job task run timeline from {src} to {tgt}")
+    print("🔧 DEBUG: Processing job task run timeline - RETRY_ATTEMPT COLUMN REMOVED")
     
     last_ts, last_version = get_last_processed_timestamp(spark, src)
     ws = window_start(last_ts)
@@ -676,8 +677,8 @@ def main():
     start_time = time.time()
     total_records = 0
     
-    # DEBUG: Confirm new code is running
-    print("🚀 DEBUG: Starting Bronze HWM Ingest Job - UPDATED VERSION WITH FIXED SQL PATHS")
+    # DEBUG: Confirm new code is running - RETRY_ATTEMPT ISSUE FIXED
+    print("🚀 DEBUG: Starting Bronze HWM Ingest Job - RETRY_ATTEMPT COLUMN ISSUE FIXED")
     
     try:
         # Setup logging context
