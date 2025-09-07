@@ -208,7 +208,7 @@ def build_silver_workspace(spark) -> bool:
             df.workspace_id,
             df.workspace_name,
             df.workspace_url,
-            df.create_time.alias("created_time"),  # FIXED: Use create_time from bronze
+            df.create_time,  # FIXED: Keep original column name to match existing table schema
             df.status,
             F.current_timestamp().alias("_loaded_at")
         ).distinct()
@@ -481,7 +481,9 @@ def build_silver_usage_txn(spark) -> bool:
             F.coalesce(df.usage_metadata.job_run_id, F.lit("UNKNOWN")).alias("job_run_id"),
             F.date_format(df.usage_date, "yyyyMMdd").cast("int").alias("date_sk"),
             F.lit(0.0).alias("list_cost_usd"),  # Will be calculated when joined with prices
-            F.lit(0.0).alias("duration_hours")  # Will be calculated from usage times
+            F.lit(0.0).alias("duration_hours"),  # Will be calculated from usage times
+            # FIXED: Add missing workflow fields that are expected in the schema
+            F.lit("None").alias("parent_workflow_name")  # Will be enriched by tag processor
         )
         
         # Enrich with tags and normalize
