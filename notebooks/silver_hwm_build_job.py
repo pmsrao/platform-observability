@@ -38,21 +38,30 @@ import sys
 import os
 
 # Add current directory to path for local development
-current_dir = os.path.dirname(os.path.abspath(__file__))
-libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
-if libs_dir not in sys.path:
-    sys.path.append(libs_dir)
+try:
+    # This works in local development
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
+    if libs_dir not in sys.path:
+        sys.path.append(libs_dir)
+except NameError:
+    # __file__ is not available in Databricks notebooks
+    pass
 
 # For Databricks, also try the workspace path
-workspace_libs_path = '/Workspace/Repos/platform-observability/libs'
-if workspace_libs_path not in sys.path:
-    sys.path.append(workspace_libs_path)
+workspace_paths = [
+    '/Workspace/Repos/platform-observability/libs',
+    '/Workspace/Users/podilapalls@gmail.com/platform-observability/libs'
+]
+for workspace_libs_path in workspace_paths:
+    if workspace_libs_path not in sys.path:
+        sys.path.append(workspace_libs_path)
 
 from config import Config
 from processing_state import get_last_processed_timestamp, commit_processing_state, get_task_name
 from tag_processor import TagProcessor
-from logging import StructuredLogger
-from error_handling import validate_data_quality
+from libs.logging import StructuredLogger
+from libs.error_handling import validate_data_quality
 from utils import yyyymmdd
 
 # COMMAND ----------
@@ -188,6 +197,10 @@ def build_silver_workspace(spark) -> bool:
         
     except Exception as e:
         logger.error(f"Error building Silver workspace table: {str(e)}", exc_info=True)
+        # Print additional debug info
+        print(f"DEBUG: Workspace table error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def build_silver_entity_latest(spark) -> bool:
@@ -295,6 +308,9 @@ def build_silver_entity_latest(spark) -> bool:
         
     except Exception as e:
         logger.error(f"Error building Silver entity latest view: {str(e)}", exc_info=True)
+        print(f"DEBUG: Entity latest error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def build_silver_clusters(spark) -> bool:
@@ -372,6 +388,9 @@ def build_silver_clusters(spark) -> bool:
         
     except Exception as e:
         logger.error(f"Error building Silver clusters table: {str(e)}", exc_info=True)
+        print(f"DEBUG: Clusters table error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def build_silver_usage_txn(spark) -> bool:
@@ -444,6 +463,9 @@ def build_silver_usage_txn(spark) -> bool:
         
     except Exception as e:
         logger.error(f"Error building Silver usage transaction table: {str(e)}", exc_info=True)
+        print(f"DEBUG: Usage transaction error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def build_silver_job_run_timeline(spark) -> bool:
@@ -503,6 +525,9 @@ def build_silver_job_run_timeline(spark) -> bool:
         
     except Exception as e:
         logger.error(f"Error building Silver job run timeline table: {str(e)}", exc_info=True)
+        print(f"DEBUG: Job run timeline error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def build_silver_job_task_run_timeline(spark) -> bool:
@@ -563,6 +588,9 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         
     except Exception as e:
         logger.error(f"Error building Silver job task run timeline table: {str(e)}", exc_info=True)
+        print(f"DEBUG: Job task run timeline error details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 # COMMAND ----------
