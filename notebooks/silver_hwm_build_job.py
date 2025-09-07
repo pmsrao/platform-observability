@@ -162,15 +162,15 @@ def build_silver_workspace(spark) -> bool:
             logger.error("Data validation failed for Silver workspace table")
             return False
         
-        # Transform data
+        # Transform data - FIXED: Use correct column names from bronze schema
         transformed_df = df.select(
+            df.account_id,
             df.workspace_id,
             df.workspace_name,
             df.workspace_url,
-            df.region,
-            df.cloud,
-            df.created_time,
-            df.updated_time
+            df.create_time.alias("created_time"),  # FIXED: Use create_time from bronze
+            df.status,
+            F.current_timestamp().alias("_loaded_at")
         ).distinct()
         
         # Write to Silver table
@@ -207,30 +207,30 @@ def build_silver_entity_latest(spark) -> bool:
         logger.info("Processing PIPELINE entities from brz_lakeflow_pipelines")
         pipelines_df = read_bronze_since_timestamp(spark, "brz_lakeflow_pipelines", last_ts)
         
-        # Transform JOB data
+        # Transform JOB data - FIXED: Use correct column names from bronze schema
         jobs_entities = None
         if jobs_df.count() > 0:
             jobs_entities = jobs_df.select(
                 jobs_df.account_id,
                 jobs_df.workspace_id,
                 jobs_df.job_id.alias("entity_id"),
-                jobs_df.job_name.alias("name"),
+                jobs_df.name,  # FIXED: Use 'name' column from bronze, not 'job_name'
                 jobs_df.run_as,
                 # Pipeline-specific attributes (NULL for jobs)
                 F.lit(None).cast("string").alias("pipeline_type"),
-                # Job-specific workflow attributes
-                jobs_df.is_parent_workflow,
-                jobs_df.is_sub_workflow,
-                jobs_df.workflow_level,
-                jobs_df.parent_workflow_name,
-                # Common attributes
-                jobs_df.created_time,
-                jobs_df.updated_time,
+                # Job-specific workflow attributes - FIXED: These columns don't exist in bronze yet
+                F.lit(False).alias("is_parent_workflow"),  # Will be computed by tag processor
+                F.lit(False).alias("is_sub_workflow"),     # Will be computed by tag processor
+                F.lit("STANDALONE").alias("workflow_level"),  # Default value
+                F.lit("None").alias("parent_workflow_name"),  # Default value
+                # Common attributes - FIXED: Use correct column names
+                jobs_df.change_time.alias("created_time"),  # Use change_time as created_time
+                jobs_df.change_time.alias("updated_time"),  # Use change_time as updated_time
                 F.current_timestamp().alias("_loaded_at")
             ).withColumn("entity_type", F.lit("JOB"))
             logger.info(f"Transformed {jobs_entities.count()} JOB entities")
         
-        # Transform PIPELINE data
+        # Transform PIPELINE data - FIXED: Use correct column names from bronze schema
         pipelines_entities = None
         if pipelines_df.count() > 0:
             pipelines_entities = pipelines_df.select(
@@ -246,9 +246,9 @@ def build_silver_entity_latest(spark) -> bool:
                 F.lit(None).cast("boolean").alias("is_sub_workflow"),
                 F.lit(None).cast("string").alias("workflow_level"),
                 F.lit(None).cast("string").alias("parent_workflow_name"),
-                # Common attributes
-                pipelines_df.created_time,
-                pipelines_df.updated_time,
+                # Common attributes - FIXED: Use correct column names
+                pipelines_df.change_time.alias("created_time"),  # Use change_time as created_time
+                pipelines_df.change_time.alias("updated_time"),  # Use change_time as updated_time
                 F.current_timestamp().alias("_loaded_at")
             ).withColumn("entity_type", F.lit("PIPELINE"))
             logger.info(f"Transformed {pipelines_entities.count()} PIPELINE entities")
@@ -318,7 +318,7 @@ def build_silver_clusters(spark) -> bool:
             logger.error("Data validation failed for Silver clusters table")
             return False
         
-        # Transform data with SCD2 logic and new schema
+        # Transform data with SCD2 logic and new schema - FIXED: Handle JSON string attributes
         transformed_df = df.select(
             df.account_id,
             df.workspace_id,
@@ -337,16 +337,18 @@ def build_silver_clusters(spark) -> bool:
             df.tags,
             df.cluster_source,
             df.init_scripts,
-            df.aws_attributes,
-            df.azure_attributes,
-            df.gcp_attributes,
+            # FIXED: Parse JSON string attributes into structured objects
+            F.from_json(df.aws_attributes, "struct<instance_profile_arn:string,zone_id:string,first_on_demand:int,availability:string,spot_bid_price_percent:int,ebs_volume_type:string,ebs_volume_count:int,ebs_volume_size:int,ebs_volume_iops:int,ebs_volume_throughput:int>").alias("aws_attributes"),
+            F.from_json(df.azure_attributes, "struct<first_on_demand:int,availability:string,spot_bid_max_price:double>").alias("azure_attributes"),
+            F.from_json(df.gcp_attributes, "struct<use_preemptible_executors:boolean,zone_id:string,first_on_demand:int,availability:string>").alias("gcp_attributes"),
             df.driver_instance_pool_id,
             df.worker_instance_pool_id,
             df.dbr_version,
             df.change_time,
             df.change_date,
             df.data_security_mode,
-            df.policy_id
+            df.policy_id,
+            F.current_timestamp().alias("_loaded_at")
         ).withColumn("valid_from", df.change_time) \
          .withColumn("valid_to", F.lit(None)) \
          .withColumn("is_current", F.lit(True))
@@ -393,7 +395,7 @@ def build_silver_usage_txn(spark) -> bool:
             logger.error("Data validation failed for Silver usage transaction table")
             return False
         
-        # Transform data with all required columns
+        # Transform data with all required columns - FIXED: Add missing columns and computed fields
         transformed_df = df.select(
             df.record_id,
             df.account_id,
@@ -404,8 +406,8 @@ def build_silver_usage_txn(spark) -> bool:
             df.usage_start_time,
             df.usage_end_time,
             df.usage_date,
-            df.custom_tags,
             df.usage_quantity,
+            # FIXED: Add missing columns that exist in bronze but were missing in silver transform
             df.usage_metadata,
             df.identity_metadata,
             df.record_type,
@@ -413,12 +415,14 @@ def build_silver_usage_txn(spark) -> bool:
             df.billing_origin_product,
             df.product_features,
             df.usage_type,
-            df.entity_type,
-            df.entity_id,
-            df.job_run_id,
-            df.date_sk,
-            df.list_cost_usd,
-            df.duration_hours
+            df.custom_tags,
+            # FIXED: Add computed fields that need to be calculated
+            F.lit("UNKNOWN").alias("entity_type"),  # Will be enriched by tag processor
+            F.lit("UNKNOWN").alias("entity_id"),    # Will be enriched by tag processor
+            F.coalesce(df.usage_metadata.job_run_id, F.lit("UNKNOWN")).alias("job_run_id"),
+            F.date_format(df.usage_date, "yyyyMMdd").cast("int").alias("date_sk"),
+            F.lit(0.0).alias("list_cost_usd"),  # Will be calculated when joined with prices
+            F.lit(0.0).alias("duration_hours")  # Will be calculated from usage times
         )
         
         # Enrich with tags and normalize
@@ -463,17 +467,25 @@ def build_silver_job_run_timeline(spark) -> bool:
             logger.error("Data validation failed for Silver job run timeline table")
             return False
         
-        # Transform data
+        # Transform data - FIXED: Use correct column names from bronze schema
         transformed_df = df.select(
+            df.account_id,
             df.workspace_id,
             df.job_id,
             df.run_id.alias("job_run_id"),  # Transform run_id to job_run_id
-            df.start_time,
-            df.end_time,
+            df.period_start_time,  # FIXED: Use period_start_time from bronze
+            df.period_end_time,    # FIXED: Use period_end_time from bronze
+            df.trigger_type,
+            df.run_type,
+            df.run_name,
+            df.compute_ids,
             df.result_state,
             df.termination_code,
-            df.date_sk_start,
-            df.date_sk_end
+            df.job_parameters,
+            # Add date_sk columns (these need to be computed)
+            F.date_format(df.period_start_time, "yyyyMMdd").cast("int").alias("date_sk_start"),
+            F.date_format(df.period_end_time, "yyyyMMdd").cast("int").alias("date_sk_end"),
+            F.current_timestamp().alias("_loaded_at")
         )
         
         # Write to Silver table
@@ -514,20 +526,25 @@ def build_silver_job_task_run_timeline(spark) -> bool:
             logger.error("Data validation failed for Silver job task run timeline table")
             return False
         
-        # Transform data with SCD2 logic
+        # Transform data with SCD2 logic - FIXED: Use correct column names from bronze schema
         transformed_df = df.select(
+            df.account_id,
             df.workspace_id,
             df.job_id,
             df.run_id.alias("task_run_id"),  # Transform run_id to task_run_id
             df.parent_run_id.alias("job_run_id"),  # Parent run becomes job_run_id
             df.task_key,
-            df.start_time,
-            df.end_time,
+            df.period_start_time,  # FIXED: Use period_start_time from bronze
+            df.period_end_time,    # FIXED: Use period_end_time from bronze
+            df.compute_ids,
             df.result_state,
             df.termination_code,
-            df.date_sk_start,
-            df.date_sk_end
-        ).withColumn("valid_from", df.start_time) \
+            # Calculate execution_secs from period times
+            F.col("period_end_time").cast("long") - F.col("period_start_time").cast("long").alias("execution_secs"),
+            # Add date_sk column (computed from period_start_time)
+            F.date_format(df.period_start_time, "yyyyMMdd").cast("int").alias("date_sk"),
+            F.current_timestamp().alias("_loaded_at")
+        ).withColumn("valid_from", df.period_start_time) \
          .withColumn("valid_to", F.lit(None)) \
          .withColumn("is_current", F.lit(True))
         

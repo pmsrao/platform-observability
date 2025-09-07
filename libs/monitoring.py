@@ -149,14 +149,12 @@ class MonitoringSystem:
         """Default metric handler - logs to structured logger"""
         self.logger.info(
             f"METRIC: {metric.name} = {metric.value} {metric.unit}",
-            {
-                "metric_name": metric.name,
-                "metric_value": metric.value,
-                "metric_unit": metric.unit,
-                "metric_timestamp": metric.timestamp.isoformat(),
-                "metric_tags": metric.tags,
-                "metric_metadata": metric.metadata
-            }
+            metric_name=metric.name,
+            metric_value=metric.value,
+            metric_unit=metric.unit,
+            metric_timestamp=metric.timestamp.isoformat(),
+            metric_tags=metric.tags,
+            metric_metadata=metric.metadata
         )
     
     def get_active_alerts(self, severity: Optional[AlertSeverity] = None) -> List[Alert]:

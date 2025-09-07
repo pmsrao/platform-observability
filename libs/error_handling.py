@@ -93,9 +93,9 @@ class DataQualityMonitor:
                 # Update performance metrics
                 monitor.complete_operation(
                     operation_id=operation_id,
-                    records_checked=result.records_checked,
+                    records_processed=result.records_checked,
                     records_failed=result.records_failed,
-                    records_passed=result.records_passed
+                    records_success=result.records_passed
                 )
                 
                 results.append(result)
