@@ -63,6 +63,7 @@ from tag_processor import TagProcessor
 from libs.logging import StructuredLogger
 from libs.error_handling import validate_data_quality
 from utils import yyyymmdd
+from libs.error_capture_utils import ErrorCapture
 
 # COMMAND ----------
 
@@ -74,6 +75,9 @@ from utils import yyyymmdd
 # Get configuration
 config = Config.get_config()
 logger = StructuredLogger("silver_hwm_build_job")
+
+# Initialize error capture system
+error_capture = ErrorCapture(spark)
 
 logger.info("Starting Silver layer HWM build job", 
             catalog=config.catalog,
@@ -196,6 +200,8 @@ def build_silver_workspace(spark) -> bool:
         return True
         
     except Exception as e:
+        # Capture error for persistence
+        error_capture.capture_error("build_silver_workspace", e)
         logger.error(f"Error building Silver workspace table: {str(e)}", exc_info=True)
         # Print additional debug info
         print(f"DEBUG: Workspace table error details: {str(e)}")
@@ -307,6 +313,8 @@ def build_silver_entity_latest(spark) -> bool:
         return True
         
     except Exception as e:
+        # Capture error for persistence
+        error_capture.capture_error("build_silver_entity_latest", e)
         logger.error(f"Error building Silver entity latest view: {str(e)}", exc_info=True)
         print(f"DEBUG: Entity latest error details: {str(e)}")
         import traceback
@@ -387,6 +395,8 @@ def build_silver_clusters(spark) -> bool:
         return True
         
     except Exception as e:
+        # Capture error for persistence
+        error_capture.capture_error("build_silver_clusters", e)
         logger.error(f"Error building Silver clusters table: {str(e)}", exc_info=True)
         print(f"DEBUG: Clusters table error details: {str(e)}")
         import traceback
@@ -462,6 +472,8 @@ def build_silver_usage_txn(spark) -> bool:
         return True
         
     except Exception as e:
+        # Capture error for persistence
+        error_capture.capture_error("build_silver_usage_txn", e)
         logger.error(f"Error building Silver usage transaction table: {str(e)}", exc_info=True)
         print(f"DEBUG: Usage transaction error details: {str(e)}")
         import traceback
@@ -524,6 +536,8 @@ def build_silver_job_run_timeline(spark) -> bool:
         return True
         
     except Exception as e:
+        # Capture error for persistence
+        error_capture.capture_error("build_silver_job_run_timeline", e)
         logger.error(f"Error building Silver job run timeline table: {str(e)}", exc_info=True)
         print(f"DEBUG: Job run timeline error details: {str(e)}")
         import traceback
@@ -587,6 +601,8 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         return True
         
     except Exception as e:
+        # Capture error for persistence
+        error_capture.capture_error("build_silver_job_task_run_timeline", e)
         logger.error(f"Error building Silver job task run timeline table: {str(e)}", exc_info=True)
         print(f"DEBUG: Job task run timeline error details: {str(e)}")
         import traceback
@@ -653,15 +669,31 @@ def build_silver_layer(spark) -> Dict[str, bool]:
 # COMMAND ----------
 
 if __name__ == "__main__":
-    # Build Silver layer
-    results = build_silver_layer(spark)
-    
-    # Check overall success
-    all_successful = all(results.values())
-    
-    if all_successful:
-        logger.info("🎉 All Silver layer tables built successfully!")
-        dbutils.notebook.exit("SUCCESS")
-    else:
-        logger.error("💥 Some Silver layer tables failed to build")
+    try:
+        # Build Silver layer
+        results = build_silver_layer(spark)
+        
+        # Check overall success
+        all_successful = all(results.values())
+        
+        if all_successful:
+            logger.info("🎉 All Silver layer tables built successfully!")
+            dbutils.notebook.exit("SUCCESS")
+        else:
+            logger.error("💥 Some Silver layer tables failed to build")
+            # Save errors before exiting
+            error_capture.save_errors_to_table()
+            error_capture.save_errors_to_file("/tmp/silver_errors.json")
+            dbutils.notebook.exit("FAILED")
+            
+    except Exception as e:
+        # Capture any critical errors
+        error_capture.capture_error("main_execution", e)
+        error_capture.save_errors_to_table()
+        error_capture.save_errors_to_file("/tmp/silver_errors.json")
+        
+        logger.error(f"💥 Critical error in main execution: {str(e)}", exc_info=True)
+        print(f"🚨 CRITICAL ERROR: {str(e)}")
+        print(f"📋 Check error_logs table or /tmp/silver_errors.json for details")
+        
         dbutils.notebook.exit("FAILED")
