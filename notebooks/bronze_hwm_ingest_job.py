@@ -309,7 +309,12 @@ def upsert_list_prices():
     last_ts, last_version = get_last_processed_timestamp(spark, src)
     ws = window_start(last_ts)
     
-    stg = spark.table(src).where(F.col("price_start_time") > ws)
+    stg = (spark.table(src)
+           .where(F.col("price_start_time") > ws)
+           .withColumn("row_hash", sha256_concat([
+               "account_id", "sku_name", "cloud", "currency_code", "usage_unit",
+               "price_start_time", "price_end_time", "pricing"
+           ])))
     
     # Validate data quality
     try:
