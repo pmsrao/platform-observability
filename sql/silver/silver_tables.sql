@@ -168,8 +168,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
         is_serverless:BOOLEAN,
         is_photon:BOOLEAN,
         serving_type:STRING,
-        offering_type:STRING,
-        networking:STRUCT<connectivity_type:STRING>
+        networking:STRUCT<connectivity_type:STRING>,
+        ai_runtime:STRUCT<compute_type:STRING>,
+        model_serving:STRUCT<offering_type:STRING>,
+        ai_gateway:STRUCT<feature_type:STRING>,
+        serverless_gpu:STRUCT<workload_type:STRING>
     >,
     usage_type STRING,
     -- NEW: Original business tags (as extracted from source)
