@@ -1,0 +1,122 @@
+{
+  "version": "1.0",
+  "description": "SQL statements for Platform Observability Dashboard",
+  "lastUpdated": "2025-01-08",
+  "statements": {
+    "overview_total_cost_summary": {
+      "description": "Key financial metrics for the last 30 days",
+      "category": "overview",
+      "sql": "WITH cost_summary AS (\n  SELECT \n    SUM(list_cost_usd) as total_cost_usd,\n    COUNT(DISTINCT workspace_id) as active_workspaces,\n    COUNT(DISTINCT entity_id) as active_entities,\n    AVG(list_cost_usd) as avg_daily_cost\n  FROM platform_observability.plt_gold.gld_fact_usage_priced_day\n  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n)\nSELECT \n  'Total Cost (30 days)' as metric,\n  CONCAT('$', FORMAT_NUMBER(total_cost_usd, 2)) as value,\n  'USD' as unit\nFROM cost_summary\nUNION ALL\nSELECT \n  'Active Workspaces' as metric,\n  CAST(active_workspaces AS STRING) as value,\n  'count' as unit\nFROM cost_summary\nUNION ALL\nSELECT \n  'Active Entities' as metric,\n  CAST(active_entities AS STRING) as value,\n  'count' as unit\nFROM cost_summary\nUNION ALL\nSELECT \n  'Avg Daily Cost' as metric,\n  CONCAT('$', FORMAT_NUMBER(avg_daily_cost, 2)) as value,\n  'USD/day' as unit\nFROM cost_summary"
+    },
+    "overview_cost_trend": {
+      "description": "Daily cost trends with 7-day rolling average",
+      "category": "overview",
+      "sql": "SELECT \n  date_sk,\n  SUM(list_cost_usd) as daily_cost_usd,\n  AVG(SUM(list_cost_usd)) OVER (ORDER BY date_sk ROWS 6 PRECEDING) as rolling_7day_avg\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nGROUP BY date_sk\nORDER BY date_sk"
+    },
+    "overview_top_cost_centers": {
+      "description": "Top 10 cost centers by total cost",
+      "category": "overview",
+      "sql": "SELECT \n  cost_center,\n  line_of_business,\n  SUM(list_cost_usd) as total_cost_usd,\n  COUNT(DISTINCT entity_id) as active_entities,\n  ROUND(SUM(list_cost_usd) / COUNT(DISTINCT entity_id), 2) as cost_per_entity\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n  AND cost_center != 'unallocated'\nGROUP BY cost_center, line_of_business\nORDER BY total_cost_usd DESC\nLIMIT 10"
+    },
+    "overview_runtime_health": {
+      "description": "Runtime version distribution and health",
+      "category": "overview",
+      "sql": "WITH runtime_health AS (\n  SELECT \n    c.dbr_version,\n    COUNT(DISTINCT c.cluster_id) as cluster_count,\n    SUM(f.list_cost_usd) as total_cost,\n    CASE \n      WHEN c.dbr_version LIKE '%13.%' THEN 'Current'\n      WHEN c.dbr_version LIKE '%12.%' THEN 'Recent'\n      WHEN c.dbr_version LIKE '%11.%' THEN 'Older'\n      ELSE 'Legacy'\n    END as version_category\n  FROM platform_observability.plt_gold.gld_fact_usage_priced_day f\n  JOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key\n  WHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n    AND c.is_current = true\n  GROUP BY c.dbr_version, version_category\n)\nSELECT \n  version_category,\n  COUNT(*) as runtime_versions,\n  SUM(cluster_count) as total_clusters,\n  SUM(total_cost) as total_cost_usd\nFROM runtime_health\nGROUP BY version_category\nORDER BY \n  CASE version_category\n    WHEN 'Current' THEN 1\n    WHEN 'Recent' THEN 2\n    WHEN 'Older' THEN 3\n    ELSE 4\n  END"
+    },
+    "finance_monthly_cost_breakdown": {
+      "description": "Monthly cost breakdown by cost center and line of business",
+      "category": "finance",
+      "sql": "SELECT \n  DATE_FORMAT(date_sk, 'yyyy-MM') as month,\n  cost_center,\n  line_of_business,\n  SUM(list_cost_usd) as total_cost_usd,\n  COUNT(DISTINCT entity_id) as active_entities,\n  ROUND(SUM(list_cost_usd) / COUNT(DISTINCT entity_id), 2) as cost_per_entity\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE cost_center != 'unallocated'\n  AND date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd')\nGROUP BY DATE_FORMAT(date_sk, 'yyyy-MM'), cost_center, line_of_business\nORDER BY month DESC, total_cost_usd DESC"
+    },
+    "finance_daily_cost_trends": {
+      "description": "Daily cost trends with rolling averages for budget monitoring",
+      "category": "finance",
+      "sql": "SELECT \n  date_sk,\n  SUM(list_cost_usd) as daily_cost_usd,\n  AVG(SUM(list_cost_usd)) OVER (ORDER BY date_sk ROWS 6 PRECEDING) as rolling_7day_avg,\n  AVG(SUM(list_cost_usd)) OVER (ORDER BY date_sk ROWS 29 PRECEDING) as rolling_30day_avg\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd')\nGROUP BY date_sk\nORDER BY date_sk"
+    },
+    "finance_cost_center_analysis": {
+      "description": "Cost center analysis with month-over-month trends",
+      "category": "finance",
+      "sql": "WITH cost_summary AS (\n  SELECT \n    cost_center,\n    line_of_business,\n    DATE_FORMAT(date_sk, 'yyyy-MM') as month,\n    SUM(list_cost_usd) as monthly_cost,\n    COUNT(DISTINCT entity_id) as active_entities\n  FROM platform_observability.plt_gold.gld_fact_usage_priced_day\n  WHERE cost_center != 'unallocated'\n    AND date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd')\n  GROUP BY cost_center, line_of_business, DATE_FORMAT(date_sk, 'yyyy-MM')\n)\nSELECT \n  cost_center,\n  line_of_business,\n  month,\n  monthly_cost,\n  active_entities,\n  ROUND(monthly_cost / active_entities, 2) as cost_per_entity,\n  LAG(monthly_cost) OVER (PARTITION BY cost_center ORDER BY month) as prev_month_cost,\n  ROUND((monthly_cost - LAG(monthly_cost) OVER (PARTITION BY cost_center ORDER BY month)) / \n        LAG(monthly_cost) OVER (PARTITION BY cost_center ORDER BY month) * 100, 2) as cost_change_pct\nFROM cost_summary\nORDER BY cost_center, month"
+    },
+    "finance_unallocated_cost_analysis": {
+      "description": "Analysis of unallocated costs and coverage",
+      "category": "finance",
+      "sql": "SELECT \n  'Unallocated Cost' as category,\n  SUM(list_cost_usd) as total_cost_usd,\n  COUNT(DISTINCT entity_id) as unallocated_entities,\n  ROUND(SUM(list_cost_usd) / (SELECT SUM(list_cost_usd) FROM platform_observability.plt_gold.gld_fact_usage_priced_day \n                            WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')) * 100, 2) as percentage_of_total\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE cost_center = 'unallocated'\n  AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nUNION ALL\nSELECT \n  'Total Cost' as category,\n  SUM(list_cost_usd) as total_cost_usd,\n  COUNT(DISTINCT entity_id) as total_entities,\n  100.0 as percentage_of_total\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')"
+    },
+    "platform_runtime_analysis": {
+      "description": "Runtime version distribution and upgrade priorities",
+      "category": "platform",
+      "sql": "SELECT \n  c.dbr_version,\n  COUNT(DISTINCT c.cluster_id) as cluster_count,\n  SUM(f.list_cost_usd) as total_cost_usd,\n  AVG(f.duration_hours) as avg_duration_hours,\n  CASE \n    WHEN c.dbr_version LIKE '%13.%' THEN 'Current'\n    WHEN c.dbr_version LIKE '%12.%' THEN 'Recent' \n    WHEN c.dbr_version LIKE '%11.%' THEN 'Older'\n    ELSE 'Legacy'\n  END as version_category\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day f\nJOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key\nWHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n  AND c.is_current = true\nGROUP BY c.dbr_version, version_category\nORDER BY total_cost_usd DESC"
+    },
+    "platform_cluster_sizing": {
+      "description": "Cluster sizing patterns and optimization opportunities",
+      "category": "platform",
+      "sql": "SELECT \n  c.worker_node_type_category,\n  c.dbr_version,\n  COUNT(DISTINCT c.cluster_id) as cluster_count,\n  SUM(f.list_cost_usd) as total_cost_usd,\n  AVG(f.duration_hours) as avg_duration_hours,\n  ROUND(SUM(f.list_cost_usd) / COUNT(DISTINCT f.job_run_id), 2) as cost_per_run\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day f\nJOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key\nWHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n  AND c.is_current = true\nGROUP BY c.worker_node_type_category, c.dbr_version\nORDER BY total_cost_usd DESC"
+    },
+    "platform_autoscaling_analysis": {
+      "description": "Auto-scaling configuration analysis",
+      "category": "platform",
+      "sql": "SELECT \n  c.cluster_name,\n  c.worker_node_type_category,\n  c.min_autoscale_workers,\n  c.max_autoscale_workers,\n  (c.max_autoscale_workers - c.min_autoscale_workers) as scaling_range,\n  AVG(f.duration_hours) as avg_duration_hours,\n  SUM(f.list_cost_usd) as total_cost_usd,\n  CASE \n    WHEN (c.max_autoscale_workers - c.min_autoscale_workers) > 5 THEN 'High Range'\n    WHEN (c.max_autoscale_workers - c.min_autoscale_workers) > 2 THEN 'Medium Range'\n    ELSE 'Low Range'\n  END as scaling_category\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day f\nJOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key\nWHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n  AND c.is_current = true\nGROUP BY c.cluster_name, c.worker_node_type_category, \n         c.min_autoscale_workers, c.max_autoscale_workers, scaling_category\nORDER BY total_cost_usd DESC"
+    },
+    "platform_workflow_hierarchy": {
+      "description": "Workflow hierarchy cost analysis",
+      "category": "platform",
+      "sql": "SELECT \n  workflow_level,\n  parent_workflow_name,\n  COUNT(DISTINCT entity_id) as entity_count,\n  SUM(list_cost_usd) as total_cost_usd,\n  AVG(list_cost_usd) as avg_cost_per_entity,\n  COUNT(DISTINCT workspace_id) as workspace_count\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE workflow_level != 'STANDALONE'\n  AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nGROUP BY workflow_level, parent_workflow_name\nORDER BY total_cost_usd DESC"
+    },
+    "data_tag_coverage": {
+      "description": "Tag coverage analysis by workspace",
+      "category": "data",
+      "sql": "WITH tag_coverage AS (\n  SELECT \n    workspace_id,\n    COUNT(*) as total_records,\n    SUM(CASE WHEN cost_center != 'unallocated' THEN 1 ELSE 0 END) as cost_center_tagged,\n    SUM(CASE WHEN line_of_business != 'Unknown' THEN 1 ELSE 0 END) as lob_tagged,\n    SUM(CASE WHEN department != 'unknown' THEN 1 ELSE 0 END) as dept_tagged,\n    SUM(CASE WHEN environment != 'dev' THEN 1 ELSE 0 END) as env_tagged\n  FROM platform_observability.plt_gold.gld_fact_usage_priced_day\n  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n  GROUP BY workspace_id\n)\nSELECT \n  workspace_id,\n  total_records,\n  ROUND(cost_center_tagged / total_records * 100, 2) as cost_center_coverage_pct,\n  ROUND(lob_tagged / total_records * 100, 2) as lob_coverage_pct,\n  ROUND(dept_tagged / total_records * 100, 2) as dept_coverage_pct,\n  ROUND(env_tagged / total_records * 100, 2) as env_coverage_pct,\n  ROUND((cost_center_tagged + lob_tagged + dept_tagged + env_tagged) / (total_records * 4) * 100, 2) as overall_coverage_pct\nFROM tag_coverage\nORDER BY overall_coverage_pct ASC"
+    },
+    "data_usage_patterns": {
+      "description": "Usage patterns by environment and hour of day",
+      "category": "data",
+      "sql": "SELECT \n  environment,\n  HOUR(FROM_UNIXTIME(UNIX_TIMESTAMP(CAST(date_sk AS STRING), 'yyyyMMdd'))) as hour_of_day,\n  COUNT(*) as usage_count,\n  SUM(usage_quantity) as total_usage,\n  AVG(usage_quantity) as avg_usage,\n  SUM(list_cost_usd) as total_cost_usd\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nGROUP BY environment, HOUR(FROM_UNIXTIME(UNIX_TIMESTAMP(CAST(date_sk AS STRING), 'yyyyMMdd')))\nORDER BY environment, hour_of_day"
+    },
+    "data_entity_usage": {
+      "description": "Entity usage summary by type",
+      "category": "data",
+      "sql": "SELECT \n  entity_type,\n  COUNT(DISTINCT entity_id) as unique_entities,\n  SUM(usage_quantity) as total_usage,\n  SUM(list_cost_usd) as total_cost_usd,\n  AVG(usage_quantity) as avg_usage_per_entity,\n  ROUND(SUM(list_cost_usd) / COUNT(DISTINCT entity_id), 2) as cost_per_entity\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nGROUP BY entity_type\nORDER BY total_cost_usd DESC"
+    },
+    "data_quality_issues": {
+      "description": "Summary of data quality issues and affected costs",
+      "category": "data",
+      "sql": "SELECT \n  'Missing Cost Center' as issue_type,\n  COUNT(*) as record_count,\n  SUM(list_cost_usd) as affected_cost_usd\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE cost_center = 'unallocated'\n  AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nUNION ALL\nSELECT \n  'Missing Line of Business' as issue_type,\n  COUNT(*) as record_count,\n  SUM(list_cost_usd) as affected_cost_usd\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE line_of_business = 'Unknown'\n  AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nUNION ALL\nSELECT \n  'Missing Department' as issue_type,\n  COUNT(*) as record_count,\n  SUM(list_cost_usd) as affected_cost_usd\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE department = 'unknown'\n  AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nORDER BY affected_cost_usd DESC"
+    },
+    "business_unit_performance": {
+      "description": "Business unit cost and usage summary",
+      "category": "business",
+      "sql": "SELECT \n  line_of_business,\n  use_case,\n  COUNT(DISTINCT entity_id) as active_entities,\n  SUM(list_cost_usd) as total_cost_usd,\n  SUM(usage_quantity) as total_usage,\n  ROUND(SUM(list_cost_usd) / COUNT(DISTINCT entity_id), 2) as cost_per_entity,\n  ROUND(SUM(list_cost_usd) / SUM(usage_quantity), 4) as cost_per_unit_usage\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE line_of_business != 'Unknown'\n  AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nGROUP BY line_of_business, use_case\nORDER BY total_cost_usd DESC"
+    },
+    "business_monthly_trends": {
+      "description": "Monthly business unit performance trends",
+      "category": "business",
+      "sql": "SELECT \n  DATE_FORMAT(date_sk, 'yyyy-MM') as month,\n  line_of_business,\n  COUNT(DISTINCT entity_id) as active_entities,\n  SUM(list_cost_usd) as monthly_cost_usd,\n  SUM(usage_quantity) as monthly_usage,\n  ROUND(SUM(list_cost_usd) / COUNT(DISTINCT entity_id), 2) as cost_per_entity,\n  LAG(SUM(list_cost_usd)) OVER (PARTITION BY line_of_business ORDER BY DATE_FORMAT(date_sk, 'yyyy-MM')) as prev_month_cost,\n  ROUND((SUM(list_cost_usd) - LAG(SUM(list_cost_usd)) OVER (PARTITION BY line_of_business ORDER BY DATE_FORMAT(date_sk, 'yyyy-MM'))) / \n        LAG(SUM(list_cost_usd)) OVER (PARTITION BY line_of_business ORDER BY DATE_FORMAT(date_sk, 'yyyy-MM')) * 100, 2) as cost_change_pct\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE line_of_business != 'Unknown'\n  AND date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd')\nGROUP BY DATE_FORMAT(date_sk, 'yyyy-MM'), line_of_business\nORDER BY line_of_business, month"
+    },
+    "business_department_performance": {
+      "description": "Department performance analysis",
+      "category": "business",
+      "sql": "SELECT \n  department,\n  cost_center,\n  COUNT(DISTINCT entity_id) as active_entities,\n  COUNT(DISTINCT workspace_id) as active_workspaces,\n  SUM(list_cost_usd) as total_cost_usd,\n  AVG(list_cost_usd) as avg_cost_per_record,\n  ROUND(SUM(list_cost_usd) / COUNT(DISTINCT entity_id), 2) as cost_per_entity\nFROM platform_observability.plt_gold.gld_fact_usage_priced_day\nWHERE department != 'unknown'\n  AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\nGROUP BY department, cost_center\nORDER BY total_cost_usd DESC"
+    },
+    "business_roi_analysis": {
+      "description": "ROI analysis by use case and business unit",
+      "category": "business",
+      "sql": "WITH use_case_metrics AS (\n  SELECT \n    use_case,\n    line_of_business,\n    COUNT(DISTINCT entity_id) as active_entities,\n    SUM(list_cost_usd) as total_cost_usd,\n    SUM(usage_quantity) as total_usage,\n    AVG(duration_hours) as avg_duration_hours\n  FROM platform_observability.plt_gold.gld_fact_usage_priced_day\n  WHERE use_case != 'Unknown'\n    AND date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')\n  GROUP BY use_case, line_of_business\n)\nSELECT \n  use_case,\n  line_of_business,\n  active_entities,\n  total_cost_usd,\n  total_usage,\n  avg_duration_hours,\n  ROUND(total_cost_usd / active_entities, 2) as cost_per_entity,\n  ROUND(total_usage / active_entities, 2) as usage_per_entity,\n  ROUND(total_cost_usd / total_usage, 4) as cost_per_unit_usage,\n  CASE \n    WHEN total_cost_usd / active_entities < 100 THEN 'Low Cost'\n    WHEN total_cost_usd / active_entities < 500 THEN 'Medium Cost'\n    ELSE 'High Cost'\n  END as cost_category\nFROM use_case_metrics\nORDER BY total_cost_usd DESC"
+    },
+    "alert_unallocated_cost": {
+      "description": "Alert query for unallocated cost percentage",
+      "category": "alert",
+      "sql": "SELECT ROUND(SUM(CASE WHEN cost_center = 'unallocated' THEN list_cost_usd ELSE 0 END) / SUM(list_cost_usd) * 100, 2) as unallocated_cost_percentage FROM platform_observability.plt_gold.gld_fact_usage_priced_day WHERE date_key >= date_format(date_sub(current_date(), 7), 'yyyyMMdd')"
+    },
+    "alert_legacy_runtime": {
+      "description": "Alert query for legacy runtime detection",
+      "category": "alert",
+      "sql": "SELECT COUNT(DISTINCT c.cluster_id) as legacy_cluster_count FROM platform_observability.plt_gold.gld_fact_usage_priced_day f JOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key WHERE c.dbr_version NOT LIKE '%13.%' AND c.dbr_version NOT LIKE '%12.%' AND c.is_current = true"
+    },
+    "alert_tag_coverage": {
+      "description": "Alert query for tag coverage percentage",
+      "category": "alert",
+      "sql": "WITH tag_coverage AS (SELECT workspace_id, COUNT(*) as total_records, SUM(CASE WHEN cost_center != 'unallocated' THEN 1 ELSE 0 END) as cost_center_tagged, SUM(CASE WHEN line_of_business != 'Unknown' THEN 1 ELSE 0 END) as lob_tagged, SUM(CASE WHEN department != 'unknown' THEN 1 ELSE 0 END) as dept_tagged, SUM(CASE WHEN environment != 'dev' THEN 1 ELSE 0 END) as env_tagged FROM platform_observability.plt_gold.gld_fact_usage_priced_day WHERE date_key >= date_format(date_sub(current_date(), 7), 'yyyyMMdd') GROUP BY workspace_id) SELECT AVG(ROUND((cost_center_tagged + lob_tagged + dept_tagged + env_tagged) / (total_records * 4) * 100, 2)) as overall_coverage_pct FROM tag_coverage"
+    }
+  }
+}

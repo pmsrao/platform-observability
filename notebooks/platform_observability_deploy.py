@@ -29,13 +29,15 @@
 # Import cloud-agnostic libraries
 import sys
 import os
+import importlib
+from pathlib import Path
 
 # Add libs to path (cloud-agnostic approach)
 try:
-current_dir = os.path.dirname(os.path.abspath(__file__))
-libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
-if libs_dir not in sys.path:
-    sys.path.append(libs_dir)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
+    if libs_dir not in sys.path:
+        sys.path.append(libs_dir)
 except NameError:
     # __file__ is not available in Databricks notebooks
     pass
@@ -47,8 +49,8 @@ workspace_paths = [
 ]
 
 for workspace_libs_path in workspace_paths:
-if workspace_libs_path not in sys.path:
-    sys.path.append(workspace_libs_path)
+    if workspace_libs_path not in sys.path:
+        sys.path.append(workspace_libs_path)
 
 # Import configuration
 from config import Config
@@ -73,12 +75,6 @@ print(f"   Databricks Host: {config.databricks_host}")
 
 # COMMAND ----------
 
-# Import SQL parameterizer for bootstrap
-import os
-import importlib
-import sys
-from pathlib import Path
-
 # Force reload modules to ensure latest changes
 if 'libs.sql_manager' in sys.modules:
     importlib.reload(sys.modules['libs.sql_manager'])
@@ -97,9 +93,7 @@ print(f"   SQL directory: {sql_manager.sql_directory}")
 print(f"   SQL directory exists: {sql_manager.sql_directory.exists()}")
 print(f"   Available SQL operations: {len(sql_manager.get_available_operations())}")
 
-# COMMAND ----------
-
-# Initialize SQL parameterizer with the updated SQLManager instance
+# Initialize SQL parameterizer
 sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
 
 # COMMAND ----------
@@ -109,188 +103,13 @@ sql_param = SQLParameterizer(sql_manager_instance=sql_manager)
 
 # COMMAND ----------
 
-# Debug: Let's see what SQL statements are being generated
-print("🔍 Debugging SQL Generation:")
-
-# First, let's see the raw SQL content
-print("Raw SQL content:")
-try:
-    raw_sql = sql_manager.parameterize_sql("config/bootstrap_catalog_schemas")
-    print(f"Raw SQL length: {len(raw_sql)}")
-    print(f"Raw SQL content: {repr(raw_sql)}")
-    print("---")
-except Exception as e:
-    print(f"Error getting raw SQL: {e}")
-
-# Now let's see the statements with proper parameters
-print("Generated statements with parameters:")
-try:
-    # Pass the parameters explicitly
-    parameters = {
-        "catalog": sql_manager._config.catalog,
-        "bronze_schema": sql_manager._config.bronze_schema,
-        "silver_schema": sql_manager._config.silver_schema,
-        "gold_schema": sql_manager._config.gold_schema
-    }
-    print(f"Parameters being passed: {parameters}")
-    
-    # Test parameterize_sql first
-    parameterized_sql = sql_manager.parameterize_sql("config/bootstrap_catalog_schemas", **parameters)
-    print(f"Parameterized SQL length: {len(parameterized_sql)}")
-    print(f"Parameterized SQL: {repr(parameterized_sql[:200])}...")
-    
-    statements = sql_manager.parameterize_sql_statements("config/bootstrap_catalog_schemas", **parameters)
-    print(f"Number of statements: {len(statements)}")
-    for i, statement in enumerate(statements):
-        print(f"Statement {i+1}: {repr(statement)}")
-        print(f"Length: {len(statement)}")
-        print("---")
-except Exception as e:
-    print(f"Error generating statements: {e}")
-    import traceback
-    traceback.print_exc()
-
-# COMMAND ----------
-
-# Let's test the SQL execution manually first
-print("🧪 Testing SQL Execution Manually:")
-try:
-    # Get the statements
-    statements = sql_manager.parameterize_sql_statements(
-        "config/bootstrap_catalog_schemas",
-        catalog=sql_manager._config.catalog,
-        bronze_schema=sql_manager._config.bronze_schema,
-        silver_schema=sql_manager._config.silver_schema,
-        gold_schema=sql_manager._config.gold_schema
-    )
-    
-    print(f"Number of statements: {len(statements)}")
-    
-    # Test executing just the first statement
-    if statements:
-        first_statement = statements[0]
-        print(f"First statement: {repr(first_statement)}")
-        print(f"Statement length: {len(first_statement)}")
-        
-        # Try to execute just the first statement
-        from pyspark.sql import SparkSession
-        spark = SparkSession.builder.getOrCreate()
-        
-        print("Executing first statement only...")
-        spark.sql(first_statement)
-        print("✅ First statement executed successfully!")
-        
-except Exception as e:
-    print(f"❌ Manual execution failed: {e}")
-    import traceback
-    traceback.print_exc()
-
-# COMMAND ----------
-
-# Let's test the SQLParameterizer execution step by step
-print("🧪 Testing SQLParameterizer Execution:")
-try:
-    # Get the statements using the same method as SQLParameterizer
-    statements = sql_param.sql_manager.parameterize_sql_statements(
-        "config/bootstrap_catalog_schemas",
-        catalog=sql_param.config.catalog,
-        bronze_schema=sql_param.config.bronze_schema,
-        silver_schema=sql_param.config.silver_schema,
-        gold_schema=sql_param.config.gold_schema
-    )
-    
-    print(f"SQLParameterizer got {len(statements)} statements")
-    
-    # Execute each statement manually using the same spark instance
-    for i, statement in enumerate(statements):
-        print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
-        print(f"   Full statement: {repr(statement)}")
-        try:
-            sql_param.spark.sql(statement)
-            print(f"   ✅ Statement {i+1} executed successfully")
-        except Exception as e:
-            print(f"   ❌ Statement {i+1} failed: {e}")
-            print(f"   Statement content: {repr(statement)}")
-            raise
-            
-    print("✅ All statements executed successfully via manual loop!")
-    
-except Exception as e:
-    print(f"❌ Manual SQLParameterizer execution failed: {e}")
-    import traceback
-    traceback.print_exc()
-
-# COMMAND ----------
-
-# Bootstrap catalog and schemas using our working manual approach
-print("🚀 Bootstrapping catalog and schemas...")
-try:
-    # Use the same working approach as our manual test
-    statements = sql_param.sql_manager.parameterize_sql_statements(
-        "config/bootstrap_catalog_schemas",
-        catalog=sql_param.config.catalog,
-        bronze_schema=sql_param.config.bronze_schema,
-        silver_schema=sql_param.config.silver_schema,
-        gold_schema=sql_param.config.gold_schema
-    )
-    
-    # Execute each statement
-    for i, statement in enumerate(statements):
-        if statement.strip():
-            print(f"   Executing statement {i+1}/{len(statements)}: {statement[:50]}...")
-            sql_param.spark.sql(statement)
-            print(f"   ✅ Statement {i+1} executed successfully")
-    
-    print("✅ Catalog and schemas created successfully")
-    
-except Exception as e:
-    print(f"❌ Bootstrap failed: {e}")
-    raise
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### 2.2 Debug: Test SQLParameterizer Method
-
-# COMMAND ----------
-
-# Let's test the SQLParameterizer method to see what's different
-print("🔍 Debugging SQLParameterizer Method:")
-
-# First, let's check if the SQLParameterizer is using the updated SQLManager
-print(f"SQLParameterizer SQLManager: {sql_param.sql_manager}")
-print(f"SQLParameterizer SQLManager has parameterize_sql_statements: {hasattr(sql_param.sql_manager, 'parameterize_sql_statements')}")
-
-# Let's test the statement generation directly
-print("\n🧪 Testing statement generation in SQLParameterizer:")
-try:
-    statements = sql_param.sql_manager.parameterize_sql_statements(
-        "config/bootstrap_catalog_schemas",
-        catalog=sql_param.config.catalog,
-        bronze_schema=sql_param.config.bronze_schema,
-        silver_schema=sql_param.config.silver_schema,
-        gold_schema=sql_param.config.gold_schema
-    )
-    print(f"SQLParameterizer generated {len(statements)} statements")
-    for i, stmt in enumerate(statements):
-        print(f"  Statement {i+1}: {stmt[:100]}...")
-except Exception as e:
-    print(f"❌ Statement generation failed: {e}")
-
-# Test the exact method that was failing
-try:
-    print("\nTesting sql_param.bootstrap_catalog_schemas()...")
+# Bootstrap catalog and schemas
 sql_param.bootstrap_catalog_schemas()
-    print("✅ SQLParameterizer method worked!")
-except Exception as e:
-    print(f"❌ SQLParameterizer method failed: {e}")
-    print("This confirms there's still an issue with the SQLParameterizer method")
-    print("We'll continue using our working manual approach for all operations.")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.3 Create Processing State Tables
+# MAGIC ### 2.2 Create Processing State Tables
 
 # COMMAND ----------
 
@@ -300,7 +119,7 @@ sql_param.create_processing_state()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.4 Create Bronze Tables
+# MAGIC ### 2.3 Create Bronze Tables
 
 # COMMAND ----------
 
@@ -310,7 +129,7 @@ sql_param.bootstrap_bronze_tables()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.5 Create Silver Tables
+# MAGIC ### 2.4 Create Silver Tables
 
 # COMMAND ----------
 
@@ -320,7 +139,7 @@ sql_param.create_silver_tables()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.6 Create Gold Tables
+# MAGIC ### 2.5 Create Gold Tables
 
 # COMMAND ----------
 
@@ -330,7 +149,7 @@ sql_param.create_gold_tables()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.7 Apply Performance Optimizations
+# MAGIC ### 2.6 Apply Performance Optimizations
 
 # COMMAND ----------
 
@@ -340,7 +159,7 @@ sql_param.apply_performance_optimizations()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 2.8 Create Gold Views
+# MAGIC ### 2.7 Create Gold Views
 
 # COMMAND ----------
 
@@ -375,12 +194,15 @@ gold_count = spark.sql(f"SHOW TABLES IN {config.catalog}.{config.gold_schema}").
 print(f"   Gold Tables: {gold_count}")
 
 # Verify CDF is enabled
-cdf_tables = spark.sql(f"""
-    SELECT table_name
-    FROM {config.catalog}.{config.bronze_schema}.INFORMATION_SCHEMA.TABLES 
-    WHERE TBLPROPERTIES['delta.enableChangeDataFeed'] = 'true'
-""").count()
-print(f"   CDF-Enabled Tables: {cdf_tables}")
+try:
+    cdf_tables = spark.sql(f"""
+        SELECT table_name
+        FROM {config.catalog}.{config.bronze_schema}.INFORMATION_SCHEMA.TABLES 
+        WHERE TBLPROPERTIES['delta.enableChangeDataFeed'] = 'true'
+    """).count()
+    print(f"   CDF-Enabled Tables: {cdf_tables}")
+except:
+    print(f"   CDF verification skipped (may not be supported)")
 
 print("\n✅ Environment verification complete!")
 
@@ -413,7 +235,7 @@ bronze_job_config = {
     "max_concurrent_runs": 1,
     "timeout_seconds": 3600,
     "environment": {
-        "ENVIRONMENT": "dev"  # or "prod"
+        "ENVIRONMENT": Config.ENV
     }
 }
 
@@ -428,15 +250,6 @@ for key, value in bronze_job_config.items():
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC Deploy the Silver HWM Build Job:
-# MAGIC 
-# MAGIC 1. **Notebook**: `notebooks/silver_hwm_build_job.py`
-# MAGIC 2. **Schedule**: Daily at 3:00 AM (after bronze)
-# MAGIC 3. **Purpose**: Transform bronze data to silver with HWM tracking
-
-# COMMAND ----------
-
 # Display sample job configuration
 silver_job_config = {
     "name": "platform-observability-silver-build",
@@ -448,7 +261,7 @@ silver_job_config = {
     "max_concurrent_runs": 1,
     "timeout_seconds": 3600,
     "environment": {
-        "ENVIRONMENT": "dev"  # or "prod"
+        "ENVIRONMENT": Config.ENV
     }
 }
 
@@ -463,15 +276,6 @@ for key, value in silver_job_config.items():
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC Deploy the Gold HWM Build Job:
-# MAGIC 
-# MAGIC 1. **Notebook**: `notebooks/gold_hwm_build_job.py`
-# MAGIC 2. **Schedule**: Daily at 4:00 AM (after silver)
-# MAGIC 3. **Purpose**: Build gold layer with SCD2 and HWM tracking
-
-# COMMAND ----------
-
 # Display sample job configuration
 gold_job_config = {
     "name": "platform-observability-gold-build",
@@ -483,7 +287,7 @@ gold_job_config = {
     "max_concurrent_runs": 1,
     "timeout_seconds": 3600,
     "environment": {
-        "ENVIRONMENT": "dev"  # or "prod"
+        "ENVIRONMENT": Config.ENV
     }
 }
 
@@ -498,15 +302,6 @@ for key, value in gold_job_config.items():
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC Deploy the Health Check Job:
-# MAGIC 
-# MAGIC 1. **Notebook**: `notebooks/health_check_job.py`
-# MAGIC 2. **Schedule**: Every 6 hours
-# MAGIC 3. **Purpose**: Monitor system health and data quality
-
-# COMMAND ----------
-
 # Display sample job configuration
 health_job_config = {
     "name": "platform-observability-health-check",
@@ -518,141 +313,13 @@ health_job_config = {
     "max_concurrent_runs": 1,
     "timeout_seconds": 1800,
     "environment": {
-        "ENVIRONMENT": "dev"  # or "prod"
+        "ENVIRONMENT": Config.ENV
     }
 }
 
 print("📋 Health Check Job Configuration:")
 for key, value in health_job_config.items():
     print(f"   {key}: {value}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Step 5: Deploy Workflows
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### 5.1 Daily Observability Workflow
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Deploy the Daily Observability Workflow:
-# MAGIC 
-# MAGIC 1. **Workflow File**: `jobs/daily_observability_workflow.json`
-# MAGIC 2. **Schedule**: Daily at 1:00 AM
-# MAGIC 3. **Purpose**: Orchestrate the complete daily pipeline
-
-# COMMAND ----------
-
-# Display workflow configuration
-workflow_config = {
-    "name": "platform-observability-daily-workflow",
-    "schedule": {
-        "quartz_cron_expression": "0 0 1 * * ?",
-        "timezone_id": "Asia/Kolkata"
-    },
-    "tasks": [
-        {
-            "task_key": "bronze_ingest",
-            "notebook_task": {
-                "notebook_path": "/Workspace/Repos/platform-observability/notebooks/bronze_hwm_ingest_job"
-            }
-        },
-        {
-            "task_key": "silver_build",
-            "notebook_task": {
-                "notebook_path": "/Workspace/Repos/platform-observability/notebooks/silver_hwm_build_job"
-            },
-            "depends_on": [{"task_key": "bronze_ingest"}]
-        },
-        {
-            "task_key": "gold_build",
-            "notebook_task": {
-                "notebook_path": "/Workspace/Repos/platform-observability/notebooks/gold_hwm_build_job"
-            },
-            "depends_on": [{"task_key": "silver_build"}]
-        }
-    ]
-}
-
-print("📋 Workflow Configuration:")
-print(f"   Name: {workflow_config['name']}")
-print(f"   Schedule: {workflow_config['schedule']['quartz_cron_expression']}")
-print(f"   Tasks: {len(workflow_config['tasks'])}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Step 6: Testing and Validation
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### 6.1 Test Data Ingestion
-
-# COMMAND ----------
-
-# Test bronze data ingestion
-print("🧪 Testing Bronze Data Ingestion...")
-
-try:
-    # Check if bronze tables exist and have data
-    bronze_tables = ["billing_usage", "compute_clusters", "job_runs"]
-    for table in bronze_tables:
-        try:
-            count = spark.sql(f"SELECT COUNT(*) as cnt FROM {config.get_table_name('bronze', table)}").collect()[0]['cnt']
-            print(f"✅ {table}: {count} records")
-        except Exception as e:
-            print(f"❌ {table}: {str(e)}")
-except Exception as e:
-    print(f"❌ Bronze ingestion test failed: {str(e)}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### 6.2 Test Data Transformation
-
-# COMMAND ----------
-
-# Test silver data transformation
-print("🧪 Testing Silver Data Transformation...")
-
-try:
-    # Check if silver tables exist and have data
-    silver_tables = ["dim_compute_clusters", "fact_job_runs", "fact_billing_usage"]
-    for table in silver_tables:
-        try:
-            count = spark.sql(f"SELECT COUNT(*) as cnt FROM {config.get_table_name('silver', table)}").collect()[0]['cnt']
-            print(f"✅ {table}: {count} records")
-        except Exception as e:
-            print(f"❌ {table}: {str(e)}")
-except Exception as e:
-    print(f"❌ Silver transformation test failed: {str(e)}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### 6.3 Test Gold Layer
-
-# COMMAND ----------
-
-# Test gold layer
-print("🧪 Testing Gold Layer...")
-
-try:
-    # Check if gold tables exist and have data
-    gold_tables = ["dim_compute_clusters", "fact_job_runs", "fact_billing_usage"]
-    for table in gold_tables:
-        try:
-            count = spark.sql(f"SELECT COUNT(*) as cnt FROM {config.get_table_name('gold', table)}").collect()[0]['cnt']
-            print(f"✅ {table}: {count} records")
-        except Exception as e:
-            print(f"❌ {table}: {str(e)}")
-except Exception as e:
-    print(f"❌ Gold layer test failed: {str(e)}")
 
 # COMMAND ----------
 
@@ -673,30 +340,12 @@ except Exception as e:
 # MAGIC | **Gold Schema** | `{config.gold_schema}` | Business-ready data layer |
 # MAGIC | **Databricks Host** | `{config.databricks_host}` | Workspace URL |
 # MAGIC 
-# MAGIC ### 📚 Documentation
-# MAGIC 
-# MAGIC - **Deployment Guide**: `docs/11-deployment.md`
-# MAGIC - **Recent Changes**: `docs/10-recent-changes-summary.md`
-# MAGIC - **Data Dictionary**: `docs/04-data-dictionary.md`
-# MAGIC - **Use Cases**: `docs/07-insights-and-use-cases.md`
-# MAGIC 
 # MAGIC ### 🚀 Next Steps
 # MAGIC 
 # MAGIC 1. **Configure Jobs**: Deploy the job configurations shown above
 # MAGIC 2. **Set Environment Variables**: Ensure all required environment variables are set
 # MAGIC 3. **Monitor**: Use the health check job to monitor system health
 # MAGIC 4. **Customize**: Adjust configurations based on your specific needs
-# MAGIC 
-# MAGIC ### 🔧 Configuration Summary
-# MAGIC 
-# MAGIC | Component | Value |
-# MAGIC |-----------|-------|
-# MAGIC | **Environment** | `{Config.ENV}` |
-# MAGIC | **Catalog** | `{config.catalog}` |
-# MAGIC | **Bronze Schema** | `{config.bronze_schema}` |
-# MAGIC | **Silver Schema** | `{config.silver_schema}` |
-# MAGIC | **Gold Schema** | `{config.gold_schema}` |
-# MAGIC | **Databricks Host** | `{config.databricks_host}` |
 # MAGIC 
 # MAGIC ### 📚 Documentation
 # MAGIC 

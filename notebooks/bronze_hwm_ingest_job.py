@@ -1,32 +1,34 @@
-"""
-Bronze Layer High Water Mark (HWM) Ingest Job - CACHE REFRESH VERSION
-
-This notebook implements the Bronze layer ingestion strategy using High Water Mark (HWM) 
-tracking for incremental data processing. It reads from Databricks system tables and 
-loads data into Bronze tables with CDF enabled for downstream consumption.
-
-UPDATED: Fixed SQL operation paths to use full directory structure (bronze/operations/)
-
-Key Features:
-- Incremental processing using HWM processing state
-- Data quality validation with built-in rules
-- Performance monitoring and structured logging
-- Externalized SQL operations for maintainability
-- Configurable overlap hours for data consistency
-
-Pipeline Flow:
-1. Read system tables (billing, lakeflow, access, compute)
-2. Apply HWM filtering for incremental processing
-3. Validate data quality
-4. Execute upsert operations using external SQL
-5. Update processing state for next run
-
-Author: Platform Observability Team
-Version: 1.0
-"""
-
 # Databricks notebook source
-# Configuration-based parameters (no widgets required for standalone execution)
+# MAGIC %md
+# MAGIC # Bronze Layer HWM Ingest Job
+# MAGIC 
+# MAGIC This notebook implements the Bronze layer ingestion strategy using High Water Mark (HWM) 
+# MAGIC tracking for incremental data processing. It reads from Databricks system tables and 
+# MAGIC loads data into Bronze tables with CDF enabled for downstream consumption.
+# MAGIC 
+# MAGIC ## Features:
+# MAGIC - Incremental processing using HWM processing state
+# MAGIC - Data quality validation with built-in rules
+# MAGIC - Performance monitoring and structured logging
+# MAGIC - Externalized SQL operations for maintainability
+# MAGIC - Configurable overlap hours for data consistency
+# MAGIC 
+# MAGIC ## Pipeline Flow:
+# MAGIC 1. Read system tables (billing, lakeflow, access, compute)
+# MAGIC 2. Apply HWM filtering for incremental processing
+# MAGIC 3. Validate data quality
+# MAGIC 4. Execute upsert operations using external SQL
+# MAGIC 5. Update processing state for next run
+# MAGIC 
+# MAGIC ## Dependencies:
+# MAGIC - Databricks system tables must be accessible
+# MAGIC - Processing state tables must exist
+# MAGIC - Configuration must be set up
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Setup and Configuration
 
 # Import configuration and utilities
 from config import Config

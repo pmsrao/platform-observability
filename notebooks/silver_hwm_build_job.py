@@ -63,7 +63,6 @@ from tag_processor import TagProcessor
 from libs.logging import StructuredLogger
 from libs.error_handling import validate_data_quality
 from utils import yyyymmdd
-from libs.error_capture_utils import ErrorCapture
 
 # COMMAND ----------
 
@@ -78,7 +77,6 @@ modules_to_clear = [
     'libs.error_handling',
     'libs.logging', 
     'libs.monitoring',
-    'libs.error_capture_utils',
     'config',
     'processing_state',
     'tag_processor',
@@ -107,7 +105,6 @@ config = Config.get_config()
 logger = StructuredLogger("silver_hwm_build_job")
 
 # Initialize error capture system
-error_capture = ErrorCapture(spark)
 
 # Helper function for upserting to silver tables (Type 1 - Current values only)
 def upsert_silver_table(df, table_name, natural_keys):
@@ -338,7 +335,6 @@ def build_silver_workspace(spark) -> bool:
         
     except Exception as e:
         # Capture error for persistence
-        error_capture.capture_error("build_silver_workspace", e)
         logger.error(f"Error building Silver workspace table: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
@@ -453,7 +449,6 @@ def build_silver_entity_latest(spark) -> bool:
         
     except Exception as e:
         # Capture error for persistence
-        error_capture.capture_error("build_silver_entity_latest", e)
         logger.error(f"Error building Silver entity latest view: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
@@ -538,7 +533,6 @@ def build_silver_clusters(spark) -> bool:
         
     except Exception as e:
         # Capture error for persistence
-        error_capture.capture_error("build_silver_clusters", e)
         logger.error(f"Error building Silver clusters table: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
@@ -632,7 +626,6 @@ def build_silver_usage_txn(spark) -> bool:
         
     except Exception as e:
         # Capture error for persistence
-        error_capture.capture_error("build_silver_usage_txn", e)
         logger.error(f"Error building Silver usage transaction table: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
@@ -699,7 +692,6 @@ def build_silver_job_run_timeline(spark) -> bool:
         
     except Exception as e:
         # Capture error for persistence
-        error_capture.capture_error("build_silver_job_run_timeline", e)
         logger.error(f"Error building Silver job run timeline table: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
@@ -763,7 +755,6 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         
     except Exception as e:
         # Capture error for persistence
-        error_capture.capture_error("build_silver_job_task_run_timeline", e)
         logger.error(f"Error building Silver job task run timeline table: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
@@ -866,17 +857,12 @@ if __name__ == "__main__":
             print("\n💥 Some Silver layer tables failed to build")
             print("=" * 80)
             # Save errors before exiting
-            error_capture.save_errors_to_table()
-            error_capture.save_errors_to_file("/tmp/silver_errors.json")
             print("❌ NOTEBOOK COMPLETED WITH FAILURES")
             
     except Exception as e:
         # Capture any critical errors
-        error_capture.capture_error("main_execution", e)
-        error_capture.save_errors_to_table()
-        error_capture.save_errors_to_file("/tmp/silver_errors.json")
         
         logger.error(f"💥 Critical error in main execution: {str(e)}", exc_info=True)
         print(f"🚨 CRITICAL ERROR: {str(e)}")
-        print(f"📋 Check error_logs table or /tmp/silver_errors.json for details")
+        print(f"📋 Check logs above for error details")
         print("❌ NOTEBOOK COMPLETED WITH CRITICAL ERROR")
