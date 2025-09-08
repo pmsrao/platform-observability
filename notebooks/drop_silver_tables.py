@@ -43,7 +43,11 @@ silver_tables = [
     "slv_clusters",
     "slv_usage_txn",
     "slv_job_run_timeline",
-    "slv_job_task_run_timeline"
+    "slv_job_task_run_timeline",
+    # SCD2 tables (optional - uncomment if you want to recreate these too)
+    # "slv_jobs_scd",
+    # "slv_pipelines_scd", 
+    # "slv_price_scd"
 ]
 
 # Drop each table
