@@ -516,8 +516,7 @@ def build_silver_usage_txn(spark) -> bool:
             F.date_format(df.usage_date, "yyyyMMdd").cast("int").alias("date_sk"),
             F.lit(0.0).alias("list_cost_usd"),  # Will be calculated when joined with prices
             F.lit(0.0).alias("duration_hours"),  # Will be calculated from usage times
-            # FIXED: Add missing workflow fields that are expected in the schema
-            F.lit("None").alias("parent_workflow_name")  # Will be enriched by tag processor
+            # Note: parent_workflow_name will be created by tag processor from custom_tags
         )
         
         # Enrich with tags and normalize
@@ -768,7 +767,7 @@ if __name__ == "__main__":
             logger.info("🎉 All Silver layer tables built successfully!")
             print("\n🎉 All Silver layer tables built successfully!")
             print("=" * 80)
-            dbutils.notebook.exit("SUCCESS")
+            print("✅ NOTEBOOK COMPLETED SUCCESSFULLY")
         else:
             logger.error("💥 Some Silver layer tables failed to build")
             print("\n💥 Some Silver layer tables failed to build")
@@ -776,7 +775,7 @@ if __name__ == "__main__":
             # Save errors before exiting
             error_capture.save_errors_to_table()
             error_capture.save_errors_to_file("/tmp/silver_errors.json")
-            dbutils.notebook.exit("FAILED")
+            print("❌ NOTEBOOK COMPLETED WITH FAILURES")
             
     except Exception as e:
         # Capture any critical errors
@@ -787,5 +786,4 @@ if __name__ == "__main__":
         logger.error(f"💥 Critical error in main execution: {str(e)}", exc_info=True)
         print(f"🚨 CRITICAL ERROR: {str(e)}")
         print(f"📋 Check error_logs table or /tmp/silver_errors.json for details")
-        
-        dbutils.notebook.exit("FAILED")
+        print("❌ NOTEBOOK COMPLETED WITH CRITICAL ERROR")

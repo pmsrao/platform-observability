@@ -34,6 +34,7 @@ class TagProcessor:
         # NEW: Workflow defaults
         "workflow_level": "STANDALONE",
         "parent_workflow": "None",
+        "parent_workflow_name": "None",
         # NEW: Runtime and infrastructure defaults
         "databricks_runtime": "Unknown",
         "compute_node_type": "Unknown",
@@ -130,9 +131,14 @@ class TagProcessor:
         result = df
         if has_identity:
             result = (result
-                .withColumn("run_actor_type", F.coalesce(F.col("identity_metadata.principal_type"), F.lit("unknown")))
-                .withColumn("run_actor_name", F.coalesce(F.col("identity_metadata.user_name"), F.col("identity_metadata.service_principal_application_id")))
-                .withColumn("is_service_principal", F.col("run_actor_type") == F.lit("service_principal"))
+                .withColumn("run_actor_type", F.lit("unknown"))  # Default since principal_type doesn't exist
+                .withColumn("run_actor_name", F.coalesce(
+                    F.col("identity_metadata.run_as"), 
+                    F.col("identity_metadata.owned_by"), 
+                    F.col("identity_metadata.created_by"),
+                    F.lit("unknown")
+                ))
+                .withColumn("is_service_principal", F.lit(False))  # Default since we can't determine this
             )
         else:
             result = (result
