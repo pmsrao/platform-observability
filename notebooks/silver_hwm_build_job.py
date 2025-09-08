@@ -124,6 +124,14 @@ logger.info("Starting Silver layer HWM build job",
             silver_schema=config.silver_schema,
             environment=Config.ENV)
 
+# Add explicit print statements for visibility
+print("🚀 Starting Silver Layer HWM Build Job")
+print(f"📊 Catalog: {config.catalog}")
+print(f"📊 Bronze Schema: {config.bronze_schema}")
+print(f"📊 Silver Schema: {config.silver_schema}")
+print(f"📊 Environment: {Config.ENV}")
+print("=" * 80)
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -198,17 +206,24 @@ def validate_silver_data(df: 'DataFrame', table_name: str) -> bool:
 def build_silver_workspace(spark) -> bool:
     """Build Silver workspace table"""
     logger.info("Building Silver workspace table")
+    print("🔧 Building Silver workspace table...")
     
     try:
         # Get last processed timestamp
+        print("📅 Getting last processed timestamp...")
         task_name = get_silver_task_name("slv_workspace")
         last_ts, _ = get_last_processed_timestamp(spark, "slv_workspace", task_name, "silver")
+        print(f"📅 Last timestamp: {last_ts}")
         
         # Read new data from Bronze
+        print("📖 Reading data from Bronze...")
         df = read_bronze_since_timestamp(spark, "brz_access_workspaces_latest", last_ts)
+        record_count = df.count()
+        print(f"📖 Found {record_count} records in Bronze")
         
-        if df.count() == 0:
+        if record_count == 0:
             logger.info("No new data for Silver workspace table")
+            print("✅ No new data - skipping workspace table")
             return True
         
         # Validate data - TEMPORARILY DISABLED due to cache issue
@@ -218,6 +233,7 @@ def build_silver_workspace(spark) -> bool:
         logger.info("Data validation temporarily disabled - processing data")
         
         # Transform data - FIXED: Use correct column names from bronze schema
+        print("🔄 Transforming data...")
         transformed_df = df.select(
             df.account_id,
             df.workspace_id,
@@ -227,10 +243,13 @@ def build_silver_workspace(spark) -> bool:
             df.status,
             F.current_timestamp().alias("_loaded_at")
         ).distinct()
+        print(f"🔄 Transformed {transformed_df.count()} records")
         
         # Write to Silver table
+        print("💾 Writing to Silver table...")
         silver_table = get_silver_table_name("slv_workspace")
         write_to_silver_table(transformed_df, silver_table)
+        print(f"✅ Successfully wrote to {silver_table}")
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -683,31 +702,48 @@ def build_silver_layer(spark) -> Dict[str, bool]:
     
     for table_name, builder_func in silver_builders:
         logger.info(f"Building Silver table: {table_name}")
+        print(f"\n🏗️  Building Silver table: {table_name}")
+        print("-" * 50)
+        
         try:
             success = builder_func(spark)
             results[table_name] = success
             
             if success:
                 logger.info(f"✅ Successfully built Silver table: {table_name}")
+                print(f"✅ Successfully built Silver table: {table_name}")
             else:
                 logger.error(f"❌ Failed to build Silver table: {table_name}")
+                print(f"❌ Failed to build Silver table: {table_name}")
                 
         except Exception as e:
             logger.error(f"❌ Exception building Silver table {table_name}: {str(e)}", exc_info=True)
+            print(f"❌ Exception building Silver table {table_name}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             results[table_name] = False
     
     # Summary
     successful_tables = [name for name, success in results.items() if success]
     failed_tables = [name for name, success in results.items() if not success]
     
+    print("\n" + "=" * 80)
+    print("📊 SILVER LAYER BUILD SUMMARY")
+    print("=" * 80)
+    print(f"✅ Successful tables: {len(successful_tables)}")
+    print(f"❌ Failed tables: {len(failed_tables)}")
+    
     logger.info(f"Silver layer build completed. Successful: {len(successful_tables)}, Failed: {len(failed_tables)}")
     
     if successful_tables:
         logger.info(f"✅ Successfully built tables: {', '.join(successful_tables)}")
+        print(f"✅ Successfully built: {', '.join(successful_tables)}")
     
     if failed_tables:
         logger.error(f"❌ Failed to build tables: {', '.join(failed_tables)}")
+        print(f"❌ Failed to build: {', '.join(failed_tables)}")
     
+    print("=" * 80)
     return results
 
 # COMMAND ----------
@@ -719,6 +755,9 @@ def build_silver_layer(spark) -> Dict[str, bool]:
 
 if __name__ == "__main__":
     try:
+        print("\n🚀 Starting Silver Layer Build Process...")
+        print("=" * 80)
+        
         # Build Silver layer
         results = build_silver_layer(spark)
         
@@ -727,9 +766,13 @@ if __name__ == "__main__":
         
         if all_successful:
             logger.info("🎉 All Silver layer tables built successfully!")
+            print("\n🎉 All Silver layer tables built successfully!")
+            print("=" * 80)
             dbutils.notebook.exit("SUCCESS")
         else:
             logger.error("💥 Some Silver layer tables failed to build")
+            print("\n💥 Some Silver layer tables failed to build")
+            print("=" * 80)
             # Save errors before exiting
             error_capture.save_errors_to_table()
             error_capture.save_errors_to_file("/tmp/silver_errors.json")
