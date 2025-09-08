@@ -14,7 +14,7 @@ OPTIMIZE {catalog}.{silver_schema}.slv_jobs_scd ZORDER BY (workspace_id, job_id,
 OPTIMIZE {catalog}.{silver_schema}.slv_pipelines_scd ZORDER BY (workspace_id, pipeline_id, valid_from);
 OPTIMIZE {catalog}.{silver_schema}.slv_usage_txn ZORDER BY (workspace_id, date_sk, entity_id);
 OPTIMIZE {catalog}.{silver_schema}.slv_job_run_timeline ZORDER BY (workspace_id, job_id, date_sk_start);
-OPTIMIZE {catalog}.{silver_schema}.slv_job_task_run_timeline ZORDER BY (workspace_id, job_id, task_run_id, date_sk);
+OPTIMIZE {catalog}.{silver_schema}.slv_job_task_run_timeline ZORDER BY (workspace_id, job_id, task_run_id, period_start_time);
 
 -- Gold Layer Optimizations
 OPTIMIZE {catalog}.{gold_schema}.gld_dim_workspace ZORDER BY (workspace_id);

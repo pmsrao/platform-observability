@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_job_run_timeline (
     _loaded_at TIMESTAMP
 ) USING DELTA;
 
--- Job Task Run Timeline SCD2 Table (Type 2 - Historical tracking)
+-- Job Task Run Timeline Table (Type 1 - Current values only)
 CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_job_task_run_timeline (
     account_id STRING,
     workspace_id STRING,                 -- Changed from BIGINT to STRING
@@ -226,12 +226,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_job_task_run_timeline (
     result_state STRING,
     termination_code STRING,
     execution_secs DECIMAL(38,18),
-    date_sk INT,
-    _loaded_at TIMESTAMP,
-    -- SCD2 columns
-    valid_from TIMESTAMP,
-    valid_to TIMESTAMP,
-    is_current BOOLEAN
+    _loaded_at TIMESTAMP
 ) USING DELTA;
 
 -- Clusters SCD2 Table (Type 2 - Historical tracking)

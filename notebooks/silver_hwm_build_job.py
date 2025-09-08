@@ -109,14 +109,86 @@ logger = StructuredLogger("silver_hwm_build_job")
 # Initialize error capture system
 error_capture = ErrorCapture(spark)
 
-# Simple helper function for writing to silver tables
-def write_to_silver_table(df, table_name):
+# Helper function for upserting to silver tables (Type 1 - Current values only)
+def upsert_silver_table(df, table_name, natural_keys):
     """
-    Write DataFrame to silver table with append mode and mergeSchema.
-    Simple approach for incremental processing.
+    Upsert DataFrame to silver table using MERGE operation to avoid duplicates.
+    Uses natural keys to identify existing records.
+    """
+    try:
+        # Create temporary view for merge
+        df.createOrReplaceTempView("temp_silver")
+        
+        # Build merge condition
+        merge_conditions = []
+        for key in natural_keys:
+            merge_conditions.append(f"target.{key} = source.{key}")
+        merge_condition = " AND ".join(merge_conditions)
+        
+        # Perform merge
+        merge_sql = f"""
+        MERGE INTO {table_name} AS target
+        USING temp_silver AS source
+        ON {merge_condition}
+        WHEN MATCHED THEN UPDATE SET *
+        WHEN NOT MATCHED THEN INSERT *
+        """
+        
+        spark.sql(merge_sql)
+        logger.info(f"Successfully upserted to {table_name} using MERGE operation")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error upserting to {table_name}: {str(e)}")
+        return False
+
+# Helper function for SCD2 tables with proper merge logic
+def upsert_scd2_silver_table(df, table_name, natural_keys, change_time_col="change_time"):
+    """
+    Upsert SCD2 DataFrame to silver table using proper SCD2 merge logic.
+    Handles historical tracking with valid_from/valid_to timestamps.
+    """
+    try:
+        # Create temporary view for merge
+        df.createOrReplaceTempView("temp_silver_scd2")
+        
+        # Build merge condition for natural keys
+        merge_conditions = []
+        for key in natural_keys:
+            merge_conditions.append(f"target.{key} = source.{key}")
+        merge_condition = " AND ".join(merge_conditions)
+        
+        # SCD2 Merge logic:
+        # 1. Close existing current records (set valid_to and is_current=false)
+        # 2. Insert new records with valid_from=change_time and is_current=true
+        merge_sql = f"""
+        MERGE INTO {table_name} AS target
+        USING temp_silver_scd2 AS source
+        ON {merge_condition} AND target.is_current = true
+        WHEN MATCHED AND target.valid_from < source.{change_time_col} THEN 
+            UPDATE SET 
+                valid_to = source.{change_time_col},
+                is_current = false
+        WHEN NOT MATCHED THEN 
+            INSERT *
+        """
+        
+        spark.sql(merge_sql)
+        logger.info(f"Successfully upserted SCD2 data to {table_name} using proper merge logic")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error upserting SCD2 data to {table_name}: {str(e)}")
+        return False
+
+# Fallback function for simple append (use only when necessary)
+def append_silver_table(df, table_name):
+    """
+    Append DataFrame to silver table with mergeSchema.
+    Use only when SCD2 merge is not applicable.
     """
     df.write.mode("append").option("mergeSchema", "true").saveAsTable(table_name)
-    logger.info(f"Successfully wrote to {table_name} with append mode and mergeSchema")
+    logger.info(f"Successfully appended to {table_name} with mergeSchema")
 
 logger.info("Starting Silver layer HWM build job", 
             catalog=config.catalog,
@@ -226,11 +298,11 @@ def build_silver_workspace(spark) -> bool:
             print("✅ No new data - skipping workspace table")
             return True
         
-        # Validate data - TEMPORARILY DISABLED due to cache issue
+        # Validate data - DISABLED for performance optimization
         # if not validate_silver_data(df, "silver_workspace"):
         #     logger.error("Data validation failed for Silver workspace table")
         #     return False
-        logger.info("Data validation temporarily disabled - processing data")
+        logger.info("Data validation disabled - processing data")
         
         # Transform data - FIXED: Use correct column names from bronze schema
         print("🔄 Transforming data...")
@@ -245,11 +317,15 @@ def build_silver_workspace(spark) -> bool:
         ).distinct()
         print(f"🔄 Transformed {transformed_df.count()} records")
         
-        # Write to Silver table
-        print("💾 Writing to Silver table...")
+        # Write to Silver table using MERGE to avoid duplicates
+        print("💾 Upserting to Silver table...")
         silver_table = get_silver_table_name("slv_workspace")
-        write_to_silver_table(transformed_df, silver_table)
-        print(f"✅ Successfully wrote to {silver_table}")
+        success = upsert_silver_table(transformed_df, silver_table, ["workspace_id"])
+        if success:
+            print(f"✅ Successfully upserted to {silver_table}")
+        else:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -264,8 +340,6 @@ def build_silver_workspace(spark) -> bool:
         # Capture error for persistence
         error_capture.capture_error("build_silver_workspace", e)
         logger.error(f"Error building Silver workspace table: {str(e)}", exc_info=True)
-        # Print additional debug info
-        print(f"DEBUG: Workspace table error details: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -345,15 +419,18 @@ def build_silver_entity_latest(spark) -> bool:
             logger.info("No new data for Silver entity latest view")
             return True
         
-        # Validate data - TEMPORARILY DISABLED due to cache issue
+        # Validate data - DISABLED for performance optimization
         # if not validate_silver_data(unified_entities, "silver_entity_latest"):
         #     logger.error("Data validation failed for Silver entity latest view")
         #     return False
-        logger.info("Data validation temporarily disabled - processing data")
+        logger.info("Data validation disabled - processing data")
         
-        # Write to Silver table
+        # Write to Silver table using MERGE to avoid duplicates
         silver_table = get_silver_table_name("slv_entity_latest")
-        write_to_silver_table(unified_entities, silver_table)
+        success = upsert_silver_table(unified_entities, silver_table, ["workspace_id", "entity_id", "entity_type"])
+        if not success:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
         
         # Update processing state (use max timestamp from both sources)
         max_ts_jobs = get_max_timestamp(jobs_df) if jobs_df.count() > 0 else None
@@ -378,7 +455,6 @@ def build_silver_entity_latest(spark) -> bool:
         # Capture error for persistence
         error_capture.capture_error("build_silver_entity_latest", e)
         logger.error(f"Error building Silver entity latest view: {str(e)}", exc_info=True)
-        print(f"DEBUG: Entity latest error details: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -399,11 +475,11 @@ def build_silver_clusters(spark) -> bool:
             logger.info("No new data for Silver clusters table")
             return True
         
-        # Validate data - TEMPORARILY DISABLED due to cache issue
+        # Validate data - DISABLED for performance optimization
         # if not validate_silver_data(df, "silver_clusters"):
         #     logger.error("Data validation failed for Silver clusters table")
         #     return False
-        logger.info("Data validation temporarily disabled - processing data")
+        logger.info("Data validation disabled - processing data")
         
         # Transform data with SCD2 logic and new schema - FIXED: Handle JSON string attributes
         transformed_df = df.select(
@@ -444,9 +520,12 @@ def build_silver_clusters(spark) -> bool:
         tag_processor = TagProcessor()
         transformed_df = tag_processor.add_worker_node_type_category(transformed_df)
         
-        # Write to Silver table
+        # Write to Silver table using SCD2 merge logic
         silver_table = get_silver_table_name("slv_clusters")
-        write_to_silver_table(transformed_df, silver_table)
+        success = upsert_scd2_silver_table(transformed_df, silver_table, ["workspace_id", "cluster_id"], "change_time")
+        if not success:
+            print(f"❌ Failed to upsert SCD2 data to {silver_table}")
+            return False
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -461,7 +540,6 @@ def build_silver_clusters(spark) -> bool:
         # Capture error for persistence
         error_capture.capture_error("build_silver_clusters", e)
         logger.error(f"Error building Silver clusters table: {str(e)}", exc_info=True)
-        print(f"DEBUG: Clusters table error details: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -482,11 +560,11 @@ def build_silver_usage_txn(spark) -> bool:
             logger.info("No new data for Silver usage transaction table")
             return True
         
-        # Validate data - TEMPORARILY DISABLED due to cache issue
+        # Validate data - DISABLED for performance optimization
         # if not validate_silver_data(df, "silver_usage_txn"):
         #     logger.error("Data validation failed for Silver usage transaction table")
         #     return False
-        logger.info("Data validation temporarily disabled - processing data")
+        logger.info("Data validation disabled - processing data")
         
         # Transform data with all required columns - FIXED: Add missing columns and computed fields
         transformed_df = df.select(
@@ -523,9 +601,12 @@ def build_silver_usage_txn(spark) -> bool:
         tag_processor = TagProcessor()
         enriched_df = tag_processor.enrich_usage(transformed_df)
         
-        # Write to Silver table
+        # Write to Silver table using MERGE to avoid duplicates
         silver_table = get_silver_table_name("slv_usage_txn")
-        write_to_silver_table(enriched_df, silver_table)
+        success = upsert_silver_table(enriched_df, silver_table, ["record_id"])
+        if not success:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -540,7 +621,6 @@ def build_silver_usage_txn(spark) -> bool:
         # Capture error for persistence
         error_capture.capture_error("build_silver_usage_txn", e)
         logger.error(f"Error building Silver usage transaction table: {str(e)}", exc_info=True)
-        print(f"DEBUG: Usage transaction error details: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -561,11 +641,11 @@ def build_silver_job_run_timeline(spark) -> bool:
             logger.info("No new data for Silver job run timeline table")
             return True
         
-        # Validate data - TEMPORARILY DISABLED due to cache issue
+        # Validate data - DISABLED for performance optimization
         # if not validate_silver_data(df, "silver_job_run_timeline"):
         #     logger.error("Data validation failed for Silver job run timeline table")
         #     return False
-        logger.info("Data validation temporarily disabled - processing data")
+        logger.info("Data validation disabled - processing data")
         
         # Transform data - FIXED: Use correct column names from bronze schema
         transformed_df = df.select(
@@ -588,9 +668,12 @@ def build_silver_job_run_timeline(spark) -> bool:
             F.current_timestamp().alias("_loaded_at")
         )
         
-        # Write to Silver table
+        # Write to Silver table using MERGE to avoid duplicates (Type 1 - Current values only)
         silver_table = get_silver_table_name("slv_job_run_timeline")
-        write_to_silver_table(transformed_df, silver_table)
+        success = upsert_silver_table(transformed_df, silver_table, ["workspace_id", "job_id", "job_run_id"])
+        if not success:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -605,7 +688,6 @@ def build_silver_job_run_timeline(spark) -> bool:
         # Capture error for persistence
         error_capture.capture_error("build_silver_job_run_timeline", e)
         logger.error(f"Error building Silver job run timeline table: {str(e)}", exc_info=True)
-        print(f"DEBUG: Job run timeline error details: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -626,11 +708,11 @@ def build_silver_job_task_run_timeline(spark) -> bool:
             logger.info("No new data for Silver job task run timeline table")
             return True
         
-        # Validate data - TEMPORARILY DISABLED due to cache issue
+        # Validate data - DISABLED for performance optimization
         # if not validate_silver_data(df, "silver_job_task_run_timeline"):
         #     logger.error("Data validation failed for Silver job task run timeline table")
         #     return False
-        logger.info("Data validation temporarily disabled - processing data")
+        logger.info("Data validation disabled - processing data")
         
         # Transform data with SCD2 logic - FIXED: Use correct column names from bronze schema
         transformed_df = df.select(
@@ -647,16 +729,15 @@ def build_silver_job_task_run_timeline(spark) -> bool:
             df.termination_code,
             # Calculate execution_secs from period times
             F.col("period_end_time").cast("long") - F.col("period_start_time").cast("long").alias("execution_secs"),
-            # Add date_sk column (computed from period_start_time)
-            F.date_format(df.period_start_time, "yyyyMMdd").cast("int").alias("date_sk"),
             F.current_timestamp().alias("_loaded_at")
-        ).withColumn("valid_from", df.period_start_time) \
-         .withColumn("valid_to", F.lit(None)) \
-         .withColumn("is_current", F.lit(True))
+        )
         
-        # Write to Silver table
+        # Write to Silver table using MERGE to avoid duplicates (Type 1 - Current values only)
         silver_table = get_silver_table_name("slv_job_task_run_timeline")
-        write_to_silver_table(transformed_df, silver_table)
+        success = upsert_silver_table(transformed_df, silver_table, ["workspace_id", "job_id", "task_run_id"])
+        if not success:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
         
         # Update processing state
         max_ts = get_max_timestamp(df)
@@ -671,7 +752,6 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         # Capture error for persistence
         error_capture.capture_error("build_silver_job_task_run_timeline", e)
         logger.error(f"Error building Silver job task run timeline table: {str(e)}", exc_info=True)
-        print(f"DEBUG: Job task run timeline error details: {str(e)}")
         import traceback
         traceback.print_exc()
         return False

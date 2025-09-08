@@ -109,7 +109,7 @@ def optimize_silver_layer(spark) -> bool:
             f"OPTIMIZE {config.catalog}.{config.silver_schema}.slv_clusters ZORDER BY (workspace_id, cluster_id);",
             f"OPTIMIZE {config.catalog}.{config.silver_schema}.slv_usage_txn ZORDER BY (date_sk, workspace_id, entity_id);",
             f"OPTIMIZE {config.catalog}.{config.silver_schema}.slv_job_run_timeline ZORDER BY (date_sk_start, workspace_id, job_id);",
-            f"OPTIMIZE {config.catalog}.{config.silver_schema}.slv_job_task_run_timeline ZORDER BY (date_sk_start, workspace_id, job_id);"
+            f"OPTIMIZE {config.catalog}.{config.silver_schema}.slv_job_task_run_timeline ZORDER BY (period_start_time, workspace_id, job_id);"
         ]
         
         for optimization in silver_optimizations:

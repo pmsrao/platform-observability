@@ -36,18 +36,23 @@ logger.info("Starting Silver tables cleanup",
 
 # COMMAND ----------
 
-# List of silver tables to drop
+# List of all silver tables to drop (complete list from silver_tables.sql)
 silver_tables = [
+    # Type 1 tables (Current values only)
     "slv_workspace",
     "slv_entity_latest", 
-    "slv_clusters",
     "slv_usage_txn",
-    "slv_job_run_timeline",
-    "slv_job_task_run_timeline",
-    # SCD2 tables (optional - uncomment if you want to recreate these too)
-    # "slv_jobs_scd",
-    # "slv_pipelines_scd", 
-    # "slv_price_scd"
+    "slv_job_run_timeline",  # Type 1 - Run execution data
+    "slv_job_task_run_timeline",  # Type 1 - Task run data
+    
+    # Type 2 tables (SCD2 - Historical tracking)
+    "slv_jobs_scd",
+    "slv_pipelines_scd", 
+    "slv_price_scd",
+    "slv_clusters",
+    
+    # Processing state tables (if they exist in silver schema)
+    "_cdf_processing_offsets"
 ]
 
 # Drop each table

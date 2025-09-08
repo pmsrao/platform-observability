@@ -140,7 +140,7 @@ parameterizer.create_silver_tables()
 # - slv_pipelines_scd (SCD2 dimension)
 # - slv_usage_txn (fact table)
 # - slv_job_run_timeline (fact table)
-# - slv_job_task_run_timeline (SCD2 fact table)
+# - slv_job_task_run_timeline (fact table)
 # - slv_clusters (SCD2 dimension)
 ```
 

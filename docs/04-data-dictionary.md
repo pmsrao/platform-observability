@@ -330,8 +330,8 @@ This document provides a comprehensive reference for all data models, tables, an
 | `date_sk_end` | INT | End date surrogate key | Date partitioning |
 
 ### `slv_job_task_run_timeline`
-**Purpose**: Task-level execution timeline SCD2 for granular performance analysis
-**SCD Type**: Type 2 (historical tracking)
+**Purpose**: Task-level execution timeline for granular performance analysis
+**SCD Type**: Type 1 (current values only)
 
 | Column | Type | Description | Business Purpose |
 |--------|------|-------------|------------------|
@@ -348,10 +348,6 @@ This document provides a comprehensive reference for all data models, tables, an
 | `result_state` | STRING | Task result | Status analysis |
 | `termination_code` | STRING | Termination reason | Failure analysis |
 | `execution_secs` | DECIMAL(38,18) | Execution duration | Performance analysis |
-| `date_sk` | INT | Date surrogate key | Date partitioning |
-| `valid_from` | TIMESTAMP | Validity start | SCD2 tracking |
-| `valid_to` | TIMESTAMP | Validity end | SCD2 tracking |
-| `is_current` | BOOLEAN | Current version flag | SCD2 filtering |
 
 ### `slv_clusters`
 **Purpose**: Enhanced cluster SCD2 information with business context
