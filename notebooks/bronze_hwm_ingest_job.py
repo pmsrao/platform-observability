@@ -30,27 +30,44 @@
 # MAGIC %md
 # MAGIC ## Setup and Configuration
 
+# COMMAND ----------
+
+import sys
+import os
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+
+# PySpark imports
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import functions as F
+
+# Import from libs package (cloud-agnostic approach)
+from libs.path_setup import setup_paths_and_import_config
+
+# Setup paths and import Config
+Config = setup_paths_and_import_config()
+
 # Import configuration and utilities
-from config import Config
-# Create our own config instance to avoid conflicts with global config
 config = Config.get_config()
 
 # Verify Config.ENV is accessible
 assert hasattr(Config, 'ENV'), "Config class should have ENV attribute"
 assert not hasattr(config, 'ENV'), "config instance should NOT have ENV attribute"
+
 from libs.logging import StructuredLogger, PerformanceMonitor, performance_monitor
 from libs.error_handling import safe_execute, validate_data_quality
 from libs.monitoring import pipeline_monitor
 from libs.processing_state import ensure_table, get_last_processed_timestamp, commit_processing_state
 from libs.sql_manager import sql_manager
 
-from pyspark.sql import functions as F
 import time
-from datetime import datetime
 
-# =============================================================================
-# INITIALIZATION & CONFIGURATION
-# =============================================================================
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Initialize Configuration and Logging
+
+# COMMAND ----------
 
 # Initialize logging and monitoring with job context
 logger = StructuredLogger("bronze_hwm_ingest_job")
@@ -69,9 +86,12 @@ except Exception as e:
     logger.error(f"Failed to initialize Spark session: {str(e)}")
     raise
 
-# =============================================================================
-# INITIALIZATION FUNCTIONS
-# =============================================================================
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Helper Functions
+
+# COMMAND ----------
 
 def get_job_context():
     """
@@ -121,9 +141,12 @@ def setup_logging():
     # Initialize monitoring for pipeline health tracking
     pipeline_monitor.monitor_pipeline_start("bronze_hwm_ingest", job_context["run_id"])
 
-# =============================================================================
-# UTILITY FUNCTIONS
-# =============================================================================
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Utility Functions
+
+# COMMAND ----------
 
 def window_start(last_ts):
     """
@@ -214,15 +237,19 @@ def execute_sql_operation(operation: str, target_table: str, staging_view: str, 
                     staging_view=staging_view)
         raise
 
-# =============================================================================
-# DATA INGESTION FUNCTIONS
-# =============================================================================
-# Each function follows the same pattern:
-# 1. Read from system table with HWM filtering
-# 2. Apply business logic and transformations
-# 3. Validate data quality
-# 4. Execute upsert operation
-    # 5. Update processing state
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Data Ingestion Functions
+# MAGIC 
+# MAGIC Each function follows the same pattern:
+# MAGIC 1. Read from system table with HWM filtering
+# MAGIC 2. Apply business logic and transformations
+# MAGIC 3. Validate data quality
+# MAGIC 4. Execute upsert operation
+# MAGIC 5. Update processing state
+
+# COMMAND ----------
 
 @performance_monitor("upsert_billing_usage")
 @safe_execute(logger, "upsert_billing_usage")
@@ -675,9 +702,12 @@ def upsert_access_workspaces():
     logger.info(f"Successfully processed {record_count} access workspaces records")
     return record_count
 
-# =============================================================================
-# MAIN EXECUTION
-# =============================================================================
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Main Execution Function
+
+# COMMAND ----------
 
 def main():
     """
@@ -776,6 +806,13 @@ def main():
                     duration_seconds=round(duration, 2),
                     error=str(e))
         raise
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Execute Bronze Layer Build
+
+# COMMAND ----------
 
 # Execute main function when notebook is run
 if __name__ == "__main__":

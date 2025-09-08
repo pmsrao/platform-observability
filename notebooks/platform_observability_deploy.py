@@ -68,7 +68,7 @@ from libs.sql_parameterizer import SQLParameterizer
 from libs.sql_manager import SQLManager
 
 # Create SQLManager with explicit path for Databricks environment
-explicit_sql_path = "/Workspace/Users/podilapalls@gmail.com/platform-observability/sql"
+explicit_sql_path = "/Workspace/Repos/accelerators/platform-observability/sql"
 sql_manager = SQLManager(sql_directory=explicit_sql_path)
 
 print("🔧 SQL Environment Setup:")

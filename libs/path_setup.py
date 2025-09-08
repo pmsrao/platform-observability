@@ -47,6 +47,7 @@ def setup_paths():
     # For Databricks workspace - try multiple possible paths
     workspace_paths = [
         '/Workspace/Repos/platform-observability',
+        '/Workspace/Repos/accelerators/platform-observability'
         '/Workspace/Users/podilapalls@gmail.com/platform-observability'
     ]
     

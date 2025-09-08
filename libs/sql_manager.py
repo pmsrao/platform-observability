@@ -26,6 +26,7 @@ class SQLManager:
             # Path 3: Databricks workspace paths (multiple possible locations)
             workspace_paths = [
                 Path("/Workspace/Repos/platform-observability/sql"),
+                Path("/Workspace/Repos/accelerators/platform-observability/sql"),
                 Path("/Workspace/Users/podilapalls@gmail.com/platform-observability/sql"),
                 Path("/Workspace/Repos/platform-observability/platform-observability/sql")
             ]
