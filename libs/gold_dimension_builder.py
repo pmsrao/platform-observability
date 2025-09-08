@@ -43,12 +43,23 @@ class DimensionBuilder:
                 merge_conditions.append(f"target.{key} = source.{key}")
             merge_condition = " AND ".join(merge_conditions)
             
+            # Get table schema to identify surrogate key columns (identity columns)
+            table_schema = self.spark.sql(f"DESCRIBE {full_table_name}").collect()
+            surrogate_key_columns = []
+            for row in table_schema:
+                if "identity" in row["col_name"].lower() or row["col_name"].endswith("_key"):
+                    surrogate_key_columns.append(row["col_name"])
+            
+            # Build UPDATE SET clause excluding surrogate keys
+            source_columns = [col for col in df.columns if col not in surrogate_key_columns]
+            update_set_clause = ", ".join([f"{col} = source.{col}" for col in source_columns])
+            
             # Perform merge
             merge_sql = f"""
             MERGE INTO {full_table_name} AS target
             USING temp_dimension AS source
             ON {merge_condition}
-            WHEN MATCHED THEN UPDATE SET *
+            WHEN MATCHED THEN UPDATE SET {update_set_clause}
             WHEN NOT MATCHED THEN INSERT *
             """
             
@@ -69,7 +80,7 @@ class WorkspaceDimensionBuilder(DimensionBuilder):
             # Read from Silver workspace table
             silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_workspace")
             
-            # Transform to dimension format
+            # Transform to dimension format (removed region and cloud attributes)
             dim_df = silver_df.select(
                 F.col("account_id"),
                 F.col("workspace_id"),
@@ -140,6 +151,17 @@ class EntityDimensionBuilder(DimensionBuilder):
             for key in natural_keys:
                 merge_conditions.append(f"target.{key} = source.{key}")
             merge_condition = " AND ".join(merge_conditions)
+            
+            # Get table schema to identify surrogate key columns (identity columns)
+            table_schema = self.spark.sql(f"DESCRIBE {full_table_name}").collect()
+            surrogate_key_columns = []
+            for row in table_schema:
+                if "identity" in row["col_name"].lower() or row["col_name"].endswith("_key"):
+                    surrogate_key_columns.append(row["col_name"])
+            
+            # Build UPDATE SET clause excluding surrogate keys for SCD2 close operation
+            source_columns = [col for col in df.columns if col not in surrogate_key_columns]
+            update_set_clause = ", ".join([f"{col} = source.{col}" for col in source_columns])
             
             # SCD2 merge logic
             merge_sql = f"""
@@ -303,6 +325,17 @@ class ClusterDimensionBuilder(DimensionBuilder):
             for key in natural_keys:
                 merge_conditions.append(f"target.{key} = source.{key}")
             merge_condition = " AND ".join(merge_conditions)
+            
+            # Get table schema to identify surrogate key columns (identity columns)
+            table_schema = self.spark.sql(f"DESCRIBE {full_table_name}").collect()
+            surrogate_key_columns = []
+            for row in table_schema:
+                if "identity" in row["col_name"].lower() or row["col_name"].endswith("_key"):
+                    surrogate_key_columns.append(row["col_name"])
+            
+            # Build UPDATE SET clause excluding surrogate keys for SCD2 close operation
+            source_columns = [col for col in df.columns if col not in surrogate_key_columns]
+            update_set_clause = ", ".join([f"{col} = source.{col}" for col in source_columns])
             
             # SCD2 merge logic
             merge_sql = f"""
