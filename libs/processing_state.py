@@ -100,8 +100,11 @@ def ensure_table(spark, layer="bronze"):
                 source_table STRING,
                 last_processed_timestamp TIMESTAMP,
                 last_processed_version BIGINT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+                updated_at TIMESTAMP
             ) USING DELTA
+            TBLPROPERTIES (
+                'delta.feature.allowColumnDefaults' = 'supported'
+            )
         """)
     elif layer == "silver":
         spark.sql(f"""
@@ -110,9 +113,12 @@ def ensure_table(spark, layer="bronze"):
                 task_name STRING,
                 last_processed_timestamp TIMESTAMP,
                 last_processed_version BIGINT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+                updated_at TIMESTAMP
             ) USING DELTA
             PARTITIONED BY (source_table)
+            TBLPROPERTIES (
+                'delta.feature.allowColumnDefaults' = 'supported'
+            )
         """)
 
 
