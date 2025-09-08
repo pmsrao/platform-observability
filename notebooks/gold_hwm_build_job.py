@@ -1,7 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Gold Layer HWM Build Job
-# MAGIC 
+# MAGIC
 # MAGIC This notebook builds the Gold layer using proper star schema design with surrogate keys.
 
 # COMMAND ----------
@@ -12,13 +12,29 @@ from datetime import datetime
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
 
-# Add libs to path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
-if libs_dir not in sys.path:
-    sys.path.append(libs_dir)
+
+# Add current directory to path for local development
+try:
+    # This works in local development
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
+    if libs_dir not in sys.path:
+        sys.path.append(libs_dir)
+except NameError:
+    # __file__ is not available in Databricks notebooks
+    pass
+
+# For Databricks, also try the workspace path
+workspace_paths = [
+    '/Workspace/Repos/platform-observability/libs',
+    '/Workspace/Users/podilapalls@gmail.com/platform-observability/libs'
+]
+for workspace_libs_path in workspace_paths:
+    if workspace_libs_path not in sys.path:
+        sys.path.append(workspace_libs_path)
 
 from config import Config
+from libs.logging import StructuredLogger
 from gold_dimension_builder import DimensionBuilderFactory
 from gold_fact_builder import FactBuilderFactory
 from gold_view_builder import ViewBuilderFactory
@@ -26,8 +42,9 @@ from gold_view_builder import ViewBuilderFactory
 # COMMAND ----------
 
 # Initialize
-config = Config()
-spark = SparkSession.builder.appName("Gold Layer HWM Build").getOrCreate()
+config = Config.get_config()
+logger = StructuredLogger("gold_hwm_build_job")
+#spark = SparkSession.builder.appName("Gold Layer HWM Build").getOrCreate()
 
 # COMMAND ----------
 
@@ -77,5 +94,3 @@ else:
     print("❌ Gold Layer Build failed")
     if "error" in build_results:
         print(f"Error: {build_results['error']}")
-
-# COMMAND ----------
