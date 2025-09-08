@@ -32,28 +32,11 @@ import os
 import importlib
 from pathlib import Path
 
-# Add libs to path (cloud-agnostic approach)
-try:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
-    if libs_dir not in sys.path:
-        sys.path.append(libs_dir)
-except NameError:
-    # __file__ is not available in Databricks notebooks
-    pass
+# Import from libs package (cloud-agnostic approach)
+from libs.path_setup import setup_paths_and_import_config
 
-# For Databricks workspace - try multiple possible paths
-workspace_paths = [
-    '/Workspace/Repos/platform-observability/libs',
-    '/Workspace/Users/podilapalls@gmail.com/platform-observability/libs'
-]
-
-for workspace_libs_path in workspace_paths:
-    if workspace_libs_path not in sys.path:
-        sys.path.append(workspace_libs_path)
-
-# Import configuration
-from config import Config
+# Setup paths and import Config
+Config = setup_paths_and_import_config()
 
 # COMMAND ----------
 

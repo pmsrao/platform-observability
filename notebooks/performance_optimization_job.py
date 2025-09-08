@@ -26,10 +26,11 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
-# Add libs to path
-sys.path.append('/Workspace/Repos/platform-observability/libs')
+# Import from libs package (cloud-agnostic approach)
+from libs.path_setup import setup_paths_and_import_config
 
-from config import Config
+# Setup paths and import Config
+Config = setup_paths_and_import_config()
 from libs.logging import StructuredLogger
 
 # COMMAND ----------

@@ -34,30 +34,10 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
 
 # Import from libs package (cloud-agnostic approach)
-import sys
-import os
+from libs.path_setup import setup_paths_and_import_config
 
-# Add current directory to path for local development
-try:
-    # This works in local development
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    libs_dir = os.path.join(os.path.dirname(current_dir), 'libs')
-    if libs_dir not in sys.path:
-        sys.path.append(libs_dir)
-except NameError:
-    # __file__ is not available in Databricks notebooks
-    pass
-
-# For Databricks, also try the workspace path
-workspace_paths = [
-    '/Workspace/Repos/platform-observability/libs',
-    '/Workspace/Users/podilapalls@gmail.com/platform-observability/libs'
-]
-for workspace_libs_path in workspace_paths:
-    if workspace_libs_path not in sys.path:
-        sys.path.append(workspace_libs_path)
-
-from config import Config
+# Setup paths and import Config
+Config = setup_paths_and_import_config()
 from processing_state import get_last_processed_timestamp, commit_processing_state, get_task_name
 from tag_processor import TagProcessor
 from libs.logging import StructuredLogger
