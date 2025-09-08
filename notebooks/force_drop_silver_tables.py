@@ -93,15 +93,13 @@ for table_name in silver_tables:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Clear Spark Cache
+# MAGIC ## Note: Cache Clearing Not Supported on Serverless
 
 # COMMAND ----------
 
-try:
-    spark.catalog.clearCache()
-    logger.info("✅ Spark catalog cache cleared")
-except Exception as e:
-    logger.warning(f"Could not clear Spark cache: {str(e)}")
+# Note: spark.catalog.clearCache() is not supported on Serverless compute
+# Skipping cache clearing for Serverless compatibility
+logger.info("Skipping cache clearing - not supported on Serverless compute")
 
 # COMMAND ----------
 
