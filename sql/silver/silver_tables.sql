@@ -133,7 +133,6 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
         endpoint_id:STRING,
         dlt_update_id:STRING,
         dlt_maintenance_id:STRING,
-        metastore_id:STRING,
         run_name:STRING,
         job_name:STRING,
         notebook_path:STRING,
@@ -142,8 +141,18 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
         destination_region:STRING,
         app_id:STRING,
         app_name:STRING,
+        metastore_id:STRING,
         private_endpoint_name:STRING,
-        budget_policy_id:STRING
+        storage_api_type:STRING,
+        budget_policy_id:STRING,
+        ai_runtime_pool_id:STRING,
+        ai_runtime_workload_id:STRING,
+        uc_table_catalog:STRING,
+        uc_table_schema:STRING,
+        uc_table_name:STRING,
+        database_instance_id:STRING,
+        sharing_materialization_id:STRING,
+        schema_id:STRING
     >,
     identity_metadata STRUCT<
         run_as:STRING,
