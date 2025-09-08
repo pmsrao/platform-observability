@@ -43,8 +43,8 @@ bronze_tables = [
     "brz_lakeflow_pipelines",
     "brz_compute_clusters",
     "brz_billing_usage",
-    "brz_job_run_timeline",
-    "brz_job_task_run_timeline"
+    "brz_lakeflow_job_run_timeline",
+    "brz_lakeflow_job_task_run_timeline"
 ]
 
 # Check each table's schema
