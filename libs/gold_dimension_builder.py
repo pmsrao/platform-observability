@@ -53,6 +53,8 @@ class DimensionBuilder:
             # Build UPDATE SET clause excluding surrogate keys
             source_columns = [col for col in df.columns if col not in surrogate_key_columns]
             update_set_clause = ", ".join([f"{col} = source.{col}" for col in source_columns])
+            insert_set_clause = ", ".join([f"source.{col}" for col in source_columns])
+            insert_columns = ", ".join([f"{col}" for col in source_columns])
             
             # Perform merge
             merge_sql = f"""
@@ -60,7 +62,7 @@ class DimensionBuilder:
             USING temp_dimension AS source
             ON {merge_condition}
             WHEN MATCHED THEN UPDATE SET {update_set_clause}
-            WHEN NOT MATCHED THEN INSERT *
+            WHEN NOT MATCHED THEN INSERT ({insert_columns}) VALUES ({insert_set_clause})
             """
             
             self.spark.sql(merge_sql)
@@ -115,11 +117,7 @@ class EntityDimensionBuilder(DimensionBuilder):
                 F.col("entity_type"),
                 F.col("entity_id"),
                 F.col("name"),
-                F.col("description"),
-                F.col("creator_id"),
                 F.col("run_as"),
-                F.col("workspace_name"),
-                F.col("workspace_url"),
                 F.col("created_time"),
                 F.col("updated_time"),
                 # SCD2 columns
@@ -162,6 +160,8 @@ class EntityDimensionBuilder(DimensionBuilder):
             # Build UPDATE SET clause excluding surrogate keys for SCD2 close operation
             source_columns = [col for col in df.columns if col not in surrogate_key_columns]
             update_set_clause = ", ".join([f"{col} = source.{col}" for col in source_columns])
+            insert_set_clause = ", ".join([f"source.{col}" for col in source_columns])
+            insert_columns = ", ".join([f"{col}" for col in source_columns])
             
             # SCD2 merge logic
             merge_sql = f"""
@@ -170,26 +170,23 @@ class EntityDimensionBuilder(DimensionBuilder):
             ON {merge_condition} AND target.is_current = true
             WHEN MATCHED AND (
                 target.name != source.name OR 
-                target.description != source.description OR
+                target.run_as != source.run_as OR
                 target.updated_time != source.updated_time
             ) THEN 
                 UPDATE SET 
                     valid_to = source.updated_time,
                     is_current = false
             WHEN NOT MATCHED THEN 
-                INSERT *
+                INSERT ({insert_columns}) VALUES ({insert_set_clause})
             """
-            
+            print(merge_sql)
             self.spark.sql(merge_sql)
             
             # Insert new version for updated records
             insert_new_version_sql = f"""
-            INSERT INTO {full_table_name}
+            INSERT INTO {full_table_name} ({insert_columns})
             SELECT 
-                source.*,
-                source.updated_time as valid_from,
-                null as valid_to,
-                true as is_current
+                source.*
             FROM temp_dimension source
             WHERE EXISTS (
                 SELECT 1 FROM {full_table_name} target
@@ -198,7 +195,7 @@ class EntityDimensionBuilder(DimensionBuilder):
                 AND target.valid_to = source.updated_time
             )
             """
-            
+            print("Inserting new version for updated records",insert_new_version_sql)
             self.spark.sql(insert_new_version_sql)
             return True
             
@@ -336,7 +333,9 @@ class ClusterDimensionBuilder(DimensionBuilder):
             # Build UPDATE SET clause excluding surrogate keys for SCD2 close operation
             source_columns = [col for col in df.columns if col not in surrogate_key_columns]
             update_set_clause = ", ".join([f"{col} = source.{col}" for col in source_columns])
-            
+            insert_set_clause = ", ".join([f"source.{col}" for col in source_columns])
+            insert_columns = ", ".join([f"{col}" for col in source_columns])
+
             # SCD2 merge logic
             merge_sql = f"""
             MERGE INTO {full_table_name} AS target
@@ -353,14 +352,14 @@ class ClusterDimensionBuilder(DimensionBuilder):
                     valid_to = source.change_time,
                     is_current = false
             WHEN NOT MATCHED THEN 
-                INSERT *
+                INSERT ({insert_columns}) VALUES ({insert_set_clause})
             """
-            
+            print(merge_sql)
             self.spark.sql(merge_sql)
             
             # Insert new version for updated records
             insert_new_version_sql = f"""
-            INSERT INTO {full_table_name}
+            INSERT INTO {full_table_name} ({insert_columns})
             SELECT 
                 source.*,
                 source.change_time as valid_from,
@@ -374,7 +373,7 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 AND target.valid_to = source.change_time
             )
             """
-            
+            print(insert_new_version_sql)
             self.spark.sql(insert_new_version_sql)
             return True
             
