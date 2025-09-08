@@ -76,10 +76,8 @@ class WorkspaceDimensionBuilder(DimensionBuilder):
                 F.col("workspace_name"),
                 F.col("workspace_url"),
                 F.col("status"),
-                F.col("region"),
-                F.col("cloud"),
-                F.col("created_time"),
-                F.col("updated_time")
+                F.col("create_time").alias("created_time"),
+                F.col("_loaded_at").alias("updated_time")
             ).distinct()
             
             # Upsert dimension

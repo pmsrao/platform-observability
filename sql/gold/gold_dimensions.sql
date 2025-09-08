@@ -10,13 +10,10 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_workspace (
     workspace_name STRING,
     workspace_url STRING,
     status STRING,
-    region STRING,
-    cloud STRING,
     created_time TIMESTAMP,
     updated_time TIMESTAMP
 )
-USING DELTA
-PARTITIONED BY (cloud);
+USING DELTA;
 
 -- Entity Dimension (SCD2)
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_entity (
