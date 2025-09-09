@@ -1,25 +1,25 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Bronze Layer HWM Ingest Job
-# MAGIC 
+# MAGIC
 # MAGIC This notebook implements the Bronze layer ingestion strategy using High Water Mark (HWM) 
 # MAGIC tracking for incremental data processing. It reads from Databricks system tables and 
 # MAGIC loads data into Bronze tables with CDF enabled for downstream consumption.
-# MAGIC 
+# MAGIC
 # MAGIC ## Features:
 # MAGIC - Incremental processing using HWM processing state
 # MAGIC - Data quality validation with built-in rules
 # MAGIC - Performance monitoring and structured logging
 # MAGIC - Externalized SQL operations for maintainability
 # MAGIC - Configurable overlap hours for data consistency
-# MAGIC 
+# MAGIC
 # MAGIC ## Pipeline Flow:
 # MAGIC 1. Read system tables (billing, lakeflow, access, compute)
 # MAGIC 2. Apply HWM filtering for incremental processing
 # MAGIC 3. Validate data quality
 # MAGIC 4. Execute upsert operations using external SQL
 # MAGIC 5. Update processing state for next run
-# MAGIC 
+# MAGIC
 # MAGIC ## Dependencies:
 # MAGIC - Databricks system tables must be accessible
 # MAGIC - Processing state tables must exist
@@ -241,7 +241,7 @@ def execute_sql_operation(operation: str, target_table: str, staging_view: str, 
 
 # MAGIC %md
 # MAGIC ## Data Ingestion Functions
-# MAGIC 
+# MAGIC
 # MAGIC Each function follows the same pattern:
 # MAGIC 1. Read from system table with HWM filtering
 # MAGIC 2. Apply business logic and transformations

@@ -19,9 +19,9 @@ from libs.path_setup import setup_paths_and_import_config
 # Setup paths and import Config
 Config = setup_paths_and_import_config()
 from libs.logging import StructuredLogger
-from gold_dimension_builder import DimensionBuilderFactory
-from gold_fact_builder import FactBuilderFactory
-from gold_view_builder import ViewBuilderFactory
+from libs.gold_dimension_builder import DimensionBuilderFactory
+from libs.gold_fact_builder import FactBuilderFactory
+from libs.gold_view_builder import ViewBuilderFactory
 
 # COMMAND ----------
 
@@ -47,7 +47,7 @@ def build_gold_layer():
                 builder.build()
         
         # Build facts
-        fact_types = ["usage", "entity_cost", "run_cost", "run_status_cost", "runs_finished"]
+        fact_types = ["usage", "entity_cost", "run_cost", "runs_finished"]
         for fact_type in fact_types:
             builder = FactBuilderFactory.create_builder(fact_type, spark, config)
             builder.build()

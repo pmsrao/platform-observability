@@ -30,6 +30,7 @@ class ViewBuilder:
         try:
             full_view_name = self.get_view_name(view_name)
             create_sql = f"CREATE OR REPLACE VIEW {full_view_name} AS {sql}"
+            print(f"Creating view {view_name}")
             self.spark.sql(create_sql)
             return True
         except Exception as e:
@@ -51,11 +52,12 @@ class ChargebackViewBuilder(ViewBuilder):
                 w.workspace_name,
                 f.date_key,
                 SUM(f.list_cost_usd) as department_total_cost,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces
+                COUNT(DISTINCT w.workspace_id) as active_workspaces
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.department, w.workspace_name, f.date_key
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_department_cost_summary")
         
@@ -66,12 +68,14 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.line_of_business,
                 f.department,
                 f.environment,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, f.line_of_business, f.department, f.environment
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_line_of_business_cost")
         
@@ -81,12 +85,14 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.date_key,
                 f.environment,
                 f.line_of_business,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, f.environment, f.line_of_business
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_environment_cost")
         
@@ -97,12 +103,14 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.use_case,
                 f.line_of_business,
                 f.department,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, f.use_case, f.line_of_business, f.department
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_use_case_cost")
         
@@ -113,12 +121,14 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.cluster_identifier,
                 f.line_of_business,
                 f.department,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, f.cluster_identifier, f.line_of_business, f.department
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_cluster_cost")
         
@@ -126,10 +136,10 @@ class ChargebackViewBuilder(ViewBuilder):
         results["tag_quality_analysis"] = self.create_view("""
             SELECT 
                 f.date_key,
-                f.workspace_id,
+                w.workspace_id,
                 w.workspace_name,
-                f.entity_type,
-                f.entity_id,
+                e.entity_type,
+                e.entity_id,
                 -- Tag completeness indicators (based on default values)
                 CASE WHEN f.line_of_business = 'Unknown' THEN 'Missing' ELSE 'Present' END as line_of_business_status,
                 CASE WHEN f.department = 'unknown' THEN 'Missing' ELSE 'Present' END as department_status,
@@ -163,6 +173,7 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.list_cost_usd
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_tag_quality_analysis")
         
         # Tag Coverage Summary
@@ -200,12 +211,14 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.cost_center,
                 f.line_of_business,
                 f.department,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, f.cost_center, f.line_of_business, f.department
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_cost_center_analysis")
         
@@ -217,12 +230,14 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.parent_workflow_name,
                 f.cost_center,
                 f.line_of_business,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, f.workflow_level, f.parent_workflow_name, f.cost_center, f.line_of_business
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_workflow_hierarchy_cost")
         
@@ -234,12 +249,14 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.workflow_level,
                 f.parent_workflow_name,
                 f.cost_center,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 AVG(f.list_cost_usd) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, f.cluster_identifier, f.workflow_level, f.parent_workflow_name, f.cost_center
         """.format(catalog=self.catalog, gold_schema=self.gold_schema), "v_cluster_workflow_cost")
         
@@ -271,7 +288,7 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 f.cost_center,
                 f.environment,
                 COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 SUM(f.duration_hours) as total_duration_hours,
                 -- Upgrade priority logic
@@ -283,6 +300,7 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 END as upgrade_priority
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, c.dbr_version, c.major_version, c.minor_version,
                      c.cluster_source, c.is_lts, c.is_current, c.runtime_age_months,
                      c.months_to_eos, c.is_supported, f.line_of_business, f.department, f.cost_center, f.environment
@@ -312,7 +330,7 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 f.cost_center,
                 f.environment,
                 COUNT(DISTINCT f.workspace_id) as active_workspaces,
-                COUNT(DISTINCT f.entity_id) as active_entities,
+                COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 SUM(f.duration_hours) as total_duration_hours,
                 AVG(f.duration_hours) as avg_duration_hours

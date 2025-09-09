@@ -134,12 +134,10 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_node_type (
     core_count DOUBLE,                   -- Renamed from vcpus to match source
     memory_mb BIGINT,                    -- Renamed from memory_gb and changed type
     gpu_count BIGINT,                    -- Changed type to match source
-    cloud STRING,
     category STRING,                     -- Node type category from Silver layer
     worker_node_type_category STRING     -- Categorized node type (General Purpose, Memory Optimized, etc.)
 )
-USING DELTA
-PARTITIONED BY (cloud);
+USING DELTA;
 
 -- Date Dimension (if not exists)
 CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_date (

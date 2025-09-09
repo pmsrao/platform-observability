@@ -11,7 +11,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType, BooleanType, DecimalType
 
 from config import Config
-from processing_state import get_last_processed_timestamp, commit_processing_state, get_task_name
+from .processing_state import get_last_processed_timestamp, commit_processing_state, get_task_name
 
 
 class FactBuilder:
@@ -142,11 +142,11 @@ class UsageFactBuilder(FactBuilder):
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
             entity_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_entity")
-            cluster_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_cluster")
+            cluster_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_cluster").drop("cloud")
             sku_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_sku")
             
             # Join with dimensions using SCD2 temporal logic
-            fact_df = (silver_df
+            fact_df = (silver_df.alias("slv_usage_txn")
                 # Workspace dimension join (no SCD2 needed - workspace doesn't change frequently)
                 .join(workspace_dim, 
                       (silver_df.workspace_id == workspace_dim.workspace_id) & 
@@ -185,8 +185,8 @@ class UsageFactBuilder(FactBuilder):
                     F.col("record_id"),                    # Unique identifier from billing.usage
                     # DEGENERATE DIMENSIONS
                     F.col("job_run_id"),
-                    F.col("cloud"),
-                    F.col("usage_unit"),
+                    F.col("slv_usage_txn.cloud"),
+                    F.col("slv_usage_txn.usage_unit"),
                     # BUSINESS CONTEXT (for analytics convenience)
                     F.col("line_of_business"),
                     F.col("department"),
@@ -296,7 +296,7 @@ class RunCostFactBuilder(FactBuilder):
             sku_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_sku")
             
             # Join with dimensions using SCD2 temporal logic
-            fact_df = (silver_df
+            fact_df = (silver_df.alias("slv_usage_txn")
                 .join(workspace_dim, 
                       (silver_df.workspace_id == workspace_dim.workspace_id) & 
                       (silver_df.account_id == workspace_dim.account_id), 
@@ -327,8 +327,8 @@ class RunCostFactBuilder(FactBuilder):
                     F.col("cluster_key"),
                     F.col("sku_key"),
                     F.col("job_run_id"),
-                    F.col("cloud"),
-                    F.col("usage_unit"),
+                    F.col("slv_usage_txn.cloud"),
+                    F.col("slv_usage_txn.usage_unit"),
                     # MEASURES
                     F.col("list_cost_usd"),
                     F.col("usage_quantity"),
@@ -359,7 +359,7 @@ class RunStatusCostFactBuilder(FactBuilder):
         """Build run status cost fact table from Silver layer"""
         try:
             # Read from Silver job run timeline table
-            silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_job_run_timeline")
+            silver_df = (self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_job_run_timeline").withColumnRenamed("date_sk_end", "date_sk").withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type"))).withColumnRenamed("job_id", "entity_id"))
             
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
@@ -416,7 +416,9 @@ class RunsFinishedFactBuilder(FactBuilder):
             entity_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_entity")
             
             # Aggregate by entity and date
-            aggregated_df = (silver_df
+            aggregated_df = (silver_df.withColumnRenamed("date_sk_end", "date_sk")
+                             .withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type")))
+                .withColumnRenamed("job_id", "entity_id")
                 .groupBy("date_sk", "account_id", "workspace_id", "entity_type", "entity_id")
                 .agg(
                     F.count("*").alias("finished_runs"),

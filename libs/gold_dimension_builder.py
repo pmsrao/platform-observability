@@ -179,7 +179,7 @@ class EntityDimensionBuilder(DimensionBuilder):
             WHEN NOT MATCHED THEN 
                 INSERT ({insert_columns}) VALUES ({insert_set_clause})
             """
-            print(merge_sql)
+            
             self.spark.sql(merge_sql)
             
             # Insert new version for updated records
@@ -195,7 +195,7 @@ class EntityDimensionBuilder(DimensionBuilder):
                 AND target.valid_to = source.updated_time
             )
             """
-            print("Inserting new version for updated records",insert_new_version_sql)
+            
             self.spark.sql(insert_new_version_sql)
             return True
             
@@ -354,17 +354,14 @@ class ClusterDimensionBuilder(DimensionBuilder):
             WHEN NOT MATCHED THEN 
                 INSERT ({insert_columns}) VALUES ({insert_set_clause})
             """
-            print(merge_sql)
+            
             self.spark.sql(merge_sql)
             
             # Insert new version for updated records
             insert_new_version_sql = f"""
             INSERT INTO {full_table_name} ({insert_columns})
             SELECT 
-                source.*,
-                source.change_time as valid_from,
-                null as valid_to,
-                true as is_current
+                source.*
             FROM temp_dimension source
             WHERE EXISTS (
                 SELECT 1 FROM {full_table_name} target
@@ -373,7 +370,7 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 AND target.valid_to = source.change_time
             )
             """
-            print(insert_new_version_sql)
+            
             self.spark.sql(insert_new_version_sql)
             return True
             
@@ -398,13 +395,12 @@ class NodeTypeDimensionBuilder(DimensionBuilder):
                 F.lit(None).cast("double").alias("core_count"),  # Will be populated from node types data
                 F.lit(None).cast("bigint").alias("memory_mb"),   # Will be populated from node types data
                 F.lit(None).cast("bigint").alias("gpu_count"),   # Will be populated from node types data
-                F.col("cloud"),
                 F.lit("Unknown").alias("category"),              # Will be populated from node types data
                 F.col("worker_node_type_category")
             ).distinct()
             
             # Upsert dimension
-            return self.upsert_dimension(dim_df, "gld_dim_node_type", ["node_type", "cloud"])
+            return self.upsert_dimension(dim_df, "gld_dim_node_type", ["node_type"])
             
         except Exception as e:
             print(f"Error building node type dimension: {str(e)}")

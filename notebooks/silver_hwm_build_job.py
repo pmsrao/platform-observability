@@ -1,17 +1,17 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Silver Layer HWM Build Job
-# MAGIC 
+# MAGIC
 # MAGIC This notebook builds the Silver layer using High-Water Mark (HWM) approach.
 # MAGIC It processes data incrementally from Bronze tables and applies transformations.
-# MAGIC 
+# MAGIC
 # MAGIC ## Features:
 # MAGIC - Incremental processing using HWM tracking
 # MAGIC - SCD2 implementation for key tables
 # MAGIC - Tag enrichment and normalization
 # MAGIC - Data quality validation
 # MAGIC - Structured logging and monitoring
-# MAGIC 
+# MAGIC
 # MAGIC ## Dependencies:
 # MAGIC - Bronze tables must be populated
 # MAGIC - Processing offsets tables must exist
@@ -38,11 +38,11 @@ from libs.path_setup import setup_paths_and_import_config
 
 # Setup paths and import Config
 Config = setup_paths_and_import_config()
-from processing_state import get_last_processed_timestamp, commit_processing_state, get_task_name
-from tag_processor import TagProcessor
+from libs.processing_state import get_last_processed_timestamp, commit_processing_state, get_task_name
+from libs.tag_processor import TagProcessor
 from libs.logging import StructuredLogger
 from libs.error_handling import validate_data_quality
-from utils import yyyymmdd
+from libs.utils import yyyymmdd
 
 # COMMAND ----------
 
@@ -489,7 +489,19 @@ def build_silver_clusters(spark) -> bool:
             F.current_timestamp().alias("_loaded_at")
         ).withColumn("valid_from", df.change_time) \
          .withColumn("valid_to", F.lit(None)) \
-         .withColumn("is_current", F.lit(True))
+         .withColumn("is_current", F.lit(True))\
+        .withColumn("inherited_line_of_business", F.lit(None).cast("string"))\
+        .withColumn("inherited_department", F.lit(None).cast("string"))\
+        .withColumn("inherited_cost_center", F.lit(None).cast("string"))\
+        .withColumn("inherited_environment", F.lit(None).cast("string"))\
+        .withColumn("inherited_use_case", F.lit(None).cast("string"))\
+        .withColumn("inherited_workflow_level", F.lit(None).cast("string"))\
+        .withColumn("inherited_parent_workflow", F.lit(None).cast("string"))\
+        .withColumn("major_version", F.lit(None).cast("int"))\
+        .withColumn("minor_version", F.lit(None).cast("int"))\
+        .withColumn("runtime_age_months", F.lit(None).cast("int"))\
+        .withColumn("is_lts", F.lit(None).cast("boolean"))\
+        .withColumn("_loaded_at", F.current_timestamp())
         
         # Add worker node type category
         tag_processor = TagProcessor()
