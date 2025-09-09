@@ -1,101 +1,62 @@
 {
   "datasets": [
     {
-      "name": "dataset_001",
-      "displayName": "Total Cost Summary",
+      "name": "4179e484",
+      "displayName": "test_fct_run_cost",
       "queryLines": [
-        "WITH cost_summary AS (",
-        "  SELECT ",
-        "    SUM(list_cost_usd) as total_cost_usd,",
-        "    COUNT(DISTINCT workspace_id) as active_workspaces,",
-        "    COUNT(DISTINCT entity_id) as active_entities,",
-        "    AVG(list_cost_usd) as avg_daily_cost",
-        "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day",
-        "  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')",
-        ")",
-        "SELECT ",
-        "  'Total Cost (30 days)' as metric,",
-        "  CONCAT('$', FORMAT_NUMBER(total_cost_usd, 2)) as value,",
-        "  'USD' as unit",
-        "FROM cost_summary",
-        "UNION ALL",
-        "SELECT ",
-        "  'Active Workspaces' as metric,",
-        "  CAST(active_workspaces AS STRING) as value,",
-        "  'count' as unit",
-        "FROM cost_summary",
-        "UNION ALL",
-        "SELECT ",
-        "  'Active Entities' as metric,",
-        "  CAST(active_entities AS STRING) as value,",
-        "  'count' as unit",
-        "FROM cost_summary",
-        "UNION ALL",
-        "SELECT ",
-        "  'Avg Daily Cost' as metric,",
-        "  CONCAT('$', FORMAT_NUMBER(avg_daily_cost, 2)) as value,",
-        "  'USD/day' as unit",
-        "FROM cost_summary"
-      ]
-    },
-    {
-      "name": "dataset_002",
-      "displayName": "Cost Trend",
-      "queryLines": [
-        "SELECT ",
-        "  date_sk,",
-        "  SUM(list_cost_usd) as daily_cost_usd,",
-        "  AVG(SUM(list_cost_usd)) OVER (ORDER BY date_sk ROWS 6 PRECEDING) as rolling_7day_avg",
-        "FROM platform_observability.plt_gold.gld_fact_usage_priced_day",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')",
-        "GROUP BY date_sk",
-        "ORDER BY date_sk"
-      ]
-    },
-    {
-      "name": "dataset_003",
-      "displayName": "Top Cost Centers",
-      "queryLines": [
-        "SELECT ",
-        "  cost_center,",
-        "  line_of_business,",
-        "  SUM(list_cost_usd) as total_cost_usd,",
-        "  COUNT(DISTINCT entity_id) as active_entities,",
-        "  ROUND(SUM(list_cost_usd) / COUNT(DISTINCT entity_id), 2) as cost_per_entity",
-        "FROM platform_observability.plt_gold.gld_fact_usage_priced_day",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd')",
-        "  AND cost_center != 'unallocated'",
-        "GROUP BY cost_center, line_of_business",
-        "ORDER BY total_cost_usd DESC",
-        "LIMIT 10"
+        "select * from platform_observability.plt_gold.gld_fact_run_cost limit 5"
       ]
     }
   ],
   "pages": [
     {
-      "name": "overview-page-001",
-      "displayName": "Overview",
+      "name": "72e9920f",
+      "displayName": "overview",
       "layout": [
         {
           "widget": {
-            "name": "overview_total_cost_summary",
+            "name": "9ce6162a",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "dataset_001",
+                  "datasetName": "4179e484",
                   "fields": [
                     {
-                      "name": "metric",
-                      "expression": "`metric`"
+                      "name": "date_key",
+                      "expression": "`date_key`"
                     },
                     {
-                      "name": "value",
-                      "expression": "`value`"
+                      "name": "workspace_key",
+                      "expression": "`workspace_key`"
                     },
                     {
-                      "name": "unit",
-                      "expression": "`unit`"
+                      "name": "cluster_key",
+                      "expression": "`cluster_key`"
+                    },
+                    {
+                      "name": "sku_key",
+                      "expression": "`sku_key`"
+                    },
+                    {
+                      "name": "job_run_id",
+                      "expression": "`job_run_id`"
+                    },
+                    {
+                      "name": "usage_unit",
+                      "expression": "`usage_unit`"
+                    },
+                    {
+                      "name": "list_cost_usd",
+                      "expression": "`list_cost_usd`"
+                    },
+                    {
+                      "name": "usage_quantity",
+                      "expression": "`usage_quantity`"
+                    },
+                    {
+                      "name": "duration_hours",
+                      "expression": "`duration_hours`"
                     }
                   ],
                   "disaggregated": true
@@ -108,7 +69,8 @@
               "encodings": {
                 "columns": [
                   {
-                    "fieldName": "metric",
+                    "fieldName": "date_key",
+                    "numberFormat": "0",
                     "booleanValues": [
                       "false",
                       "true"
@@ -121,263 +83,22 @@
                     "linkTextTemplate": "{{ @ }}",
                     "linkTitleTemplate": "{{ @ }}",
                     "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100000,
-                    "title": "metric",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false,
-                    "displayName": "metric"
-                  },
-                  {
-                    "fieldName": "value",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100001,
-                    "title": "value",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false,
-                    "displayName": "value"
-                  },
-                  {
-                    "fieldName": "unit",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100002,
-                    "title": "unit",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false,
-                    "displayName": "unit"
-                  }
-                ]
-              },
-              "allowHTMLByDefault": false,
-              "itemsPerPage": 25,
-              "paginationSize": "default",
-              "condensed": true,
-              "withRowNumber": true,
-              "frame": {
-                "showTitle": true,
-                "title": "Total Cost Summary"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 6,
-            "height": 5
-          }
-        },
-        {
-          "widget": {
-            "name": "overview_cost_trend",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "dataset_002",
-                  "fields": [
-                    {
-                      "name": "date_sk",
-                      "expression": "`date_sk`"
-                    },
-                    {
-                      "name": "daily_cost_usd",
-                      "expression": "`daily_cost_usd`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "version": 1,
-              "widgetType": "line",
-              "encodings": {
-                "x": {
-                  "fieldName": "date_sk",
-                  "type": "integer"
-                },
-                "y": {
-                  "fieldName": "daily_cost_usd",
-                  "type": "decimal"
-                }
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Cost Trend (30 Days)"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 0,
-            "width": 6,
-            "height": 5
-          }
-        },
-        {
-          "widget": {
-            "name": "overview_top_cost_centers",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "dataset_003",
-                  "fields": [
-                    {
-                      "name": "cost_center",
-                      "expression": "`cost_center`"
-                    },
-                    {
-                      "name": "line_of_business",
-                      "expression": "`line_of_business`"
-                    },
-                    {
-                      "name": "total_cost_usd",
-                      "expression": "`total_cost_usd`"
-                    },
-                    {
-                      "name": "active_entities",
-                      "expression": "`active_entities`"
-                    },
-                    {
-                      "name": "cost_per_entity",
-                      "expression": "`cost_per_entity`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "version": 1,
-              "widgetType": "table",
-              "encodings": {
-                "columns": [
-                  {
-                    "fieldName": "cost_center",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100000,
-                    "title": "cost_center",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false,
-                    "displayName": "cost_center"
-                  },
-                  {
-                    "fieldName": "line_of_business",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100001,
-                    "title": "line_of_business",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false,
-                    "displayName": "line_of_business"
-                  },
-                  {
-                    "fieldName": "total_cost_usd",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "decimal",
+                    "type": "integer",
                     "displayAs": "number",
                     "visible": true,
-                    "order": 100002,
-                    "title": "total_cost_usd",
+                    "order": 100000,
+                    "title": "date_key",
                     "allowSearch": false,
                     "alignContent": "right",
                     "allowHTML": false,
                     "highlightLinks": false,
                     "useMonospaceFont": false,
                     "preserveWhitespace": false,
-                    "displayName": "total_cost_usd"
+                    "displayName": "date_key"
                   },
                   {
-                    "fieldName": "active_entities",
+                    "fieldName": "workspace_key",
+                    "numberFormat": "0",
                     "booleanValues": [
                       "false",
                       "true"
@@ -390,21 +111,131 @@
                     "linkTextTemplate": "{{ @ }}",
                     "linkTitleTemplate": "{{ @ }}",
                     "linkOpenInNewTab": true,
-                    "type": "decimal",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "workspace_key",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "workspace_key"
+                  },
+                  {
+                    "fieldName": "cluster_key",
+                    "numberFormat": "0",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "integer",
                     "displayAs": "number",
                     "visible": true,
                     "order": 100003,
-                    "title": "active_entities",
+                    "title": "cluster_key",
                     "allowSearch": false,
                     "alignContent": "right",
                     "allowHTML": false,
                     "highlightLinks": false,
                     "useMonospaceFont": false,
                     "preserveWhitespace": false,
-                    "displayName": "active_entities"
+                    "displayName": "cluster_key"
                   },
                   {
-                    "fieldName": "cost_per_entity",
+                    "fieldName": "sku_key",
+                    "numberFormat": "0",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100004,
+                    "title": "sku_key",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "sku_key"
+                  },
+                  {
+                    "fieldName": "job_run_id",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100005,
+                    "title": "job_run_id",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "job_run_id"
+                  },
+                  {
+                    "fieldName": "usage_unit",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100007,
+                    "title": "usage_unit",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "usage_unit"
+                  },
+                  {
+                    "fieldName": "list_cost_usd",
                     "booleanValues": [
                       "false",
                       "true"
@@ -420,18 +251,125 @@
                     "type": "decimal",
                     "displayAs": "number",
                     "visible": true,
-                    "order": 100004,
-                    "title": "cost_per_entity",
+                    "order": 100008,
+                    "title": "list_cost_usd",
                     "allowSearch": false,
                     "alignContent": "right",
                     "allowHTML": false,
                     "highlightLinks": false,
                     "useMonospaceFont": false,
                     "preserveWhitespace": false,
-                    "displayName": "cost_per_entity"
+                    "displayName": "list_cost_usd"
+                  },
+                  {
+                    "fieldName": "usage_quantity",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100009,
+                    "title": "usage_quantity",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "usage_quantity"
+                  },
+                  {
+                    "fieldName": "duration_hours",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100010,
+                    "title": "duration_hours",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "displayName": "duration_hours"
                   }
                 ]
               },
+              "invisibleColumns": [
+                {
+                  "numberFormat": "0",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "entity_key",
+                  "type": "integer",
+                  "displayAs": "number",
+                  "order": 100002,
+                  "title": "entity_key",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "cloud",
+                  "type": "string",
+                  "displayAs": "string",
+                  "order": 100006,
+                  "title": "cloud",
+                  "allowSearch": false,
+                  "alignContent": "left",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                }
+              ],
               "allowHTMLByDefault": false,
               "itemsPerPage": 25,
               "paginationSize": "default",
@@ -439,14 +377,14 @@
               "withRowNumber": true,
               "frame": {
                 "showTitle": true,
-                "title": "Top Cost Centers"
+                "title": "Test Widget"
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 5,
-            "width": 12,
+            "y": 0,
+            "width": 6,
             "height": 5
           }
         }

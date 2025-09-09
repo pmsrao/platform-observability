@@ -725,9 +725,15 @@ def build_silver_job_task_run_timeline(spark) -> bool:
             df.compute_ids,
             df.result_state,
             df.termination_code,
-            # Calculate execution_secs from period times
-            F.col("period_end_time").cast("long") - F.col("period_start_time").cast("long").alias("execution_secs"),
+            # Calculate execution_secs from period times - FIXED: Use withColumn for cleaner expression
+            F.lit(0).alias("execution_secs"),  # Will be calculated properly in next step
             F.current_timestamp().alias("_loaded_at")
+        )
+        
+        # Calculate execution_secs properly using withColumn
+        transformed_df = transformed_df.withColumn(
+            "execution_secs", 
+            (F.col("period_end_time").cast("long") - F.col("period_start_time").cast("long")).cast("decimal(38,18)")
         )
         
         # Write to Silver table using MERGE to avoid duplicates (Type 1 - Current values only)

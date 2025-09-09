@@ -6,23 +6,29 @@ This directory contains a modular approach to creating and managing Databricks D
 
 ```
 notebooks/
-├── generate_dashboard_json.py       # Generator script (Databricks notebook)
-├── deploy_dashboard.py              # Deployment instructions and utilities
-└── README_Dashboard.md              # This documentation
+├── generate_dashboard_json_corrected.py  # Generator script (corrected format)
+├── deploy_dashboard.py                   # Deployment instructions and utilities
+└── README_Dashboard.md                   # This documentation
 
 resources/dashboard/
-├── dashboard_template.json          # Dashboard structure with SQL references
-├── dashboard_sql_statements.json    # All SQL statements with metadata
-├── platform_observability_dashboard.lvdash.json  # Generated final dashboard (output)
-└── dashboard_sql_only.sql           # SQL statements for independent testing
+├── dashboard_template_corrected.json     # Dashboard structure (corrected format)
+├── dashboard_sql_statements.json         # All SQL statements with metadata
+├── platform_observability_dashboard.lvdash.json  # Generated final dashboard (corrected)
+├── manual_Dashboard_exp.lvdash.json      # Reference manual export format
+└── dashboard_sql_only.sql                # SQL statements for independent testing
 ```
 
 ## 🎯 Benefits of This Approach
 
+### ✅ **Correct Format Implementation**
+- **Based on Manual Export**: Uses the correct `.lvdash.json` format from Databricks manual export
+- **Proper Dataset Structure**: Includes `datasets` section with `queryLines` for SQL queries
+- **Widget Encoding**: Detailed field encodings for proper display and functionality
+
 ### ✅ **Separation of Concerns**
-- **Dashboard Structure**: Defined in `dashboard_template.json`
+- **Dashboard Structure**: Defined in `dashboard_template_corrected.json`
 - **SQL Logic**: Managed in `dashboard_sql_statements.json`
-- **Generation Logic**: Handled by `generate_dashboard_json.py`
+- **Generation Logic**: Handled by `generate_dashboard_json_corrected.py`
 
 ### ✅ **Independent SQL Validation**
 - Test SQL queries before dashboard creation

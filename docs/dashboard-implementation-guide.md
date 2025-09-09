@@ -73,6 +73,7 @@ resources/dashboard/
    - Select "Import from JSON"
    - Upload `resources/dashboard/platform_observability_dashboard.lvdash.json`
 3. **Configure Settings**: Review and adjust widget positions if needed
+4. **Note**: The dashboard uses the correct `.lvdash.json` format based on Databricks manual export analysis, ensuring proper dataset creation and widget functionality
 
 #### Method 2: Programmatic Deployment (Advanced)
 
