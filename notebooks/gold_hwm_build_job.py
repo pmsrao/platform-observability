@@ -47,7 +47,7 @@ def build_gold_layer():
                 builder.build()
         
         # Build facts
-        fact_types = ["usage", "entity_cost", "run_cost", "runs_finished"]
+        fact_types = ["usage", "entity_cost", "run_cost", "run_status_cost", "runs_finished"]
         for fact_type in fact_types:
             builder = FactBuilderFactory.create_builder(fact_type, spark, config)
             builder.build()

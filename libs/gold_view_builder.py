@@ -281,29 +281,30 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 c.is_lts,
                 c.is_current,
                 c.runtime_age_months,
-                c.months_to_eos,
-                c.is_supported,
+                NULL as months_to_eos,
+                NULL as is_supported,
                 f.line_of_business,
                 f.department,
                 f.cost_center,
                 f.environment,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 SUM(f.duration_hours) as total_duration_hours,
                 -- Upgrade priority logic
                 CASE 
-                    WHEN c.months_to_eos <= 3 THEN 'Critical'
-                    WHEN c.months_to_eos <= 6 THEN 'High'
-                    WHEN c.months_to_eos <= 12 THEN 'Medium'
+                    WHEN months_to_eos <= 3 THEN 'Critical'
+                    WHEN months_to_eos <= 6 THEN 'High'
+                    WHEN months_to_eos <= 12 THEN 'Medium'
                     ELSE 'Low'
                 END as upgrade_priority
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
             JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
             GROUP BY f.date_key, c.dbr_version, c.major_version, c.minor_version,
                      c.cluster_source, c.is_lts, c.is_current, c.runtime_age_months,
-                     c.months_to_eos, c.is_supported, f.line_of_business, f.department, f.cost_center, f.environment
+                     months_to_eos, is_supported, f.line_of_business, f.department, f.cost_center, f.environment
         """.format(catalog=self.catalog, gold_schema=self.gold_schema, silver_schema=self.config.silver_schema), "v_runtime_version_analysis")
         
         # Node Type Analysis
@@ -318,10 +319,10 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 -- Cluster sizing analysis
                 c.min_autoscale_workers,
                 c.max_autoscale_workers,
-                c.autoscale_enabled,
+                case when c.worker_count is null then true else false end as autoscale_enabled,
                 CASE 
-                    WHEN c.min_autoscale_workers = c.max_autoscale_workers THEN 'Fixed'
-                    WHEN c.autoscale_enabled THEN 'Auto-scaling'
+                    WHEN c.worker_count is not null THEN 'Fixed'
+                    WHEN c.worker_count is null THEN 'Auto-scaling'
                     ELSE 'Manual'
                 END as scaling_type,
                 -- Business context (from Silver layer)
@@ -329,16 +330,18 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 f.department,
                 f.cost_center,
                 f.environment,
-                COUNT(DISTINCT f.workspace_id) as active_workspaces,
+                COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
                 SUM(f.list_cost_usd) as total_cost_usd,
                 SUM(f.duration_hours) as total_duration_hours,
                 AVG(f.duration_hours) as avg_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
+            JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
+            JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
             GROUP BY f.date_key, c.worker_node_type, c.driver_node_type, c.worker_node_type,
                      c.worker_node_type_category, c.min_autoscale_workers, c.max_autoscale_workers,
-                     c.autoscale_enabled, f.line_of_business, f.department, f.cost_center, f.environment
+                     autoscale_enabled, c.worker_count, f.line_of_business, f.department, f.cost_center, f.environment
         """.format(catalog=self.catalog, gold_schema=self.gold_schema, silver_schema=self.config.silver_schema), "v_node_type_analysis")
         
         # Runtime Optimization Opportunities
@@ -352,8 +355,8 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 c.is_lts,
                 c.is_current,
                 c.runtime_age_months,
-                c.months_to_eos,
-                c.is_supported,
+                NULL as months_to_eos,
+                NULL as is_supported,
                 -- Runtime generation classification
                 CASE 
                     WHEN c.major_version >= 14 THEN 'Latest Generation'
@@ -366,8 +369,8 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{silver_schema}.slv_clusters c ON f.cluster_identifier = c.cluster_id
             WHERE c.dbr_version IS NOT NULL
-            GROUP BY f.date_key, c.dbr_version, c.major_version, c.minor_version,
-                     c.cluster_source, c.node_type_id
+            GROUP BY f.date_key, c.dbr_version, c.major_version, c.minor_version,c.is_lts,c.is_current,
+                c.runtime_age_months,c.cluster_source, c.worker_node_type_category
         """.format(catalog=self.catalog, gold_schema=self.gold_schema, silver_schema=self.config.silver_schema), "v_runtime_optimization_opportunities")
         
         return results

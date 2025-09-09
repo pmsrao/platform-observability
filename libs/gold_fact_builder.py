@@ -359,7 +359,7 @@ class RunStatusCostFactBuilder(FactBuilder):
         """Build run status cost fact table from Silver layer"""
         try:
             # Read from Silver job run timeline table
-            silver_df = (self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_job_run_timeline").withColumnRenamed("date_sk_end", "date_sk").withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type"))).withColumnRenamed("job_id", "entity_id"))
+            silver_df = (self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_job_run_timeline").withColumnRenamed("date_sk_end", "date_sk").withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type"))).withColumnRenamed("job_id", "entity_id").withColumn("result_state_cost_usd", F.lit(None)))
             
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
