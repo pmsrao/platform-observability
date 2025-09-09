@@ -95,7 +95,7 @@ def deploy_dashboard_via_api(dashboard_json_path: str, workspace_url: str, acces
 
 # Example usage (commented out - requires actual credentials)
 # dashboard_id = deploy_dashboard_via_api(
-#     dashboard_json_path="/Workspace/Users/podilapalls@gmail.com/platform-observability/resources/dashboard/platform_observability_dashboard.json",
+#     dashboard_json_path="/Workspace/Users/podilapalls@gmail.com/platform-observability/resources/dashboard/platform_observability_dashboard.lvdash.json",
 #     workspace_url="https://your-workspace.cloud.databricks.com",
 #     access_token="your-access-token"
 # )

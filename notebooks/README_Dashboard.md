@@ -13,7 +13,7 @@ notebooks/
 resources/dashboard/
 ├── dashboard_template.json          # Dashboard structure with SQL references
 ├── dashboard_sql_statements.json    # All SQL statements with metadata
-├── platform_observability_dashboard.json  # Generated final dashboard (output)
+├── platform_observability_dashboard.lvdash.json  # Generated final dashboard (output)
 └── dashboard_sql_only.sql           # SQL statements for independent testing
 ```
 

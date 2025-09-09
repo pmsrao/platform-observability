@@ -30,7 +30,7 @@ notebooks/
 resources/dashboard/
 ├── dashboard_template.json          # Dashboard structure with SQL references
 ├── dashboard_sql_statements.json    # All SQL statements with metadata
-├── platform_observability_dashboard.json  # Generated final dashboard (output)
+├── platform_observability_dashboard.lvdash.json  # Generated final dashboard (output)
 └── dashboard_sql_only.sql           # SQL statements for independent testing
 ```
 
@@ -71,7 +71,7 @@ resources/dashboard/
    - Click on "Dashboards" in the left sidebar
    - Click "Create Dashboard"
    - Select "Import from JSON"
-   - Upload `resources/dashboard/platform_observability_dashboard.json`
+   - Upload `resources/dashboard/platform_observability_dashboard.lvdash.json`
 3. **Configure Settings**: Review and adjust widget positions if needed
 
 #### Method 2: Programmatic Deployment (Advanced)

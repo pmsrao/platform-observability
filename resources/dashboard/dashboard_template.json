@@ -1,533 +1,293 @@
 {
-  "version": "1.0",
-  "name": "Platform Observability Dashboard",
-  "description": "Comprehensive observability dashboard for Databricks platform with persona-specific insights",
-  "tags": ["observability", "cost-management", "platform-engineering", "data-quality"],
-  "refreshInterval": 3600000,
-  "tabs": [
+  "pages": [
     {
-      "name": "Overview",
-      "description": "Executive summary with key metrics and KPIs",
+      "name": "overview-page-001",
+      "displayName": "Overview",
       "widgets": [
         {
-          "id": "overview_total_cost_summary",
-          "name": "Total Cost Summary",
-          "type": "table",
-          "description": "Key financial metrics for the last 30 days",
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 4
-          },
-          "query": {
-            "sqlRef": "overview_total_cost_summary",
-            "refreshInterval": 3600000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "overview_total_cost_summary",
+          "displayName": "Total Cost Summary",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{overview_total_cost_summary}}"
+            }
           }
         },
         {
-          "id": "overview_cost_trend",
-          "name": "Cost Trend",
-          "type": "line_chart",
-          "description": "Daily cost trends with 7-day rolling average",
-          "position": {
-            "x": 0,
-            "y": 4,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "overview_cost_trend",
-            "refreshInterval": 3600000
-          },
-          "options": {
-            "showLegend": true,
-            "showGrid": true,
-            "enableZoom": true,
-            "xAxis": "date_sk",
-            "yAxis": ["daily_cost_usd", "rolling_7day_avg"]
+          "name": "overview_cost_trend",
+          "displayName": "Cost Trend (30 Days)",
+          "visualization": {
+            "type": "line",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{overview_cost_trend}}"
+            }
           }
         },
         {
-          "id": "overview_top_cost_centers",
-          "name": "Top Cost Centers",
-          "type": "bar_chart",
-          "description": "Top 10 cost centers by total cost",
-          "position": {
-            "x": 0,
-            "y": 10,
-            "width": 8,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "overview_top_cost_centers",
-            "refreshInterval": 3600000
-          },
-          "options": {
-            "showLegend": true,
-            "showGrid": true,
-            "orientation": "vertical",
-            "xAxis": "cost_center",
-            "yAxis": "total_cost_usd"
+          "name": "overview_top_cost_centers",
+          "displayName": "Top Cost Centers",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{overview_top_cost_centers}}"
+            }
           }
         },
         {
-          "id": "overview_runtime_health",
-          "name": "Runtime Health",
-          "type": "pie_chart",
-          "description": "Runtime version distribution and health",
-          "position": {
-            "x": 8,
-            "y": 10,
-            "width": 4,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "overview_runtime_health",
-            "refreshInterval": 3600000
-          },
-          "options": {
-            "showLegend": true,
-            "showPercentages": true,
-            "category": "version_category",
-            "value": "total_clusters"
+          "name": "overview_runtime_health",
+          "displayName": "Runtime Health",
+          "visualization": {
+            "type": "bar",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{overview_runtime_health}}"
+            }
           }
         }
       ]
     },
     {
-      "name": "Finance & Cost Management",
-      "description": "Cost allocation, chargeback, and budget tracking",
+      "name": "finance-page-002",
+      "displayName": "Finance",
       "widgets": [
         {
-          "id": "finance_monthly_cost_breakdown",
-          "name": "Monthly Cost by Cost Center",
-          "type": "table",
-          "description": "Monthly cost breakdown by cost center and line of business",
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "finance_monthly_cost_breakdown",
-            "refreshInterval": 14400000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 50
+          "name": "finance_monthly_cost_breakdown",
+          "displayName": "Monthly Cost Breakdown",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{finance_monthly_cost_breakdown}}"
+            }
           }
         },
         {
-          "id": "finance_daily_cost_trends",
-          "name": "Daily Cost Trends",
-          "type": "line_chart",
-          "description": "Daily cost trends with rolling averages for budget monitoring",
-          "position": {
-            "x": 0,
-            "y": 6,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "finance_daily_cost_trends",
-            "refreshInterval": 14400000
-          },
-          "options": {
-            "showLegend": true,
-            "showGrid": true,
-            "enableZoom": true,
-            "xAxis": "date_sk",
-            "yAxis": ["daily_cost_usd", "rolling_7day_avg", "rolling_30day_avg"]
+          "name": "finance_daily_cost_trends",
+          "displayName": "Daily Cost Trends",
+          "visualization": {
+            "type": "line",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{finance_daily_cost_trends}}"
+            }
           }
         },
         {
-          "id": "finance_cost_center_analysis",
-          "name": "Cost Center Analysis",
-          "type": "table",
-          "description": "Cost center analysis with month-over-month trends",
-          "position": {
-            "x": 0,
-            "y": 12,
-            "width": 8,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "finance_cost_center_analysis",
-            "refreshInterval": 14400000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 50
+          "name": "finance_cost_center_analysis",
+          "displayName": "Cost Center Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{finance_cost_center_analysis}}"
+            }
           }
         },
         {
-          "id": "finance_unallocated_cost_analysis",
-          "name": "Unallocated Cost Analysis",
-          "type": "table",
-          "description": "Analysis of unallocated costs and coverage",
-          "position": {
-            "x": 8,
-            "y": 12,
-            "width": 4,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "finance_unallocated_cost_analysis",
-            "refreshInterval": 14400000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": false,
-            "enableSorting": false,
-            "pageSize": 10
+          "name": "finance_unallocated_cost_analysis",
+          "displayName": "Unallocated Cost Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{finance_unallocated_cost_analysis}}"
+            }
           }
         }
       ]
     },
     {
-      "name": "Platform Engineers & DevOps",
-      "description": "Runtime optimization, cluster sizing, and infrastructure insights",
+      "name": "platform-page-003",
+      "displayName": "Platform Engineering",
       "widgets": [
         {
-          "id": "platform_runtime_analysis",
-          "name": "Runtime Version Analysis",
-          "type": "table",
-          "description": "Runtime version distribution and upgrade priorities",
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "platform_runtime_analysis",
-            "refreshInterval": 7200000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "platform_runtime_analysis",
+          "displayName": "Runtime Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{platform_runtime_analysis}}"
+            }
           }
         },
         {
-          "id": "platform_cluster_sizing",
-          "name": "Cluster Sizing Analysis",
-          "type": "table",
-          "description": "Cluster sizing patterns and optimization opportunities",
-          "position": {
-            "x": 0,
-            "y": 6,
-            "width": 8,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "platform_cluster_sizing",
-            "refreshInterval": 7200000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "platform_cluster_sizing",
+          "displayName": "Cluster Sizing Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{platform_cluster_sizing}}"
+            }
           }
         },
         {
-          "id": "platform_autoscaling_analysis",
-          "name": "Auto-scaling Configuration",
-          "type": "table",
-          "description": "Auto-scaling configuration analysis",
-          "position": {
-            "x": 8,
-            "y": 6,
-            "width": 4,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "platform_autoscaling_analysis",
-            "refreshInterval": 7200000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "platform_autoscaling_analysis",
+          "displayName": "Autoscaling Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{platform_autoscaling_analysis}}"
+            }
           }
         },
         {
-          "id": "platform_workflow_hierarchy",
-          "name": "Workflow Hierarchy Cost",
-          "type": "table",
-          "description": "Workflow hierarchy cost analysis",
-          "position": {
-            "x": 0,
-            "y": 12,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "platform_workflow_hierarchy",
-            "refreshInterval": 7200000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "platform_workflow_hierarchy",
+          "displayName": "Workflow Hierarchy",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{platform_workflow_hierarchy}}"
+            }
           }
         }
       ]
     },
     {
-      "name": "Data Engineers & Analysts",
-      "description": "Data quality, tag coverage, and usage pattern analysis",
+      "name": "data-page-004",
+      "displayName": "Data Quality",
       "widgets": [
         {
-          "id": "data_tag_coverage",
-          "name": "Tag Coverage Analysis",
-          "type": "table",
-          "description": "Tag coverage analysis by workspace",
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "data_tag_coverage",
-            "refreshInterval": 21600000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "data_tag_coverage",
+          "displayName": "Tag Coverage Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{data_tag_coverage}}"
+            }
           }
         },
         {
-          "id": "data_usage_patterns",
-          "name": "Usage Patterns by Time",
-          "type": "line_chart",
-          "description": "Usage patterns by environment and hour of day",
-          "position": {
-            "x": 0,
-            "y": 6,
-            "width": 8,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "data_usage_patterns",
-            "refreshInterval": 21600000
-          },
-          "options": {
-            "showLegend": true,
-            "showGrid": true,
-            "enableZoom": true,
-            "xAxis": "hour_of_day",
-            "yAxis": ["usage_count", "total_cost_usd"],
-            "groupBy": "environment"
+          "name": "data_usage_patterns",
+          "displayName": "Usage Patterns",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{data_usage_patterns}}"
+            }
           }
         },
         {
-          "id": "data_entity_usage",
-          "name": "Entity Usage Summary",
-          "type": "table",
-          "description": "Entity usage summary by type",
-          "position": {
-            "x": 8,
-            "y": 6,
-            "width": 4,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "data_entity_usage",
-            "refreshInterval": 21600000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": false,
-            "enableSorting": true,
-            "pageSize": 10
+          "name": "data_entity_usage",
+          "displayName": "Entity Usage Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{data_entity_usage}}"
+            }
           }
         },
         {
-          "id": "data_quality_issues",
-          "name": "Data Quality Issues",
-          "type": "table",
-          "description": "Summary of data quality issues and affected costs",
-          "position": {
-            "x": 0,
-            "y": 12,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "data_quality_issues",
-            "refreshInterval": 21600000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": false,
-            "enableSorting": true,
-            "pageSize": 10
+          "name": "data_quality_issues",
+          "displayName": "Data Quality Issues",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{data_quality_issues}}"
+            }
           }
         }
       ]
     },
     {
-      "name": "Business Stakeholders",
-      "description": "Business unit performance and project tracking",
+      "name": "business-page-005",
+      "displayName": "Business Intelligence",
       "widgets": [
         {
-          "id": "business_unit_performance",
-          "name": "Business Unit Performance",
-          "type": "table",
-          "description": "Business unit cost and usage summary",
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "business_unit_performance",
-            "refreshInterval": 28800000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "business_unit_performance",
+          "displayName": "Business Unit Performance",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{business_unit_performance}}"
+            }
           }
         },
         {
-          "id": "business_monthly_trends",
-          "name": "Monthly Business Trends",
-          "type": "line_chart",
-          "description": "Monthly business unit performance trends",
-          "position": {
-            "x": 0,
-            "y": 6,
-            "width": 8,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "business_monthly_trends",
-            "refreshInterval": 28800000
-          },
-          "options": {
-            "showLegend": true,
-            "showGrid": true,
-            "enableZoom": true,
-            "xAxis": "month",
-            "yAxis": "monthly_cost_usd",
-            "groupBy": "line_of_business"
+          "name": "business_monthly_trends",
+          "displayName": "Monthly Business Trends",
+          "visualization": {
+            "type": "line",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{business_monthly_trends}}"
+            }
           }
         },
         {
-          "id": "business_department_performance",
-          "name": "Department Performance",
-          "type": "table",
-          "description": "Department performance analysis",
-          "position": {
-            "x": 8,
-            "y": 6,
-            "width": 4,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "business_department_performance",
-            "refreshInterval": 28800000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "business_department_performance",
+          "displayName": "Department Performance",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{business_department_performance}}"
+            }
           }
         },
         {
-          "id": "business_roi_analysis",
-          "name": "ROI Analysis by Use Case",
-          "type": "table",
-          "description": "ROI analysis by use case and business unit",
-          "position": {
-            "x": 0,
-            "y": 12,
-            "width": 12,
-            "height": 6
-          },
-          "query": {
-            "sqlRef": "business_roi_analysis",
-            "refreshInterval": 28800000
-          },
-          "options": {
-            "showRowNumbers": true,
-            "enableSearch": true,
-            "enableSorting": true,
-            "pageSize": 25
+          "name": "business_roi_analysis",
+          "displayName": "ROI Analysis",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{business_roi_analysis}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "alerts-page-006",
+      "displayName": "Alerts & Monitoring",
+      "widgets": [
+        {
+          "name": "alert_unallocated_cost",
+          "displayName": "Unallocated Cost Alert",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{alert_unallocated_cost}}"
+            }
+          }
+        },
+        {
+          "name": "alert_legacy_runtime",
+          "displayName": "Legacy Runtime Alert",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{alert_legacy_runtime}}"
+            }
+          }
+        },
+        {
+          "name": "alert_tag_coverage",
+          "displayName": "Tag Coverage Alert",
+          "visualization": {
+            "type": "table",
+            "query": {
+              "data_source_id": "platform_observability",
+              "query": "{{alert_tag_coverage}}"
+            }
           }
         }
       ]
     }
-  ],
-  "alerts": [
-    {
-      "name": "High Unallocated Cost Alert",
-      "description": "Alert when unallocated costs exceed 20% of total",
-      "condition": "unallocated_cost_percentage > 20",
-      "query": {
-        "sqlRef": "alert_unallocated_cost"
-      },
-      "threshold": 20,
-      "notificationChannels": ["email", "slack"]
-    },
-    {
-      "name": "Legacy Runtime Alert",
-      "description": "Alert when clusters using legacy runtimes are detected",
-      "condition": "legacy_cluster_count > 0",
-      "query": {
-        "sqlRef": "alert_legacy_runtime"
-      },
-      "threshold": 0,
-      "notificationChannels": ["email"]
-    },
-    {
-      "name": "Low Tag Coverage Alert",
-      "description": "Alert when tag coverage drops below 80%",
-      "condition": "overall_coverage_pct < 80",
-      "query": {
-        "sqlRef": "alert_tag_coverage"
-      },
-      "threshold": 80,
-      "notificationChannels": ["email", "slack"]
-    }
-  ],
-  "accessControl": {
-    "overview": ["all_users"],
-    "finance": ["finance_team", "executives", "platform_admins"],
-    "platform": ["platform_engineers", "devops_team", "platform_admins"],
-    "data": ["data_engineers", "data_analysts", "platform_admins"],
-    "business": ["business_stakeholders", "product_owners", "executives"]
-  },
-  "metadata": {
-    "createdBy": "Platform Observability Team",
-    "createdDate": "2025-01-08",
-    "version": "1.0",
-    "lastUpdated": "2025-01-08",
-    "tags": ["observability", "cost-management", "platform-engineering", "data-quality"],
-    "description": "Comprehensive observability dashboard for Databricks platform with persona-specific insights covering cost management, runtime optimization, data quality, and business performance analysis."
-  }
+  ]
 }

@@ -27,7 +27,7 @@ from typing import Dict, List, Any, Optional
 # File paths
 DASHBOARD_TEMPLATE_PATH = "/Workspace/Users/podilapalls@gmail.com/platform-observability/resources/dashboard/dashboard_template.json"
 SQL_STATEMENTS_PATH = "/Workspace/Users/podilapalls@gmail.com/platform-observability/resources/dashboard/dashboard_sql_statements.json"
-OUTPUT_DASHBOARD_PATH = "/Workspace/Users/podilapalls@gmail.com/platform-observability/resources/dashboard/platform_observability_dashboard.json"
+OUTPUT_DASHBOARD_PATH = "/Workspace/Users/podilapalls@gmail.com/platform-observability/resources/dashboard/platform_observability_dashboard.lvdash.json"
 
 # COMMAND ----------
 
