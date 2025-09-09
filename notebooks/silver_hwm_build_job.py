@@ -718,6 +718,7 @@ def build_silver_job_task_run_timeline(spark) -> bool:
             df.job_id,
             df.run_id.alias("task_run_id"),  # Transform run_id to task_run_id
             df.parent_run_id.alias("job_run_id"),  # Parent run becomes job_run_id
+            df.parent_run_id,  # FIXED: Add missing parent_run_id column
             df.task_key,
             df.period_start_time,  # FIXED: Use period_start_time from bronze
             df.period_end_time,    # FIXED: Use period_end_time from bronze
