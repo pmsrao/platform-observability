@@ -133,7 +133,28 @@ def generate_usage_data(spark, num_records=50):
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Write Data to Bronze Table
+# MAGIC ## DLT Table Definition
+
+# COMMAND ----------
+
+import dlt
+
+@dlt.table(
+    name="brz_billing_usage",
+    comment="Sample billing usage data for testing platform observability",
+    table_properties={
+        "quality": "bronze",
+        "pipeline.autoOptimize.managed": "true"
+    }
+)
+def brz_billing_usage():
+    """Generate and return sample billing usage data"""
+    return generate_usage_data(spark, 50)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Alternative: Write Data to Bronze Table (for notebook execution)
 
 # COMMAND ----------
 
@@ -164,7 +185,7 @@ def write_usage_data():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Execute Data Generation
+# MAGIC ## Execute Data Generation (for notebook execution)
 
 # COMMAND ----------
 
