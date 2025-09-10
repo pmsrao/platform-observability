@@ -1,14 +1,14 @@
 {
   "name": "simple_dlt_pipeline",
-  "description": "Simple DLT pipeline for generating billing usage test data",
+  "description": "Simple DLT pipeline for processing billing list prices data",
   "libraries": [
     {
       "notebook": {
-        "path": "/notebooks/sample_dlt_pipeline"
+        "path": "/notebooks/simple_dlt_pipeline"
       }
     }
   ],
-  "target": "platform_observability.plt_bronze",
+  "target": "platform_observability.default",
   "catalog": "platform_observability",
   "configuration": {
     "spark.databricks.delta.retentionDurationCheck.enabled": "false"
