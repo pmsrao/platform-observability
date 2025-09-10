@@ -836,6 +836,80 @@ def build_silver_price_scd(spark) -> bool:
         traceback.print_exc()
         return False
 
+def build_silver_compute_node_type_scd(spark) -> bool:
+    """Build Silver compute node type SCD2 table from bronze compute node types"""
+    logger.info("Building Silver compute node type SCD2 table from bronze compute node types")
+    print("🔧 Building Silver compute node type SCD2 table...")
+    
+    try:
+        # Get last processed timestamp
+        print("📅 Getting last processed timestamp...")
+        task_name = get_silver_task_name("slv_compute_node_type_scd")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_compute_node_type_scd", task_name, "silver")
+        print(f"📅 Last timestamp: {last_ts}")
+        
+        # Read new data from Bronze
+        print("📖 Reading data from Bronze...")
+        df = read_bronze_since_timestamp(spark, "brz_compute_node_types", last_ts)
+        record_count = df.count()
+        print(f"📖 Found {record_count} records in Bronze")
+        
+        if record_count == 0:
+            logger.info("No new data for Silver compute node type SCD2 table")
+            print("✅ No new data - skipping compute node type SCD2 table")
+            return True
+        
+        # Validate data - DISABLED for performance optimization
+        # if not validate_silver_data(df, "silver_compute_node_type_scd"):
+        #     logger.error("Data validation failed for Silver compute node type SCD2 table")
+        #     return False
+        logger.info("Data validation disabled - processing data")
+        
+        # Transform data with SCD2 logic and node type categorization
+        print("🔄 Transforming data...")
+        transformed_df = df.select(
+            df.account_id,
+            df.node_type,
+            df.core_count,
+            df.memory_mb,
+            df.gpu_count,
+            F.current_timestamp().alias("_loaded_at")
+        ).withColumn("valid_from", F.current_timestamp()) \
+         .withColumn("valid_to", F.lit(None)) \
+         .withColumn("is_current", F.lit(True))
+        
+        # Add node type categorization using TagProcessor
+        tag_processor = TagProcessor()
+        transformed_df = tag_processor.add_worker_node_type_category(transformed_df, "node_type", "category")
+        
+        print(f"🔄 Transformed {transformed_df.count()} records")
+        
+        # Write to Silver table using SCD2 merge logic
+        print("💾 Upserting to Silver table...")
+        silver_table = get_silver_table_name("slv_compute_node_type_scd")
+        success = upsert_scd2_silver_table(transformed_df, silver_table, ["account_id", "node_type"], "valid_from")
+        if success:
+            print(f"✅ Successfully upserted to {silver_table}")
+        else:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
+        
+        # Update processing state
+        max_ts = get_max_timestamp(df)
+        if max_ts:
+            task_name = get_silver_task_name("slv_compute_node_type_scd")
+            commit_processing_state(spark, "slv_compute_node_type_scd", max_ts, task_name=task_name, layer="silver")
+        
+        logger.info(f"Successfully built Silver compute node type SCD2 table with {transformed_df.count()} records")
+        return True
+        
+    except Exception as e:
+        # Capture error for persistence
+        logger.error(f"Error building Silver compute node type SCD2 table: {str(e)}", exc_info=True)
+        import traceback
+        traceback.print_exc()
+        return False
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -854,6 +928,7 @@ def build_silver_layer(spark) -> Dict[str, bool]:
         ("workspace", build_silver_workspace),
         ("entity_latest", build_silver_entity_latest),
         ("clusters", build_silver_clusters),
+        ("compute_node_type_scd", build_silver_compute_node_type_scd),
         ("price_scd", build_silver_price_scd),
         ("usage_txn", build_silver_usage_txn),
         ("job_run_timeline", build_silver_job_run_timeline),

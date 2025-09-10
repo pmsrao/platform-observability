@@ -241,6 +241,21 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_job_task_run_timeline (
     _loaded_at TIMESTAMP
 ) USING DELTA;
 
+-- Compute Node Types SCD2 Table (Type 2 - Historical tracking)
+CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_compute_node_type_scd (
+    account_id STRING,
+    node_type STRING,                    -- Natural key
+    core_count DOUBLE,                   -- CPU cores
+    memory_mb BIGINT,                    -- Memory in megabytes
+    gpu_count BIGINT,                    -- Number of GPUs
+    category STRING,                     -- Node type category (General Purpose, Memory Optimized, etc.)
+    _loaded_at TIMESTAMP,
+    -- SCD2 columns
+    valid_from TIMESTAMP,
+    valid_to TIMESTAMP,
+    is_current BOOLEAN
+) USING DELTA;
+
 -- Clusters SCD2 Table (Type 2 - Historical tracking)
 CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     account_id STRING,

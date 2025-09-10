@@ -385,18 +385,21 @@ class NodeTypeDimensionBuilder(DimensionBuilder):
     def build(self) -> bool:
         """Build node type dimension from Silver layer"""
         try:
-            # Read from Silver clusters table
-            silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_clusters")
+            # Read from Silver compute node type SCD2 table
+            silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_compute_node_type_scd")
+            
+            # Filter for current records only
+            current_df = silver_df.filter(F.col("is_current") == True)
             
             # Transform to dimension format
-            dim_df = silver_df.select(
+            dim_df = current_df.select(
                 F.col("account_id"),
-                F.col("worker_node_type").alias("node_type"),
-                F.lit(None).cast("double").alias("core_count"),  # Will be populated from node types data
-                F.lit(None).cast("bigint").alias("memory_mb"),   # Will be populated from node types data
-                F.lit(None).cast("bigint").alias("gpu_count"),   # Will be populated from node types data
-                F.lit("Unknown").alias("category"),              # Will be populated from node types data
-                F.col("worker_node_type_category")
+                F.col("node_type"),
+                F.col("core_count"),
+                F.col("memory_mb"),
+                F.col("gpu_count"),
+                F.col("category"),
+                F.col("category").alias("worker_node_type_category")  # Use category as worker_node_type_category
             ).distinct()
             
             # Upsert dimension
