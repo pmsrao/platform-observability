@@ -1,0 +1,38 @@
+{
+  "name": "sample_dlt_pipeline",
+  "description": "Sample DLT pipeline for generating test data for platform observability",
+  "libraries": [
+    {
+      "notebook": {
+        "path": "/notebooks/sample_dlt_pipeline"
+      }
+    }
+  ],
+  "target": "platform_observability.plt_bronze",
+  "catalog": "platform_observability",
+  "configuration": {
+    "spark.databricks.delta.retentionDurationCheck.enabled": "false",
+    "spark.databricks.delta.merge.repartitionBeforeWrite": "true"
+  },
+  "clusters": [
+    {
+      "label": "default",
+      "node_type_id": "i3.xlarge",
+      "driver_node_type_id": "i3.xlarge",
+      "num_workers": 1,
+      "autoscale": {
+        "min_workers": 1,
+        "max_workers": 2
+      }
+    }
+  ],
+  "development": true,
+  "continuous": false,
+  "photon": false,
+  "edition": "ADVANCED",
+  "channel": "CURRENT",
+  "storage_location": "s3://your-bucket/platform-observability/sample-dlt-pipeline",
+  "data_lineage": {
+    "enabled": true
+  }
+}
