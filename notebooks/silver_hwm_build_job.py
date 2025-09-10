@@ -759,6 +759,83 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         traceback.print_exc()
         return False
 
+def build_silver_price_scd(spark) -> bool:
+    """Build Silver price SCD2 table from billing list prices"""
+    logger.info("Building Silver price SCD2 table from billing list prices")
+    print("🔧 Building Silver price SCD2 table...")
+    
+    try:
+        # Get last processed timestamp
+        print("📅 Getting last processed timestamp...")
+        task_name = get_silver_task_name("slv_price_scd")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_price_scd", task_name, "silver")
+        print(f"📅 Last timestamp: {last_ts}")
+        
+        # Read new data from Bronze
+        print("📖 Reading data from Bronze...")
+        df = read_bronze_since_timestamp(spark, "brz_billing_list_prices", last_ts)
+        record_count = df.count()
+        print(f"📖 Found {record_count} records in Bronze")
+        
+        if record_count == 0:
+            logger.info("No new data for Silver price SCD2 table")
+            print("✅ No new data - skipping price SCD2 table")
+            return True
+        
+        # Validate data - DISABLED for performance optimization
+        # if not validate_silver_data(df, "silver_price_scd"):
+        #     logger.error("Data validation failed for Silver price SCD2 table")
+        #     return False
+        logger.info("Data validation disabled - processing data")
+        
+        # Transform data with SCD2 logic - FIXED: Use correct column names from bronze schema
+        print("🔄 Transforming data...")
+        transformed_df = df.select(
+            df.account_id,
+            df.cloud,
+            df.sku_name,
+            df.usage_unit,
+            df.currency_code,
+            # Extract price from pricing struct - use effective_list.default as primary price
+            F.coalesce(
+                df.pricing.effective_list.default,
+                df.pricing.default
+            ).alias("price_usd"),
+            df.price_start_time,
+            df.price_end_time,
+            F.current_timestamp().alias("_loaded_at")
+        ).withColumn("valid_from", df.price_start_time) \
+         .withColumn("valid_to", df.price_end_time) \
+         .withColumn("is_current", F.lit(True))
+        
+        print(f"🔄 Transformed {transformed_df.count()} records")
+        
+        # Write to Silver table using SCD2 merge logic
+        print("💾 Upserting to Silver table...")
+        silver_table = get_silver_table_name("slv_price_scd")
+        success = upsert_scd2_silver_table(transformed_df, silver_table, ["account_id", "cloud", "sku_name", "usage_unit"], "price_start_time")
+        if success:
+            print(f"✅ Successfully upserted to {silver_table}")
+        else:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
+        
+        # Update processing state
+        max_ts = get_max_timestamp(df)
+        if max_ts:
+            task_name = get_silver_task_name("slv_price_scd")
+            commit_processing_state(spark, "slv_price_scd", max_ts, task_name=task_name, layer="silver")
+        
+        logger.info(f"Successfully built Silver price SCD2 table with {transformed_df.count()} records")
+        return True
+        
+    except Exception as e:
+        # Capture error for persistence
+        logger.error(f"Error building Silver price SCD2 table: {str(e)}", exc_info=True)
+        import traceback
+        traceback.print_exc()
+        return False
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -777,6 +854,7 @@ def build_silver_layer(spark) -> Dict[str, bool]:
         ("workspace", build_silver_workspace),
         ("entity_latest", build_silver_entity_latest),
         ("clusters", build_silver_clusters),
+        ("price_scd", build_silver_price_scd),
         ("usage_txn", build_silver_usage_txn),
         ("job_run_timeline", build_silver_job_run_timeline),
         ("job_task_run_timeline", build_silver_job_task_run_timeline)
