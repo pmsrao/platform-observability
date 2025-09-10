@@ -426,6 +426,27 @@
         "FROM cost_summary ",
         "ORDER BY cost_center, month "
       ]
+    },
+    {
+      "name": "dataset_019",
+      "displayName": "KPI Metrics",
+      "queryLines": [
+        "WITH kpi_metrics AS (",
+        "  SELECT ",
+        "    SUM(list_cost_usd) as total_cost_usd,",
+        "    COUNT(DISTINCT workspace_key) as active_workspaces,",
+        "    COUNT(DISTINCT entity_key) as active_entities,",
+        "    AVG(list_cost_usd) as avg_daily_cost ",
+        "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
+        "  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        ") ",
+        "SELECT ",
+        "  total_cost_usd,",
+        "  active_workspaces,",
+        "  active_entities,",
+        "  avg_daily_cost ",
+        "FROM kpi_metrics "
+      ]
     }
   ],
   "pages": [
@@ -545,6 +566,238 @@
         },
         {
           "widget": {
+            "name": "overview_total_cost_kpi",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_019",
+                  "fields": [
+                    {
+                      "name": "total_cost_usd",
+                      "expression": "`total_cost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_cost_usd",
+                  "displayName": "total_cost_usd",
+                  "format": {
+                    "type": "number-currency"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Cost (30 days)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_active_workspaces_kpi",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_019",
+                  "fields": [
+                    {
+                      "name": "active_workspaces",
+                      "expression": "`active_workspaces`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "active_workspaces",
+                  "displayName": "active_workspaces",
+                  "format": {
+                    "type": "number"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Active Workspaces"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_active_entities_kpi",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_019",
+                  "fields": [
+                    {
+                      "name": "active_entities",
+                      "expression": "`active_entities`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "active_entities",
+                  "displayName": "active_entities",
+                  "format": {
+                    "type": "number"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Active Entities"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_avg_daily_cost_kpi",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_019",
+                  "fields": [
+                    {
+                      "name": "avg_daily_cost",
+                      "expression": "`avg_daily_cost`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_daily_cost",
+                  "displayName": "avg_daily_cost",
+                  "format": {
+                    "type": "number-currency"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Avg Daily Cost"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_cost_trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "fields": [
+                    {
+                      "name": "date_key",
+                      "expression": "`date_key`"
+                    },
+                    {
+                      "name": "daily_cost_usd",
+                      "expression": "`daily_cost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "date_key",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "axis": {
+                    "title": "Date Key"
+                  },
+                  "displayName": "Date Key"
+                },
+                "y": {
+                  "fieldName": "daily_cost_usd",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Daily Cost Usd"
+                  },
+                  "displayName": "Daily Cost Usd"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cost Trend (30 Days)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
             "name": "overview_total_cost_summary",
             "queries": [
               {
@@ -635,73 +888,13 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Total Cost Summary"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 1,
-            "width": 6,
-            "height": 5
-          }
-        },
-        {
-          "widget": {
-            "name": "overview_cost_trend",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "dataset_002",
-                  "fields": [
-                    {
-                      "name": "date_key",
-                      "expression": "`date_key`"
-                    },
-                    {
-                      "name": "daily_cost_usd",
-                      "expression": "`daily_cost_usd`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "widgetType": "line",
-              "encodings": {
-                "x": {
-                  "fieldName": "date_key",
-                  "scale": {
-                    "type": "temporal"
-                  },
-                  "axis": {
-                    "title": "Date Key"
-                  },
-                  "displayName": "Date Key"
-                },
-                "y": {
-                  "fieldName": "daily_cost_usd",
-                  "scale": {
-                    "type": "quantitative"
-                  },
-                  "axis": {
-                    "title": "Daily Cost Usd"
-                  },
-                  "displayName": "Daily Cost Usd"
-                }
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Cost Trend (30 Days)"
+                "title": "Cost Summary Details"
               }
             }
           },
           "position": {
             "x": 6,
-            "y": 1,
+            "y": 3,
             "width": 6,
             "height": 5
           }
@@ -850,7 +1043,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 8,
             "width": 12,
             "height": 5
           }

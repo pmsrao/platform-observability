@@ -199,6 +199,55 @@ def create_chart_widget(widget_name, title, dataset_name, x_field, y_field, char
         }
     }
 
+def create_counter_widget(widget_name, title, dataset_name, value_field, format_type="number", style_config=None):
+    """Create a counter widget for KPI displays."""
+    spec = {
+        "version": 2,
+        "widgetType": "counter",
+        "encodings": {
+            "value": {
+                "fieldName": value_field,
+                "displayName": value_field
+            }
+        },
+        "frame": {
+            "showTitle": True,
+            "title": title
+        }
+    }
+    
+    # Add format if specified
+    if format_type:
+        spec["encodings"]["value"]["format"] = {
+            "type": format_type
+        }
+    
+    # Add style if specified
+    if style_config:
+        spec["encodings"]["value"]["style"] = style_config
+    
+    return {
+        "widget": {
+            "name": widget_name,
+            "queries": [
+                {
+                    "name": "main_query",
+                    "query": {
+                        "datasetName": dataset_name,
+                        "fields": [
+                            {
+                                "name": value_field,
+                                "expression": f"`{value_field}`"
+                            }
+                        ],
+                        "disaggregated": True
+                    }
+                }
+            ],
+            "spec": spec
+        }
+    }
+
 def generate_comprehensive_dashboard():
     """Generate the comprehensive dashboard JSON."""
     
@@ -229,21 +278,42 @@ def generate_comprehensive_dashboard():
                     **create_filter_widget("filter_workspace", "Workspace", "dataset_007", "workspace_name"),
                     "position": {"x": 3, "y": 0, "width": 3, "height": 1}
                 },
-                # Overview widgets
+                # KPI Counter widgets
                 {
-                    **create_table_widget("overview_total_cost_summary", "Total Cost Summary", "dataset_001", 
-                                        ["metric", "value", "unit"]),
-                    "position": {"x": 0, "y": 1, "width": 6, "height": 5}
+                    **create_counter_widget("overview_total_cost_kpi", "Total Cost (30 days)", "dataset_019", 
+                                          "total_cost_usd", "number-currency"),
+                    "position": {"x": 0, "y": 1, "width": 3, "height": 2}
                 },
+                {
+                    **create_counter_widget("overview_active_workspaces_kpi", "Active Workspaces", "dataset_019", 
+                                          "active_workspaces", "number"),
+                    "position": {"x": 3, "y": 1, "width": 3, "height": 2}
+                },
+                {
+                    **create_counter_widget("overview_active_entities_kpi", "Active Entities", "dataset_019", 
+                                          "active_entities", "number"),
+                    "position": {"x": 6, "y": 1, "width": 3, "height": 2}
+                },
+                {
+                    **create_counter_widget("overview_avg_daily_cost_kpi", "Avg Daily Cost", "dataset_019", 
+                                          "avg_daily_cost", "number-currency"),
+                    "position": {"x": 9, "y": 1, "width": 3, "height": 2}
+                },
+                # Charts and tables
                 {
                     **create_chart_widget("overview_cost_trend", "Cost Trend (30 Days)", "dataset_002", 
                                         "date_key", "daily_cost_usd", "line"),
-                    "position": {"x": 6, "y": 1, "width": 6, "height": 5}
+                    "position": {"x": 0, "y": 3, "width": 6, "height": 5}
+                },
+                {
+                    **create_table_widget("overview_total_cost_summary", "Cost Summary Details", "dataset_001", 
+                                        ["metric", "value", "unit"]),
+                    "position": {"x": 6, "y": 3, "width": 6, "height": 5}
                 },
                 {
                     **create_table_widget("overview_top_cost_centers", "Top Cost Centers", "dataset_003", 
                                         ["cost_center", "line_of_business", "total_cost_usd", "active_entities", "cost_per_entity"]),
-                    "position": {"x": 0, "y": 6, "width": 12, "height": 5}
+                    "position": {"x": 0, "y": 8, "width": 12, "height": 5}
                 }
             ],
             "pageType": "PAGE_TYPE_CANVAS"

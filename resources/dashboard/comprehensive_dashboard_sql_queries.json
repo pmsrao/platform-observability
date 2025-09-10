@@ -426,6 +426,27 @@
         "FROM cost_summary ",
         "ORDER BY cost_center, month "
       ]
+    },
+    "dataset_019": {
+      "name": "dataset_019",
+      "displayName": "KPI Metrics",
+      "queryLines": [
+        "WITH kpi_metrics AS (",
+        "  SELECT ",
+        "    SUM(list_cost_usd) as total_cost_usd,",
+        "    COUNT(DISTINCT workspace_key) as active_workspaces,",
+        "    COUNT(DISTINCT entity_key) as active_entities,",
+        "    AVG(list_cost_usd) as avg_daily_cost ",
+        "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
+        "  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        ") ",
+        "SELECT ",
+        "  total_cost_usd,",
+        "  active_workspaces,",
+        "  active_entities,",
+        "  avg_daily_cost ",
+        "FROM kpi_metrics "
+      ]
     }
   }
 }
