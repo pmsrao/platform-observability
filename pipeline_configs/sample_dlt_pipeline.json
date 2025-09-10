@@ -1,6 +1,6 @@
 {
-  "name": "sample_dlt_pipeline",
-  "description": "Sample DLT pipeline for generating test data for platform observability",
+  "name": "simple_dlt_pipeline",
+  "description": "Simple DLT pipeline for generating billing usage test data",
   "libraries": [
     {
       "notebook": {
@@ -11,28 +11,20 @@
   "target": "platform_observability.plt_bronze",
   "catalog": "platform_observability",
   "configuration": {
-    "spark.databricks.delta.retentionDurationCheck.enabled": "false",
-    "spark.databricks.delta.merge.repartitionBeforeWrite": "true"
+    "spark.databricks.delta.retentionDurationCheck.enabled": "false"
   },
   "clusters": [
     {
       "label": "default",
       "node_type_id": "i3.xlarge",
       "driver_node_type_id": "i3.xlarge",
-      "num_workers": 1,
-      "autoscale": {
-        "min_workers": 1,
-        "max_workers": 2
-      }
+      "num_workers": 0
     }
   ],
   "development": true,
   "continuous": false,
   "photon": false,
-  "edition": "ADVANCED",
+  "edition": "CORE",
   "channel": "CURRENT",
-  "storage_location": "s3://your-bucket/platform-observability/sample-dlt-pipeline",
-  "data_lineage": {
-    "enabled": true
-  }
+  "storage_location": "s3://your-bucket/platform-observability/simple-dlt-pipeline"
 }

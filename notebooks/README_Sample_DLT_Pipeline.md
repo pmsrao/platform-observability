@@ -1,61 +1,22 @@
-# Sample DLT Pipeline for Platform Observability Testing
+# Simple DLT Pipeline for Platform Observability Testing
 
-This directory contains a sample DLT (Delta Live Tables) pipeline designed to generate realistic test data for the platform observability system.
+This directory contains a simple DLT (Delta Live Tables) pipeline designed to generate billing usage test data for the platform observability system.
 
 ## Overview
 
-The sample DLT pipeline generates dummy system data across all the bronze layer tables to help you test and validate the platform observability system. By running this pipeline daily for a few days, you'll accumulate enough data to test the entire data flow from bronze to gold layers.
+The simple DLT pipeline generates only billing usage data in the bronze layer to help you test and validate the platform observability system. By running this pipeline daily for a few days, you'll accumulate enough usage data to test the data flow from bronze to gold layers.
 
 ## Generated Data
 
-The pipeline generates the following types of data:
+The pipeline generates only one type of data:
 
-### 1. **Workspace Data** (`brz_access_workspaces_latest`)
-- 3 test workspaces with realistic names and URLs
-- Account information and creation timestamps
-- Active status and metadata
-
-### 2. **Job Data** (`brz_lakeflow_jobs`)
-- 5 sample jobs with different types (ETL, ML, Analytics, Streaming, Batch)
-- Realistic job names, descriptions, and metadata
-- Tag information for cost attribution testing
-- Creator and ownership information
-
-### 3. **Pipeline Data** (`brz_lakeflow_pipelines`)
-- 3 sample pipelines (DLT, Streaming, Batch)
-- Configuration settings and metadata
-- Tag information for cost attribution testing
-
-### 4. **Cluster Data** (`brz_compute_clusters`)
-- 4 sample clusters with different configurations
-- Various node types and scaling settings
-- Cloud provider attributes (AWS, Azure, GCP)
-- Tag information for cost attribution testing
-
-### 5. **Node Types Data** (`brz_compute_node_types`)
-- 8 different node types with CPU, memory, and GPU specifications
-- Realistic AWS instance types (i3, m5, r5, g4dn series)
-
-### 6. **Usage Data** (`brz_billing_usage`)
-- 200 usage records with realistic timestamps
-- Various SKU types and cloud providers
+### **Usage Data** (`brz_billing_usage`)
+- 50 usage records per run with realistic timestamps
+- Various SKU types (DBU, Standard_DBUs, Premium_DBUs, Serverless_DBUs)
+- Multiple cloud providers (AWS, Azure, GCP)
 - Rich metadata including job runs, clusters, and tags
 - Realistic usage quantities and durations
-
-### 7. **Pricing Data** (`brz_billing_list_prices`)
-- Pricing information for all SKU types across cloud providers
-- Time-based pricing with start/end dates
-- Different pricing tiers (default, promotional, effective)
-
-### 8. **Job Run Data** (`brz_lakeflow_job_run_timeline`)
-- 100 job run records with execution details
-- Various trigger types and result states
-- Realistic execution times and parameters
-
-### 9. **Task Run Data** (`brz_lakeflow_job_task_run_timeline`)
-- 200 task run records with detailed execution information
-- Parent-child relationships with job runs
-- Task-specific metadata and results
+- Complete tag information for cost attribution testing
 
 ## Usage Instructions
 
@@ -63,7 +24,7 @@ The pipeline generates the following types of data:
 
 1. **Open the notebook**: Navigate to `/notebooks/sample_dlt_pipeline.py` in your Databricks workspace
 2. **Configure the environment**: Ensure your configuration is set up correctly
-3. **Run the notebook**: Execute all cells to generate and write sample data
+3. **Run the notebook**: Execute all cells to generate and write usage data
 4. **Repeat daily**: Run this notebook once per day for 3-5 days to accumulate data
 
 ### Option 2: Run as DLT Pipeline
@@ -85,41 +46,37 @@ The pipeline generates the following types of data:
 ## Data Characteristics
 
 ### Realistic Timestamps
-- All data is generated with timestamps from the last 24 hours
-- Job runs and task runs have realistic execution durations
-- Usage data spans different time periods
+- All usage data is generated with timestamps from the last 24 hours
+- Realistic usage durations (30-180 minutes)
+- Proper start and end time relationships
 
 ### Tag Diversity
 - Random selection from predefined tag values
 - Mix of "UNKNOWN" and specific values to test normalization
-- Consistent tagging across related entities
+- Complete tag coverage for cost attribution testing
 
-### Data Relationships
-- Jobs and pipelines are associated with specific workspaces
-- Usage records reference actual job IDs and cluster IDs
-- Job runs and task runs maintain proper parent-child relationships
+### Rich Metadata
+- Complete usage_metadata structure with all required fields
+- Identity metadata for user tracking
+- Product features and billing information
+- Realistic SKU and cloud provider distribution
 
 ### Volume Scaling
-- Adjustable record counts for different data types
-- Configurable number of workspaces, jobs, and clusters
+- 50 usage records per run (easily adjustable)
 - Realistic usage patterns and frequencies
+- Configurable record counts
 
 ## Customization
 
 You can customize the generated data by modifying the following parameters in the notebook:
 
 ```python
-# Adjust data volumes
-num_workspaces = 3
-num_jobs = 5
-num_pipelines = 3
-num_clusters = 4
-num_usage_records = 200
-num_job_runs = 100
-num_task_runs = 200
+# Adjust data volume
+num_records = 50  # Number of usage records per run
 
 # Modify tag values
-job_types = ["ETL", "ML", "Analytics", "Streaming", "Batch"]
+sku_names = ["DBU", "Standard_DBUs", "Premium_DBUs", "Serverless_DBUs"]
+clouds = ["AWS", "Azure", "GCP"]
 environments = ["prod", "dev", "stage", "uat"]
 node_types = ["i3.xlarge", "i3.2xlarge", "m5.large", "m5.xlarge"]
 ```
@@ -129,30 +86,25 @@ node_types = ["i3.xlarge", "i3.2xlarge", "m5.large", "m5.xlarge"]
 After running the pipeline, you can validate the generated data:
 
 ```sql
--- Check data counts
-SELECT 'workspaces' as table_name, count(*) as record_count FROM platform_observability.plt_bronze.brz_access_workspaces_latest
-UNION ALL
-SELECT 'jobs', count(*) FROM platform_observability.plt_bronze.brz_lakeflow_jobs
-UNION ALL
-SELECT 'pipelines', count(*) FROM platform_observability.plt_bronze.brz_lakeflow_pipelines
-UNION ALL
-SELECT 'clusters', count(*) FROM platform_observability.plt_bronze.brz_compute_clusters
-UNION ALL
-SELECT 'usage', count(*) FROM platform_observability.plt_bronze.brz_billing_usage;
+-- Check usage data count
+SELECT count(*) as usage_records FROM platform_observability.plt_bronze.brz_billing_usage;
 
 -- Check data freshness
 SELECT 
-  table_name,
   max(_loaded_at) as latest_load_time,
-  count(*) as total_records
-FROM (
-  SELECT 'workspaces' as table_name, _loaded_at FROM platform_observability.plt_bronze.brz_access_workspaces_latest
-  UNION ALL
-  SELECT 'jobs', _loaded_at FROM platform_observability.plt_bronze.brz_lakeflow_jobs
-  UNION ALL
-  SELECT 'usage', _loaded_at FROM platform_observability.plt_bronze.brz_billing_usage
-) t
-GROUP BY table_name;
+  count(*) as total_records,
+  count(DISTINCT workspace_id) as unique_workspaces,
+  count(DISTINCT sku_name) as unique_skus
+FROM platform_observability.plt_bronze.brz_billing_usage;
+
+-- Check tag distribution
+SELECT 
+  custom_tags.line_of_business,
+  custom_tags.environment,
+  count(*) as record_count
+FROM platform_observability.plt_bronze.brz_billing_usage
+GROUP BY custom_tags.line_of_business, custom_tags.environment
+ORDER BY record_count DESC;
 ```
 
 ## Next Steps
