@@ -116,7 +116,6 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
     entity_id STRING,
     job_run_id STRING,                   -- Renamed from run_id for clarity
     date_sk INT,
-    list_cost_usd DECIMAL(38,18),
     duration_hours DECIMAL(38,18),
     billing_origin_product STRING,
     custom_tags MAP<STRING, STRING>,     -- Renamed from tags
