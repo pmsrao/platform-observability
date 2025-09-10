@@ -1,0 +1,46 @@
+{
+  "datasets": [],
+  "pages": [
+    {
+      "name": "overview-page-001",
+      "displayName": "Overview",
+      "layout": [],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "finance-page-002",
+      "displayName": "Finance & Cost Management",
+      "layout": [],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "platform-page-003",
+      "displayName": "Platform Engineering",
+      "layout": [],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "data-quality-page-004",
+      "displayName": "Data Quality & Governance",
+      "layout": [],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "business-page-005",
+      "displayName": "Business Intelligence",
+      "layout": [],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "operations-page-006",
+      "displayName": "Operations & Performance",
+      "layout": [],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
+}

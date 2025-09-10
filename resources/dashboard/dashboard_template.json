@@ -1,293 +1,852 @@
 {
+  "datasets": [],
   "pages": [
     {
       "name": "overview-page-001",
       "displayName": "Overview",
-      "widgets": [
+      "layout": [
         {
-          "name": "overview_total_cost_summary",
-          "displayName": "Total Cost Summary",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{overview_total_cost_summary}}"
+          "widget": {
+            "name": "filter_date_range",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "fields": [
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "param_start_date",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Date Range"
+              }
             }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 1
           }
         },
         {
-          "name": "overview_cost_trend",
-          "displayName": "Cost Trend (30 Days)",
-          "visualization": {
-            "type": "line",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{overview_cost_trend}}"
+          "widget": {
+            "name": "filter_workspace",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "fields": [
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_name",
+                    "displayName": "workspace_name",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "<ALL>"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
             }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 1
           }
         },
         {
-          "name": "overview_top_cost_centers",
-          "displayName": "Top Cost Centers",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{overview_top_cost_centers}}"
+          "widget": {
+            "name": "overview_total_cost_summary",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "fields": [
+                    {
+                      "name": "metric",
+                      "expression": "`metric`"
+                    },
+                    {
+                      "name": "value",
+                      "expression": "`value`"
+                    },
+                    {
+                      "name": "unit",
+                      "expression": "`unit`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "metric",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 0
+                  },
+                  {
+                    "fieldName": "value",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1
+                  },
+                  {
+                    "fieldName": "unit",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 2
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Cost Summary"
+              }
             }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 5
           }
         },
         {
-          "name": "overview_runtime_health",
-          "displayName": "Runtime Health",
-          "visualization": {
-            "type": "bar",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{overview_runtime_health}}"
+          "widget": {
+            "name": "overview_cost_trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "fields": [
+                    {
+                      "name": "date_key",
+                      "expression": "`date_key`"
+                    },
+                    {
+                      "name": "daily_cost_usd",
+                      "expression": "`daily_cost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "date_key",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "axis": {
+                    "title": "Date"
+                  },
+                  "displayName": "Date"
+                },
+                "y": {
+                  "fieldName": "daily_cost_usd",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Daily Cost (USD)"
+                  },
+                  "displayName": "Daily Cost (USD)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cost Trend (30 Days)"
+              }
             }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "overview_top_cost_centers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "fields": [
+                    {
+                      "name": "cost_center",
+                      "expression": "`cost_center`"
+                    },
+                    {
+                      "name": "line_of_business",
+                      "expression": "`line_of_business`"
+                    },
+                    {
+                      "name": "total_cost_usd",
+                      "expression": "`total_cost_usd`"
+                    },
+                    {
+                      "name": "active_entities",
+                      "expression": "`active_entities`"
+                    },
+                    {
+                      "name": "cost_per_entity",
+                      "expression": "`cost_per_entity`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "cost_center",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 0
+                  },
+                  {
+                    "fieldName": "line_of_business",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1
+                  },
+                  {
+                    "fieldName": "total_cost_usd",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 2
+                  },
+                  {
+                    "fieldName": "active_entities",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 3
+                  },
+                  {
+                    "fieldName": "cost_per_entity",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 4
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top Cost Centers"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 5
           }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     },
     {
       "name": "finance-page-002",
       "displayName": "Finance",
-      "widgets": [
+      "layout": [
         {
-          "name": "finance_monthly_cost_breakdown",
-          "displayName": "Monthly Cost Breakdown",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{finance_monthly_cost_breakdown}}"
+          "widget": {
+            "name": "finance_monthly_cost_breakdown",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "cost_center",
+                      "expression": "`cost_center`"
+                    },
+                    {
+                      "name": "line_of_business",
+                      "expression": "`line_of_business`"
+                    },
+                    {
+                      "name": "total_cost_usd",
+                      "expression": "`total_cost_usd`"
+                    },
+                    {
+                      "name": "active_entities",
+                      "expression": "`active_entities`"
+                    },
+                    {
+                      "name": "cost_per_entity",
+                      "expression": "`cost_per_entity`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "month",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 0
+                  },
+                  {
+                    "fieldName": "cost_center",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1
+                  },
+                  {
+                    "fieldName": "line_of_business",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 2
+                  },
+                  {
+                    "fieldName": "total_cost_usd",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 3
+                  },
+                  {
+                    "fieldName": "active_entities",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 4
+                  },
+                  {
+                    "fieldName": "cost_per_entity",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 5
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly Cost Breakdown"
+              }
             }
-          }
-        },
-        {
-          "name": "finance_daily_cost_trends",
-          "displayName": "Daily Cost Trends",
-          "visualization": {
-            "type": "line",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{finance_daily_cost_trends}}"
-            }
-          }
-        },
-        {
-          "name": "finance_cost_center_analysis",
-          "displayName": "Cost Center Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{finance_cost_center_analysis}}"
-            }
-          }
-        },
-        {
-          "name": "finance_unallocated_cost_analysis",
-          "displayName": "Unallocated Cost Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{finance_unallocated_cost_analysis}}"
-            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 8
           }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     },
     {
-      "name": "platform-page-003",
-      "displayName": "Platform Engineering",
-      "widgets": [
+      "name": "operations-page-003",
+      "displayName": "Operations",
+      "layout": [
         {
-          "name": "platform_runtime_analysis",
-          "displayName": "Runtime Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{platform_runtime_analysis}}"
+          "widget": {
+            "name": "operations_runtime_health",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "fields": [
+                    {
+                      "name": "version_category",
+                      "expression": "`version_category`"
+                    },
+                    {
+                      "name": "runtime_versions",
+                      "expression": "`runtime_versions`"
+                    },
+                    {
+                      "name": "total_clusters",
+                      "expression": "`total_clusters`"
+                    },
+                    {
+                      "name": "total_cost_usd",
+                      "expression": "`total_cost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "version_category",
+                  "scale": {
+                    "type": "ordinal"
+                  },
+                  "axis": {
+                    "title": "Runtime Version Category"
+                  },
+                  "displayName": "Runtime Version Category"
+                },
+                "y": {
+                  "fieldName": "total_clusters",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Number of Clusters"
+                  },
+                  "displayName": "Number of Clusters"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Runtime Health - Cluster Distribution"
+              }
             }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 6
           }
         },
         {
-          "name": "platform_cluster_sizing",
-          "displayName": "Cluster Sizing Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{platform_cluster_sizing}}"
+          "widget": {
+            "name": "operations_job_performance",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "fields": [
+                    {
+                      "name": "job_name",
+                      "expression": "`job_name`"
+                    },
+                    {
+                      "name": "workspace_name",
+                      "expression": "`workspace_name`"
+                    },
+                    {
+                      "name": "total_runs",
+                      "expression": "`total_runs`"
+                    },
+                    {
+                      "name": "avg_duration_hours",
+                      "expression": "`avg_duration_hours`"
+                    },
+                    {
+                      "name": "total_cost_usd",
+                      "expression": "`total_cost_usd`"
+                    },
+                    {
+                      "name": "cost_per_run",
+                      "expression": "`cost_per_run`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "job_name",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 0
+                  },
+                  {
+                    "fieldName": "workspace_name",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1
+                  },
+                  {
+                    "fieldName": "total_runs",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 2
+                  },
+                  {
+                    "fieldName": "avg_duration_hours",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 3
+                  },
+                  {
+                    "fieldName": "total_cost_usd",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 4
+                  },
+                  {
+                    "fieldName": "cost_per_run",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 5
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Job Performance Analysis"
+              }
             }
-          }
-        },
-        {
-          "name": "platform_autoscaling_analysis",
-          "displayName": "Autoscaling Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{platform_autoscaling_analysis}}"
-            }
-          }
-        },
-        {
-          "name": "platform_workflow_hierarchy",
-          "displayName": "Workflow Hierarchy",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{platform_workflow_hierarchy}}"
-            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 8
           }
         }
-      ]
-    },
-    {
-      "name": "data-page-004",
-      "displayName": "Data Quality",
-      "widgets": [
-        {
-          "name": "data_tag_coverage",
-          "displayName": "Tag Coverage Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{data_tag_coverage}}"
-            }
-          }
-        },
-        {
-          "name": "data_usage_patterns",
-          "displayName": "Usage Patterns",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{data_usage_patterns}}"
-            }
-          }
-        },
-        {
-          "name": "data_entity_usage",
-          "displayName": "Entity Usage Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{data_entity_usage}}"
-            }
-          }
-        },
-        {
-          "name": "data_quality_issues",
-          "displayName": "Data Quality Issues",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{data_quality_issues}}"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "business-page-005",
-      "displayName": "Business Intelligence",
-      "widgets": [
-        {
-          "name": "business_unit_performance",
-          "displayName": "Business Unit Performance",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{business_unit_performance}}"
-            }
-          }
-        },
-        {
-          "name": "business_monthly_trends",
-          "displayName": "Monthly Business Trends",
-          "visualization": {
-            "type": "line",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{business_monthly_trends}}"
-            }
-          }
-        },
-        {
-          "name": "business_department_performance",
-          "displayName": "Department Performance",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{business_department_performance}}"
-            }
-          }
-        },
-        {
-          "name": "business_roi_analysis",
-          "displayName": "ROI Analysis",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{business_roi_analysis}}"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "alerts-page-006",
-      "displayName": "Alerts & Monitoring",
-      "widgets": [
-        {
-          "name": "alert_unallocated_cost",
-          "displayName": "Unallocated Cost Alert",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{alert_unallocated_cost}}"
-            }
-          }
-        },
-        {
-          "name": "alert_legacy_runtime",
-          "displayName": "Legacy Runtime Alert",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{alert_legacy_runtime}}"
-            }
-          }
-        },
-        {
-          "name": "alert_tag_coverage",
-          "displayName": "Tag Coverage Alert",
-          "visualization": {
-            "type": "table",
-            "query": {
-              "data_source_id": "platform_observability",
-              "query": "{{alert_tag_coverage}}"
-            }
-          }
-        }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     }
-  ]
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
 }

@@ -1,299 +1,152 @@
-# Platform Observability Dashboard - Modular Approach
+# Platform Observability Dashboard - Updated System
 
-This directory contains a modular approach to creating and managing Databricks Dashboards with separated concerns for better maintainability and flexibility.
+## Overview
 
-## 📁 File Structure
+This updated dashboard system incorporates all learnings from multiple iterations of development and testing. It provides a clean, modular approach to generating Databricks dashboards that import without errors.
+
+## Key Learnings Applied
+
+### 1. SQL Query Formatting
+- **Trailing Spaces**: All SQL keywords must have trailing spaces (`FROM `, `WHERE `, `GROUP BY `, `ORDER BY `, `UNION ALL `)
+- **Date Formatting**: Use `TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd')` for proper date conversion
+- **Division Operations**: Use `try_divide()` instead of `/` to prevent division by zero errors
+- **Column References**: Use correct column names (`entity_key`, `workspace_key`, `date_key`)
+
+### 2. Widget Specifications
+- **Table Widgets**: Use `version: 1` and remove unsupported properties
+- **Chart Widgets**: Use `version: 3` for line and bar charts
+- **Column Encodings**: Only include essential properties (remove `numberFormat`, `allowSearch`, `alignContent`, etc.)
+- **Order Values**: Use simple integers (0, 1, 2, etc.) instead of complex values
+
+### 3. Filter Widgets
+- **Date Picker**: Use `filter-date-picker` with proper parameter binding
+- **Single Select**: Use `filter-single-select` with field binding and default selections
+
+## File Structure
 
 ```
-notebooks/
-├── generate_dashboard_json_corrected.py  # Generator script (corrected format)
-├── deploy_dashboard.py                   # Deployment instructions and utilities
-└── README_Dashboard.md                   # This documentation
-
 resources/dashboard/
-├── dashboard_template_corrected.json     # Dashboard structure (corrected format)
-├── dashboard_sql_statements.json         # All SQL statements with metadata
-├── platform_observability_dashboard.lvdash.json  # Generated final dashboard (corrected)
-├── manual_Dashboard_exp.lvdash.json      # Reference manual export format
-└── dashboard_sql_only.sql                # SQL statements for independent testing
+├── dashboard_sql_queries.json          # All working SQL queries
+├── dashboard_template_updated.json     # Clean dashboard template
+├── platform_observability_dashboard_generated.lvdash.json  # Generated dashboard
+└── platform_observability_dashboard.lvdash.json           # Current working dashboard
+
+notebooks/
+├── generate_dashboard_json_updated.py  # Updated generator script
+└── README_Dashboard_Updated.md         # This documentation
 ```
 
-## 🎯 Benefits of This Approach
+## Usage
 
-### ✅ **Correct Format Implementation**
-- **Based on Manual Export**: Uses the correct `.lvdash.json` format from Databricks manual export
-- **Proper Dataset Structure**: Includes `datasets` section with `queryLines` for SQL queries
-- **Widget Encoding**: Detailed field encodings for proper display and functionality
-
-### ✅ **Separation of Concerns**
-- **Dashboard Structure**: Defined in `dashboard_template_corrected.json`
-- **SQL Logic**: Managed in `dashboard_sql_statements.json`
-- **Generation Logic**: Handled by `generate_dashboard_json_corrected.py`
-
-### ✅ **Independent SQL Validation**
-- Test SQL queries before dashboard creation
-- Validate syntax and references
-- Ensure data availability and accuracy
-
-### ✅ **Reusable Components**
-- Same SQL statement can be used in multiple widgets
-- Easy to create dashboard variants
-- Consistent query logic across widgets
-
-### ✅ **Version Control Friendly**
-- Track changes to SQL separately from dashboard structure
-- Easy to review and merge changes
-- Clear history of modifications
-
-### ✅ **Dynamic Generation**
-- Generate different dashboard versions
-- A/B testing capabilities
-- Environment-specific configurations
-
-## 🚀 Quick Start
-
-### 1. Generate Dashboard JSON
-
-Run the generator notebook to create the final dashboard JSON:
-
-```python
-# In Databricks, run the generate_dashboard_json.py notebook
-# This will:
-# - Validate all SQL statements
-# - Check SQL references
-# - Generate the final dashboard JSON in resources/dashboard/
-# - Create a SQL-only file for testing
+### 1. Generate Dashboard
+```bash
+cd notebooks
+python generate_dashboard_json_updated.py
 ```
 
-### 2. Test SQL Statements
+### 2. Import to Databricks
+1. Copy the generated `platform_observability_dashboard_generated.lvdash.json` file
+2. In Databricks, go to Dashboards → Import Dashboard
+3. Upload the JSON file
+4. The dashboard should import without errors
 
-Use the generated SQL-only file to test queries independently:
+## Dashboard Structure
 
-```sql
--- Test individual queries in Databricks SQL
--- File: resources/dashboard/dashboard_sql_only.sql
-```
+### Overview Tab
+- **Date Range Filter**: Filter by date range
+- **Workspace Filter**: Filter by workspace (defaults to "All")
+- **Total Cost Summary**: KPI metrics table
+- **Cost Trend**: Line chart showing daily costs
+- **Top Cost Centers**: Table with cost center analysis
 
-### 3. Deploy Dashboard
+### Finance Tab
+- **Monthly Cost Breakdown**: Detailed monthly cost analysis by cost center and line of business
 
-Follow the deployment instructions in `deploy_dashboard.py`:
+### Operations Tab
+- **Runtime Health**: Bar chart showing cluster distribution by DBR version
+- **Job Performance Analysis**: Table with job execution metrics and costs
 
-- **Manual Import**: Upload `resources/dashboard/platform_observability_dashboard.json` to Databricks Dashboard UI
-- **Programmatic**: Use Databricks REST API (advanced)
+## SQL Queries Included
 
-## 📊 Dashboard Structure
+1. **Total Cost Summary**: 30-day cost metrics with KPIs
+2. **Cost Trend**: Daily cost trends with 7-day rolling average
+3. **Top Cost Centers**: Cost center analysis with entity counts
+4. **Runtime Health**: DBR version distribution and cluster analysis
+5. **Monthly Cost Breakdown**: 3-month cost trends by cost center
+6. **Job Performance Analysis**: Job execution metrics and costs
+7. **Filter Parameters**: Workspace list for filtering
 
-### Tabs and Personas
+## Key Features
 
-| Tab | Target Persona | Key Metrics |
-|-----|----------------|-------------|
-| **Overview** | All Users | Total cost, active workspaces, cost trends |
-| **Finance** | Finance Team | Cost allocation, chargeback, budget tracking |
-| **Platform** | Platform Engineers | Runtime analysis, cluster sizing, optimization |
-| **Data** | Data Engineers | Tag coverage, usage patterns, data quality |
-| **Business** | Business Stakeholders | ROI analysis, department performance |
+### ✅ Error-Free Import
+- All SQL syntax issues resolved
+- Proper widget specifications
+- Clean column encodings
+- Correct data type handling
 
-### Widget Types
+### ✅ Comprehensive Filtering
+- Date range filtering
+- Workspace selection
+- Default values for better UX
 
-- **Tables**: Detailed data with sorting and search
-- **Line Charts**: Trend analysis with time series
-- **Bar Charts**: Comparative analysis
-- **Pie Charts**: Distribution analysis
+### ✅ Multi-Tab Structure
+- Overview: High-level metrics and trends
+- Finance: Detailed cost analysis
+- Operations: Runtime health and job performance
 
-## 🔧 Customization
+### ✅ Proper Data Sources
+- Uses correct dimension tables (`gld_dim_entity` instead of `gld_dim_job`)
+- Proper column references (`entity_key`, `workspace_key`, `date_key`)
+- Efficient queries with appropriate joins
+
+## Customization
+
+### Adding New Queries
+1. Add the SQL query to `dashboard_sql_queries.json`
+2. Add the dataset to the template in `dashboard_template_updated.json`
+3. Create the widget specification
+4. Run the generator script
+
+### Modifying Existing Queries
+1. Update the SQL in `dashboard_sql_queries.json`
+2. Ensure proper spacing and formatting
+3. Run the generator script
 
 ### Adding New Widgets
+1. Add the widget specification to the appropriate page in the template
+2. Ensure proper positioning and sizing
+3. Use correct widget versions and encodings
+4. Run the generator script
 
-1. **Add SQL Statement**:
-   ```json
-   // In dashboard_sql_statements.json
-   "new_widget_sql": {
-     "description": "Description of the new widget",
-     "category": "overview|finance|platform|data|business|alert",
-     "sql": "SELECT ... FROM ..."
-   }
-   ```
+## Troubleshooting
 
-2. **Add Widget Reference**:
-   ```json
-   // In dashboard_template.json
-   {
-     "id": "new_widget",
-     "name": "New Widget",
-     "type": "table",
-     "query": {
-       "sqlRef": "new_widget_sql"
-     }
-   }
-   ```
+### Common Issues
+1. **SQL Syntax Errors**: Check for missing trailing spaces after keywords
+2. **Column Not Found**: Verify column names match the actual table schema
+3. **Widget Import Errors**: Ensure widget specifications match Databricks requirements
+4. **Date Format Errors**: Use proper date conversion functions
 
-3. **Regenerate Dashboard**:
-   ```python
-   # Run generate_dashboard_json.py
-   ```
+### Validation
+The generator script includes validation to ensure:
+- Proper JSON structure
+- Required fields are present
+- Datasets and pages are correctly formatted
 
-### Modifying Existing Widgets
+## Best Practices
 
-1. **Update SQL**: Modify the SQL in `dashboard_sql_statements.json`
-2. **Update Structure**: Modify widget properties in `dashboard_template.json`
-3. **Regenerate**: Run the generator script
+1. **Always test queries** in Databricks SQL editor before adding to dashboard
+2. **Use proper spacing** in SQL queries to avoid parsing errors
+3. **Keep widget specifications simple** - only include supported properties
+4. **Use meaningful field names** and display names
+5. **Test dashboard import** after any changes
+6. **Document any customizations** for future reference
 
-### Creating Dashboard Variants
+## Support
 
-1. **Copy Template**: Create a new template file
-2. **Modify Structure**: Adjust tabs, widgets, or layout
-3. **Use Same SQL**: Reference existing SQL statements
-4. **Generate Variant**: Create a new dashboard JSON
+For issues or questions:
+1. Check the SQL queries in Databricks SQL editor
+2. Validate JSON syntax
+3. Review widget specifications against Databricks documentation
+4. Test with minimal dashboard first, then add complexity
 
-## 🧪 Testing and Validation
-
-### SQL Validation
-
-The generator script performs several validations:
-
-- **Syntax Validation**: Basic SQL syntax checking
-- **Reference Validation**: Ensures all SQL references exist
-- **Balance Checking**: Validates parentheses and quotes
-
-### Data Validation
-
-Before deployment, ensure:
-
-- ✅ Gold layer data is fresh and complete
-- ✅ All referenced tables exist
-- ✅ Column names and types match queries
-- ✅ Data ranges are appropriate
-
-### Performance Testing
-
-- Test queries with production data volumes
-- Optimize slow-performing queries
-- Consider materialized views for complex aggregations
-
-## 📈 Maintenance
-
-### Regular Updates
-
-1. **Monthly**: Review and update SQL queries for new requirements
-2. **Quarterly**: Assess dashboard usage and user feedback
-3. **Annually**: Major dashboard redesign and optimization
-
-### Monitoring
-
-Track these metrics:
-
-- **Usage**: Daily active users, widget views, session duration
-- **Performance**: Query execution times, refresh success rates
-- **Business Impact**: Cost reduction, data quality improvements
-
-### Troubleshooting
-
-Common issues and solutions:
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Widget not loading | SQL error | Test query independently |
-| Access denied | Permission issue | Check table ACLs |
-| Slow performance | Large datasets | Optimize queries, add filters |
-| Stale data | Refresh issues | Check Gold layer pipeline |
-
-## 🔐 Security and Access Control
-
-### Table Permissions
-
-Ensure dashboard users have appropriate access:
-
-```sql
--- Example: Grant read access to Gold layer tables
-GRANT SELECT ON platform_observability.plt_gold.gld_fact_usage_priced_day TO `dashboard_users`;
-GRANT SELECT ON platform_observability.plt_gold.gld_dim_cluster TO `dashboard_users`;
-```
-
-### Dashboard Access
-
-Configure access by persona:
-
-- **Overview**: All authenticated users
-- **Finance**: Finance team members
-- **Platform**: Platform engineers and DevOps
-- **Data**: Data engineers and analysts
-- **Business**: Business stakeholders and executives
-
-## 🚀 Advanced Features
-
-### Dynamic Parameters
-
-Consider adding parameterized queries for:
-
-- Date range selection
-- Workspace filtering
-- Cost center filtering
-- Environment selection
-
-### Real-time Updates
-
-For real-time monitoring:
-
-- Use streaming data sources
-- Implement incremental refresh
-- Set up alerting mechanisms
-
-### Machine Learning Integration
-
-Future enhancements:
-
-- Cost prediction models
-- Anomaly detection
-- Optimization recommendations
-- Trend forecasting
-
-## 📚 Resources
-
-### Documentation
-
-- [Databricks Dashboard Documentation](https://docs.databricks.com/dashboards/index.html)
-- [SQL Widget Configuration](https://docs.databricks.com/dashboards/widgets.html)
-- [Dashboard Permissions](https://docs.databricks.com/security/access-control/dashboard-acl.html)
-
-### Best Practices
-
-- Keep SQL queries simple and efficient
-- Use appropriate refresh intervals
-- Implement proper error handling
-- Monitor dashboard performance
-- Collect user feedback regularly
-
-## 🤝 Contributing
-
-### Adding New Features
-
-1. Create feature branch
-2. Update SQL statements and template
-3. Test thoroughly
-4. Submit pull request
-5. Update documentation
-
-### Reporting Issues
-
-When reporting issues, include:
-
-- Dashboard version
-- Error messages
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment details
-
-## 📞 Support
-
-For questions or issues:
-
-1. Check this documentation
-2. Review troubleshooting section
-3. Test SQL statements independently
-4. Contact platform observability team
-
----
-
-**Last Updated**: 2025-01-08  
-**Version**: 1.0  
-**Maintainer**: Platform Observability Team
+This updated system provides a solid foundation for creating and maintaining Databricks dashboards with minimal errors and maximum functionality.

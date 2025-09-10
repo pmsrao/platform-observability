@@ -9,7 +9,7 @@
         "    SUM(list_cost_usd) as total_cost_usd,",
         "    COUNT(DISTINCT workspace_key) as active_workspaces,",
         "    COUNT(DISTINCT entity_key) as active_entities,",
-        "    AVG(list_cost_usd) as avg_daily_cost",
+        "    AVG(list_cost_usd) as avg_daily_cost ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
         "  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
         ") ",
@@ -80,11 +80,11 @@
         "    COUNT(DISTINCT c.cluster_key) as cluster_count,",
         "    SUM(f.list_cost_usd) as total_cost,",
         "    CASE ",
-        "      WHEN c.dbr_version LIKE '%13.%' THEN 'Current'",
-        "      WHEN c.dbr_version LIKE '%12.%' THEN 'Recent'",
-        "      WHEN c.dbr_version LIKE '%11.%' THEN 'Older'",
-        "      ELSE 'Legacy'",
-        "    END as version_category",
+        "      WHEN c.dbr_version LIKE '%13.%' THEN 'Current' ",
+        "      WHEN c.dbr_version LIKE '%12.%' THEN 'Recent' ",
+        "      WHEN c.dbr_version LIKE '%11.%' THEN 'Older' ",
+        "      ELSE 'Legacy' ",
+        "    END as version_category ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day f ",
         "  JOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key ",
         "  WHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
@@ -927,25 +927,25 @@
                     "visible": true,
                     "order": 2
                   },
-                    {
-                      "fieldName": "avg_duration_hours",
-                      "booleanValues": [
-                        "false",
-                        "true"
-                      ],
-                      "imageUrlTemplate": "{{ @ }}",
-                      "imageTitleTemplate": "{{ @ }}",
-                      "imageWidth": "",
-                      "imageHeight": "",
-                      "linkUrlTemplate": "{{ @ }}",
-                      "linkTextTemplate": "{{ @ }}",
-                      "linkTitleTemplate": "{{ @ }}",
-                      "linkOpenInNewTab": true,
-                      "type": "decimal",
-                      "displayAs": "number",
-                      "visible": true,
-                      "order": 3
-                    },
+                  {
+                    "fieldName": "avg_duration_hours",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "decimal",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 3
+                  },
                   {
                     "fieldName": "total_cost_usd",
                     "booleanValues": [
