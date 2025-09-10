@@ -14,12 +14,12 @@ WHEN MATCHED AND T.row_hash != S.row_hash THEN
         T._loaded_at = CURRENT_TIMESTAMP()
 WHEN NOT MATCHED THEN
     INSERT (
-        cloud, sku_name, usage_unit, pricing,
+        cloud,account_id,currency_code,sku_name, usage_unit, pricing,
         price_start_time, price_end_time,
         row_hash, _loaded_at
     )
     VALUES (
-        S.cloud, S.sku_name, S.usage_unit, S.pricing,
+        S.cloud, S.account_id, S.currency_code, S.sku_name, S.usage_unit, S.pricing,
         S.price_start_time, S.price_end_time,
         S.row_hash, CURRENT_TIMESTAMP()
     )
