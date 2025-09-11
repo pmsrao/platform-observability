@@ -424,7 +424,7 @@ def generate_comprehensive_dashboard():
                 # Project cost tracking
                 {
                     **create_table_widget("business_project_tracking", "Project Cost Tracking", "dataset_017", 
-                                        ["month", "line_of_business", "sub_project", "project_cost_usd", "active_entities", "active_workspaces"]),
+                                        ["month", "line_of_business", "department", "project_cost_usd", "active_entities", "active_workspaces"]),
                     "position": {"x": 0, "y": 6, "width": 12, "height": 6}
                 }
             ],
