@@ -228,19 +228,35 @@ class EntityCostFactBuilder(FactBuilder):
         try:
             # Read from Silver usage transaction table and aggregate
             silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_usage_txn")
+            silver_price_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_price_scd")
             
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
             entity_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_entity")
             
             # Aggregate by entity
-            aggregated_df = (silver_df
-                .groupBy("date_sk", "account_id", "workspace_id", "entity_type", "entity_id")
-                .agg(
-                    # MEASURES
-                    F.sum("list_cost_usd").alias("list_cost_usd"),
-                    F.countDistinct("job_run_id").alias("runs_count")
-                )
+            aggregated_df = (silver_df.join(silver_price_df, 
+                                            (silver_df.sku_name == silver_price_df.sku_name) & 
+                                            (silver_df.account_id == silver_price_df.account_id) & 
+                                            (silver_df.usage_unit == silver_price_df.usage_unit) & 
+                                            (silver_df.usage_start_time >= silver_price_df.price_start_time) & 
+                                            ((silver_df.usage_start_time < silver_price_df.price_end_time) | 
+                                             silver_price_df.price_end_time.isNull()))
+                             .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd"))
+                             .select(
+                                 silver_df.date_sk, 
+                                 silver_df.account_id, 
+                                 silver_df.workspace_id, 
+                                 silver_df.entity_type, 
+                                 silver_df.entity_id,
+                                 silver_df.job_run_id,
+                                 F.col("usage_cost")
+                             )
+                             .groupBy("date_sk", "account_id", "workspace_id", "entity_type", "entity_id")
+                             .agg(
+                                 F.sum("usage_cost").alias("usage_cost"),
+                                 F.countDistinct("job_run_id").alias("runs_count")
+                             )
             )
             
             # Join with dimensions using SCD2 temporal logic
@@ -261,7 +277,7 @@ class EntityCostFactBuilder(FactBuilder):
                     F.col("date_sk").alias("date_key"),
                     F.col("workspace_key"),
                     F.col("entity_key"),
-                    F.col("list_cost_usd"),
+                    F.col("usage_cost"),
                     F.col("runs_count")
                 )
             )

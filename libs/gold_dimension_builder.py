@@ -212,7 +212,7 @@ class SKUDimensionBuilder(DimensionBuilder):
         """Build SKU dimension from Silver layer"""
         try:
             # Read from Silver usage transaction table
-            silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_usage_txn")
+            silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_price_scd")
             
             # Transform to dimension format
             dim_df = silver_df.select(
@@ -220,14 +220,14 @@ class SKUDimensionBuilder(DimensionBuilder):
                 F.col("cloud"),
                 F.col("sku_name"),
                 F.col("usage_unit"),
-                F.col("billing_origin_product"),
-                F.lit("USD").alias("currency_code"),  # Default currency
-                F.lit(None).cast(DecimalType(38, 18)).alias("current_price_usd"),  # Will be populated from pricing data
-                F.current_date().alias("price_effective_date")
+                F.col("currency_code"),  # Default currency
+                F.col("price_usd").cast(DecimalType(38, 18)).alias("current_price_usd"), 
+                F.to_date(F.col("price_start_time")).alias("price_effective_from"),
+                F.to_date(F.col("price_end_time")).alias("price_effective_till")
             ).distinct()
             
             # Upsert dimension
-            return self.upsert_dimension(dim_df, "gld_dim_sku", ["sku_name", "cloud"])
+            return self.upsert_dimension(dim_df, "gld_dim_sku", ["sku_name", "cloud", "account_id", "usage_unit", "currency_code", "price_effective_from"])
             
         except Exception as e:
             print(f"Error building SKU dimension: {str(e)}")

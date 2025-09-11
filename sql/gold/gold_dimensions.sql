@@ -40,16 +40,16 @@ TBLPROPERTIES (
 );
 
 -- SKU Dimension
-CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_sku (
+CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_sku(
     sku_key BIGINT GENERATED ALWAYS AS IDENTITY,  -- Surrogate key
     account_id STRING,
     cloud STRING,
     sku_name STRING,                    -- Natural key
     usage_unit STRING,
     currency_code STRING,
-    billing_origin_product STRING,
     current_price_usd DECIMAL(38,18),
-    price_effective_date DATE
+    price_effective_from TIMESTAMP,
+    price_effective_till TIMESTAMP
 )
 USING DELTA
 PARTITIONED BY (cloud);

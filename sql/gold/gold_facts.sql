@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_entity_cost (
     workspace_key BIGINT,
     entity_key BIGINT,
     -- MEASURES
-    list_cost_usd DECIMAL(38,18),
+    usage_cost DECIMAL(38,18),
     runs_count BIGINT
 )
 USING DELTA
