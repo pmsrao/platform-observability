@@ -139,40 +139,57 @@ class UsageFactBuilder(FactBuilder):
                 print("No new data to process for gld_fact_usage_priced_day")
                 return True
             
+            # Get price data for cost calculation
+            silver_price_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_price_scd")
+            
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
             entity_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_entity")
             cluster_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_cluster").drop("cloud")
             sku_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_sku")
             
+            # Join with price data to calculate usage_cost
+            silver_with_cost = (silver_df.join(silver_price_df, 
+                                            (silver_df.sku_name == silver_price_df.sku_name) & 
+                                            (silver_df.account_id == silver_price_df.account_id) & 
+                                            (silver_df.usage_unit == silver_price_df.usage_unit) & 
+                                            (silver_df.usage_start_time >= silver_price_df.price_start_time) & 
+                                            ((silver_df.usage_start_time < silver_price_df.price_end_time) | 
+                                             silver_price_df.price_end_time.isNull()))
+                             .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
+            
             # Join with dimensions using SCD2 temporal logic
-            fact_df = (silver_df.alias("slv_usage_txn")
+            fact_df = (silver_with_cost.alias("slv_usage_txn")
                 # Workspace dimension join (no SCD2 needed - workspace doesn't change frequently)
                 .join(workspace_dim, 
-                      (silver_df.workspace_id == workspace_dim.workspace_id) & 
-                      (silver_df.account_id == workspace_dim.account_id), 
+                      (silver_with_cost.workspace_id == workspace_dim.workspace_id) & 
+                      (silver_with_cost.account_id == workspace_dim.account_id), 
                       "left")
                 # Entity dimension join with SCD2 temporal logic
                 .join(entity_dim, 
-                      (silver_df.workspace_id == entity_dim.workspace_id) & 
-                      (silver_df.entity_type == entity_dim.entity_type) & 
-                      (silver_df.entity_id == entity_dim.entity_id) &
+                      (silver_with_cost.workspace_id == entity_dim.workspace_id) & 
+                      (silver_with_cost.entity_type == entity_dim.entity_type) & 
+                      (silver_with_cost.entity_id == entity_dim.entity_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_df.usage_start_time) >= entity_dim.valid_from) &
-                      ((entity_dim.valid_to.isNull()) | (F.to_date(silver_df.usage_start_time) < entity_dim.valid_to)), 
+                      (F.to_date(silver_with_cost.usage_start_time) >= entity_dim.valid_from) &
+                      ((entity_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < entity_dim.valid_to)), 
                       "left")
                 # Cluster dimension join with SCD2 temporal logic
                 .join(cluster_dim, 
-                      (silver_df.workspace_id == cluster_dim.workspace_id) & 
-                      (silver_df.cluster_identifier == cluster_dim.cluster_id) &
+                      (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
+                      (silver_with_cost.cluster_identifier == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_df.usage_start_time) >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_df.usage_start_time) < cluster_dim.valid_to)), 
+                      (F.to_date(silver_with_cost.usage_start_time) >= cluster_dim.valid_from) &
+                      ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < cluster_dim.valid_to)), 
                       "left")
-                # SKU dimension join (no SCD2 needed - SKU attributes are stable)
+                # SKU dimension join with temporal pricing logic
                 .join(sku_dim, 
-                      (silver_df.sku_name == sku_dim.sku_name) & 
-                      (silver_df.cloud == sku_dim.cloud), 
+                      (silver_with_cost.sku_name == sku_dim.sku_name) & 
+                      (silver_with_cost.cloud == sku_dim.cloud) &
+                      (silver_with_cost.usage_unit == sku_dim.usage_unit) &
+                      # Temporal condition: usage_start_time <= price_effective_from and > price_effective_till or price_effective_till is null
+                      (silver_with_cost.usage_start_time <= sku_dim.price_effective_from) &
+                      ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time > sku_dim.price_effective_till)), 
                       "left")
                 .select(
                     # FOREIGN KEYS (surrogate keys to dimensions)
@@ -199,7 +216,7 @@ class UsageFactBuilder(FactBuilder):
                     F.col("parent_workflow_name"),
                     # MEASURES
                     F.col("usage_quantity"),
-                    F.col("list_cost_usd"),
+                    F.col("usage_cost"),
                     F.col("duration_hours")
                 )
             )
@@ -305,36 +322,53 @@ class RunCostFactBuilder(FactBuilder):
                 print("No new data to process for gld_fact_run_cost")
                 return True
             
+            # Get price data for cost calculation
+            silver_price_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_price_scd")
+            
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
             entity_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_entity")
             cluster_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_cluster")
             sku_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_sku")
             
+            # Join with price data to calculate usage_cost
+            silver_with_cost = (silver_df.join(silver_price_df, 
+                                            (silver_df.sku_name == silver_price_df.sku_name) & 
+                                            (silver_df.account_id == silver_price_df.account_id) & 
+                                            (silver_df.usage_unit == silver_price_df.usage_unit) & 
+                                            (silver_df.usage_start_time >= silver_price_df.price_start_time) & 
+                                            ((silver_df.usage_start_time < silver_price_df.price_end_time) | 
+                                             silver_price_df.price_end_time.isNull()))
+                             .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
+            
             # Join with dimensions using SCD2 temporal logic
-            fact_df = (silver_df.alias("slv_usage_txn")
+            fact_df = (silver_with_cost.alias("slv_usage_txn")
                 .join(workspace_dim, 
-                      (silver_df.workspace_id == workspace_dim.workspace_id) & 
-                      (silver_df.account_id == workspace_dim.account_id), 
+                      (silver_with_cost.workspace_id == workspace_dim.workspace_id) & 
+                      (silver_with_cost.account_id == workspace_dim.account_id), 
                       "left")
                 .join(entity_dim, 
-                      (silver_df.workspace_id == entity_dim.workspace_id) & 
-                      (silver_df.entity_type == entity_dim.entity_type) & 
-                      (silver_df.entity_id == entity_dim.entity_id) &
+                      (silver_with_cost.workspace_id == entity_dim.workspace_id) & 
+                      (silver_with_cost.entity_type == entity_dim.entity_type) & 
+                      (silver_with_cost.entity_id == entity_dim.entity_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_df.usage_start_time) >= entity_dim.valid_from) &
-                      ((entity_dim.valid_to.isNull()) | (F.to_date(silver_df.usage_start_time) < entity_dim.valid_to)), 
+                      (F.to_date(silver_with_cost.usage_start_time) >= entity_dim.valid_from) &
+                      ((entity_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < entity_dim.valid_to)), 
                       "left")
                 .join(cluster_dim, 
-                      (silver_df.workspace_id == cluster_dim.workspace_id) & 
-                      (silver_df.cluster_identifier == cluster_dim.cluster_id) &
+                      (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
+                      (silver_with_cost.cluster_identifier == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_df.usage_start_time) >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_df.usage_start_time) < cluster_dim.valid_to)), 
+                      (F.to_date(silver_with_cost.usage_start_time) >= cluster_dim.valid_from) &
+                      ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < cluster_dim.valid_to)), 
                       "left")
                 .join(sku_dim, 
-                      (silver_df.sku_name == sku_dim.sku_name) & 
-                      (silver_df.cloud == sku_dim.cloud), 
+                      (silver_with_cost.sku_name == sku_dim.sku_name) & 
+                      (silver_with_cost.cloud == sku_dim.cloud) &
+                      (silver_with_cost.usage_unit == sku_dim.usage_unit) &
+                      # Temporal condition: usage_start_time <= price_effective_from and > price_effective_till or price_effective_till is null
+                      (silver_with_cost.usage_start_time <= sku_dim.price_effective_from) &
+                      ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time > sku_dim.price_effective_till)), 
                       "left")
                 .select(
                     F.col("date_sk").alias("date_key"),
@@ -346,7 +380,7 @@ class RunCostFactBuilder(FactBuilder):
                     F.col("slv_usage_txn.cloud"),
                     F.col("slv_usage_txn.usage_unit"),
                     # MEASURES
-                    F.col("list_cost_usd"),
+                    F.col("usage_cost"),
                     F.col("usage_quantity"),
                     F.col("duration_hours")
                 )
@@ -374,8 +408,37 @@ class RunStatusCostFactBuilder(FactBuilder):
     def build(self) -> bool:
         """Build run status cost fact table from Silver layer"""
         try:
-            # Read from Silver job run timeline table
-            silver_df = (self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_job_run_timeline").withColumnRenamed("date_sk_end", "date_sk").withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type"))).withColumnRenamed("job_id", "entity_id").withColumn("result_state_cost_usd", F.lit(None)))
+            # Read from Silver job run timeline table and join with usage data to get costs
+            silver_usage_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_usage_txn")
+            silver_price_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_price_scd")
+            silver_job_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_job_run_timeline")
+            
+            # Calculate usage cost by joining usage with price data
+            usage_with_cost = (silver_usage_df.join(silver_price_df, 
+                                            (silver_usage_df.sku_name == silver_price_df.sku_name) & 
+                                            (silver_usage_df.account_id == silver_price_df.account_id) & 
+                                            (silver_usage_df.usage_unit == silver_price_df.usage_unit) & 
+                                            (silver_usage_df.usage_start_time >= silver_price_df.price_start_time) & 
+                                            ((silver_usage_df.usage_start_time < silver_price_df.price_end_time) | 
+                                             silver_price_df.price_end_time.isNull()))
+                             .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
+            
+            # Aggregate usage cost by job run
+            run_costs = (usage_with_cost
+                        .groupBy("workspace_id", "account_id", "job_run_id")
+                        .agg(F.sum("usage_cost").alias("usage_cost")))
+            
+            # Join job run timeline with calculated costs
+            silver_df = (silver_job_df
+                        .withColumnRenamed("date_sk_end", "date_sk")
+                        .withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type")))
+                        .withColumnRenamed("job_id", "entity_id")
+                        .join(run_costs, 
+                              (silver_job_df.workspace_id == run_costs.workspace_id) & 
+                              (silver_job_df.account_id == run_costs.account_id) & 
+                              (silver_job_df.job_run_id == run_costs.job_run_id), 
+                              "left")
+                        .withColumn("usage_cost", F.coalesce(F.col("usage_cost"), F.lit(0.0))))
             
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
@@ -405,7 +468,7 @@ class RunStatusCostFactBuilder(FactBuilder):
                     F.col("entity_key"),
                     F.col("run_status_key"),
                     F.col("job_run_id"),
-                    F.col("result_state_cost_usd")
+                    F.col("usage_cost")
                 )
             )
             

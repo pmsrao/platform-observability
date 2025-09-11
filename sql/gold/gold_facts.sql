@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_usage_priced_day (
     parent_workflow_name STRING,
     -- MEASURES
     usage_quantity DECIMAL(38,18),
-    list_cost_usd DECIMAL(38,18),
+    usage_cost DECIMAL(38,18),
     duration_hours DECIMAL(38,18)
 )
 USING DELTA
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_run_cost (
     cloud STRING,
     usage_unit STRING,
     -- MEASURES
-    list_cost_usd DECIMAL(38,18),
+    usage_cost DECIMAL(38,18),
     usage_quantity DECIMAL(38,18),
     duration_hours DECIMAL(38,18)
 )
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_run_status_cost (
     run_status_key BIGINT,
     job_run_id STRING,
     -- MEASURES
-    result_state_cost_usd DECIMAL(38,18)
+    usage_cost DECIMAL(38,18)
 )
 USING DELTA
 PARTITIONED BY (date_key);
