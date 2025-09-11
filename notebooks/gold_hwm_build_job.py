@@ -53,10 +53,10 @@ def build_gold_layer():
             builder.build()
         
         # Build views
-        view_types = ["chargeback", "runtime_analysis"]
-        for view_type in view_types:
-            builder = ViewBuilderFactory.create_builder(view_type, spark, config)
-            builder.build_all()
+        # view_types = ["chargeback", "runtime_analysis"]
+        # for view_type in view_types:
+        #     builder = ViewBuilderFactory.create_builder(view_type, spark, config)
+        #     builder.build_all()
         
         results["success"] = True
         

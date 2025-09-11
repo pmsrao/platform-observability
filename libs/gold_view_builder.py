@@ -51,9 +51,9 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.department as department_code,
                 w.workspace_name,
                 f.date_key,
-                SUM(f.list_cost_usd) as department_total_cost,
+                SUM(f.usage_cost) as department_total_cost,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -70,8 +70,8 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.environment,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                SUM(f.usage_cost) as total_cost_usd,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -87,8 +87,8 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.line_of_business,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                SUM(f.usage_cost) as total_cost_usd,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -105,8 +105,8 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.department,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                SUM(f.usage_cost) as total_cost_usd,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -123,8 +123,8 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.department,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                SUM(f.usage_cost) as total_cost_usd,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -170,7 +170,7 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.cluster_identifier,
                 f.workflow_level,
                 f.parent_workflow_name,
-                f.list_cost_usd
+                f.usage_cost
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
             JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
@@ -213,8 +213,8 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.department,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                SUM(f.usage_cost) as total_cost_usd,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -232,8 +232,8 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.line_of_business,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                SUM(f.usage_cost) as total_cost_usd,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -251,8 +251,8 @@ class ChargebackViewBuilder(ViewBuilder):
                 f.cost_center,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
-                AVG(f.list_cost_usd) as avg_cost_per_entity,
+                SUM(f.usage_cost) as total_cost_usd,
+                AVG(f.usage_cost) as avg_cost_per_entity,
                 SUM(f.duration_hours) as total_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
             JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
@@ -289,7 +289,7 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 f.environment,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
+                SUM(f.usage_cost) as total_cost_usd,
                 SUM(f.duration_hours) as total_duration_hours,
                 -- Upgrade priority logic
                 CASE 
@@ -332,7 +332,7 @@ class RuntimeAnalysisViewBuilder(ViewBuilder):
                 f.environment,
                 COUNT(DISTINCT w.workspace_id) as active_workspaces,
                 COUNT(DISTINCT e.entity_id) as active_entities,
-                SUM(f.list_cost_usd) as total_cost_usd,
+                SUM(f.usage_cost) as total_cost_usd,
                 SUM(f.duration_hours) as total_duration_hours,
                 AVG(f.duration_hours) as avg_duration_hours
             FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f

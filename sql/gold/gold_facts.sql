@@ -19,13 +19,11 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_usage_priced_day (
     environment STRING,
     use_case STRING,
     pipeline_name STRING,
-    cluster_identifier STRING,
     workflow_level STRING,
     parent_workflow_name STRING,
     -- MEASURES
     usage_quantity DECIMAL(38,18),
-    usage_cost DECIMAL(38,18),
-    duration_hours DECIMAL(38,18)
+    usage_cost DECIMAL(38,18)
 )
 USING DELTA
 PARTITIONED BY (date_key, cloud);
@@ -54,8 +52,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_run_cost (
     usage_unit STRING,
     -- MEASURES
     usage_cost DECIMAL(38,18),
-    usage_quantity DECIMAL(38,18),
-    duration_hours DECIMAL(38,18)
+    usage_quantity DECIMAL(38,18)
 )
 USING DELTA
 PARTITIONED BY (date_key, cloud);

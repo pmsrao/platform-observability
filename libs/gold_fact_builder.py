@@ -156,6 +156,7 @@ class UsageFactBuilder(FactBuilder):
                                             (silver_df.usage_start_time >= silver_price_df.price_start_time) & 
                                             ((silver_df.usage_start_time < silver_price_df.price_end_time) | 
                                              silver_price_df.price_end_time.isNull()))
+                             .select( silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
             
             # Join with dimensions using SCD2 temporal logic
@@ -177,7 +178,7 @@ class UsageFactBuilder(FactBuilder):
                 # Cluster dimension join with SCD2 temporal logic
                 .join(cluster_dim, 
                       (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
-                      (silver_with_cost.cluster_identifier == cluster_dim.cluster_id) &
+                      (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
                       (F.to_date(silver_with_cost.usage_start_time) >= cluster_dim.valid_from) &
                       ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < cluster_dim.valid_to)), 
@@ -211,13 +212,11 @@ class UsageFactBuilder(FactBuilder):
                     F.col("environment"),
                     F.col("use_case"),
                     F.col("pipeline_name"),
-                    F.col("cluster_identifier"),
                     F.col("workflow_level"),
                     F.col("parent_workflow_name"),
                     # MEASURES
                     F.col("usage_quantity"),
-                    F.col("usage_cost"),
-                    F.col("duration_hours")
+                    F.col("usage_cost")
                 )
             )
             
@@ -259,6 +258,7 @@ class EntityCostFactBuilder(FactBuilder):
                                             (silver_df.usage_start_time >= silver_price_df.price_start_time) & 
                                             ((silver_df.usage_start_time < silver_price_df.price_end_time) | 
                                              silver_price_df.price_end_time.isNull()))
+                             .select( silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd"))
                              .select(
                                  silver_df.date_sk, 
@@ -339,6 +339,7 @@ class RunCostFactBuilder(FactBuilder):
                                             (silver_df.usage_start_time >= silver_price_df.price_start_time) & 
                                             ((silver_df.usage_start_time < silver_price_df.price_end_time) | 
                                              silver_price_df.price_end_time.isNull()))
+                             .select(silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
             
             # Join with dimensions using SCD2 temporal logic
@@ -357,7 +358,7 @@ class RunCostFactBuilder(FactBuilder):
                       "left")
                 .join(cluster_dim, 
                       (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
-                      (silver_with_cost.cluster_identifier == cluster_dim.cluster_id) &
+                      (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
                       (F.to_date(silver_with_cost.usage_start_time) >= cluster_dim.valid_from) &
                       ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < cluster_dim.valid_to)), 
@@ -381,8 +382,7 @@ class RunCostFactBuilder(FactBuilder):
                     F.col("slv_usage_txn.usage_unit"),
                     # MEASURES
                     F.col("usage_cost"),
-                    F.col("usage_quantity"),
-                    F.col("duration_hours")
+                    F.col("usage_quantity")
                 )
             )
             
@@ -421,6 +421,7 @@ class RunStatusCostFactBuilder(FactBuilder):
                                             (silver_usage_df.usage_start_time >= silver_price_df.price_start_time) & 
                                             ((silver_usage_df.usage_start_time < silver_price_df.price_end_time) | 
                                              silver_price_df.price_end_time.isNull()))
+                            .select( silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
             
             # Aggregate usage cost by job run
