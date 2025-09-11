@@ -47,7 +47,7 @@ class DimensionBuilder:
             table_schema = self.spark.sql(f"DESCRIBE {full_table_name}").collect()
             surrogate_key_columns = []
             for row in table_schema:
-                if "identity" in row["col_name"].lower() or row["col_name"].endswith("_key"):
+                if "identity" in row["col_name"].lower() or (row["col_name"].endswith("_key") and row["col_name"]!="date_key"):
                     surrogate_key_columns.append(row["col_name"])
             
             # Build UPDATE SET clause excluding surrogate keys
@@ -120,6 +120,7 @@ class EntityDimensionBuilder(DimensionBuilder):
                 F.col("run_as"),
                 F.col("created_time"),
                 F.col("updated_time"),
+                F.col("creator_id"),
                 # SCD2 columns
                 F.col("created_time").alias("valid_from"),  # Version becomes valid from creation
                 F.lit(None).cast("timestamp").alias("valid_to"),  # No end date for current version
@@ -283,12 +284,13 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 F.col("enable_elastic_disk"),
                 F.col("cluster_source"),
                 F.col("init_scripts"),
-                F.col("aws_attributes"),
-                F.col("azure_attributes"),
-                F.col("gcp_attributes"),
                 F.col("driver_instance_pool_id"),
                 F.col("worker_instance_pool_id"),
                 F.col("dbr_version"),
+                F.col("major_version"),
+                F.col("minor_version"),
+                F.col("is_photon_enabled"),
+                F.col("is_ml_enabled"),
                 F.col("change_time"),
                 F.col("change_date"),
                 F.col("data_security_mode"),
@@ -296,88 +298,18 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 F.col("worker_node_type_category"),
                 # SCD2 columns
                 F.col("change_time").alias("valid_from"),  # Version becomes valid from change time
-                F.lit(None).cast("timestamp").alias("valid_to"),  # No end date for current version
-                F.lit(True).alias("is_current")  # Current version flag
+                F.col("valid_to").alias("valid_to"),  
+                F.col("is_current").alias("is_current")  # Current version flag
             ).distinct()
             
             # For SCD2, we need to handle updates differently
-            return self.upsert_dimension_scd2(dim_df, "gld_dim_cluster", ["workspace_id", "cluster_id"])
+            return self.upsert_dimension(dim_df, "gld_dim_cluster", ["workspace_id", "cluster_id", "valid_from"])
             
         except Exception as e:
             print(f"Error building cluster dimension: {str(e)}")
             return False
     
-    def upsert_dimension_scd2(self, df: DataFrame, table_name: str, natural_keys: List[str]) -> bool:
-        """
-        Upsert dimension table using SCD2 logic
-        """
-        try:
-            full_table_name = self.get_table_name(table_name)
-            
-            # Create temporary view for merge
-            df.createOrReplaceTempView("temp_dimension")
-            
-            # Build merge condition for natural keys
-            merge_conditions = []
-            for key in natural_keys:
-                merge_conditions.append(f"target.{key} = source.{key}")
-            merge_condition = " AND ".join(merge_conditions)
-            
-            # Get table schema to identify surrogate key columns (identity columns)
-            table_schema = self.spark.sql(f"DESCRIBE {full_table_name}").collect()
-            surrogate_key_columns = []
-            for row in table_schema:
-                if "identity" in row["col_name"].lower() or row["col_name"].endswith("_key"):
-                    surrogate_key_columns.append(row["col_name"])
-            
-            # Build UPDATE SET clause excluding surrogate keys for SCD2 close operation
-            source_columns = [col for col in df.columns if col not in surrogate_key_columns]
-            update_set_clause = ", ".join([f"{col} = source.{col}" for col in source_columns])
-            insert_set_clause = ", ".join([f"source.{col}" for col in source_columns])
-            insert_columns = ", ".join([f"{col}" for col in source_columns])
-
-            # SCD2 merge logic
-            merge_sql = f"""
-            MERGE INTO {full_table_name} AS target
-            USING temp_dimension AS source
-            ON {merge_condition} AND target.is_current = true
-            WHEN MATCHED AND (
-                target.worker_node_type != source.worker_node_type OR 
-                target.dbr_version != source.dbr_version OR
-                target.min_autoscale_workers != source.min_autoscale_workers OR
-                target.max_autoscale_workers != source.max_autoscale_workers OR
-                target.change_time != source.change_time
-            ) THEN 
-                UPDATE SET 
-                    valid_to = source.change_time,
-                    is_current = false
-            WHEN NOT MATCHED THEN 
-                INSERT ({insert_columns}) VALUES ({insert_set_clause})
-            """
-            
-            self.spark.sql(merge_sql)
-            
-            # Insert new version for updated records
-            insert_new_version_sql = f"""
-            INSERT INTO {full_table_name} ({insert_columns})
-            SELECT 
-                source.*
-            FROM temp_dimension source
-            WHERE EXISTS (
-                SELECT 1 FROM {full_table_name} target
-                WHERE {merge_condition} 
-                AND target.is_current = false
-                AND target.valid_to = source.change_time
-            )
-            """
-            
-            self.spark.sql(insert_new_version_sql)
-            return True
-            
-        except Exception as e:
-            print(f"Error upserting SCD2 dimension {table_name}: {str(e)}")
-            return False
-
+   
 
 class NodeTypeDimensionBuilder(DimensionBuilder):
     """Builder for node type dimension table"""
@@ -398,8 +330,7 @@ class NodeTypeDimensionBuilder(DimensionBuilder):
                 F.col("core_count"),
                 F.col("memory_mb"),
                 F.col("gpu_count"),
-                F.col("category"),
-                F.col("category").alias("worker_node_type_category")  # Use category as worker_node_type_category
+                F.col("category")
             ).distinct()
             
             # Upsert dimension

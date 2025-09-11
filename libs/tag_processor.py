@@ -26,6 +26,13 @@ class TagProcessor:
              .when(F.col(node_type_col).like("%Standard_L%"), F.lit("Storage Optimized (L)"))
              .when(F.col(node_type_col).like("%Standard_N%"), F.lit("GPU Enabled (N)"))
              .when(F.col(node_type_col).like("%Standard_M%"), F.lit("Memory Optimized (M)"))
+             .when(F.col(node_type_col).like("c%"), F.lit("Compute Optimized (C-family)"))
+             .when(F.col(node_type_col).like("m%"), F.lit("General Purpose (M-family)"))
+             .when(F.col(node_type_col).like("r%"), F.lit("Memory Optimized (R-family)"))
+             .when(F.col(node_type_col).like("i%"), F.lit("Storage Optimized (I-family)"))
+             .when(F.col(node_type_col).like("g%"), F.lit("GPU Enabled (G-family)"))
+             .when(F.col(node_type_col).like("p%"), F.lit("GPU Enabled (P-family)"))
+             .when(F.col(node_type_col).like("t%"), F.lit("Burstable (T-family)"))
              .otherwise(F.lit("Other"))
         )
 
@@ -33,70 +40,26 @@ class TagProcessor:
     def enrich_usage(cls, usage_df: DataFrame) -> DataFrame:
         """
         Enrich usage data with specific tag processing:
-        1. Extract raw columns from custom_tags
-        2. Populate inherited columns with nulls
-        3. Create coalesced columns from raw and inherited
+        Extract columns from custom_tags
         """
         result = usage_df
         
         # 1. Extract raw columns from custom_tags
-        raw_columns = {
-            "line_of_business": "line_of_business_raw",
-            "department": "department_raw", 
-            "cost_center": "cost_center_raw",
-            "use_case": "use_case_raw",
-            "pipeline_name": "pipeline_name_raw",
-            "workflow_level": "workflow_level_raw",
-            "parent_workflow_name": "parent_workflow_name_raw"
-        }
+        columns = ["line_of_business","department","cost_center","use_case","pipeline_name","workflow_level","parent_workflow_name"]
         
-        for tag_key, raw_col in raw_columns.items():
+        for col in columns:
             result = result.withColumn(
-                raw_col,
-                F.col(f"custom_tags.{tag_key}")
+                col,
+                F.col(f"custom_tags.{col}")
             )
         
-        # 2. Populate inherited columns with nulls
-        inherited_columns = [
-            "inherited_line_of_business",
-            "inherited_cost_center", 
-            "inherited_workflow_level",
-            "inherited_parent_workflow_name"
-        ]
-        
-        for inherited_col in inherited_columns:
-            result = result.withColumn(inherited_col, F.lit(None).cast("string"))
-        
-        # 3. Create coalesced columns (raw + inherited + defaults)
-        coalesced_columns = {
-            "line_of_business": ("line_of_business_raw", "inherited_line_of_business", "UNKNOWN"),
-            "department": ("department_raw", None, "UNKNOWN"),
-            "cost_center": ("cost_center_raw", "inherited_cost_center", "UNKNOWN"),
-            "use_case": ("use_case_raw", None, "UNKNOWN"),
-            "pipeline_name": ("pipeline_name_raw", None, "UNKNOWN"),
-            "workflow_level": ("workflow_level_raw", "inherited_workflow_level", "UNKNOWN"),
-            "parent_workflow_name": ("parent_workflow_name_raw", "inherited_parent_workflow_name", "UNKNOWN")
-        }
-        
-        for norm_col, (raw_col, inherited_col, default) in coalesced_columns.items():
-            if inherited_col:
-                result = result.withColumn(
-                    norm_col,
-                    F.coalesce(F.col(raw_col), F.col(inherited_col), F.lit(default))
-                )
-            else:
-                result = result.withColumn(
-                    norm_col,
-                    F.coalesce(F.col(raw_col), F.lit(default))
-                )
-        
-        # 4. Handle environment separately from custom_tags.environment
+        # 2. Handle environment separately from custom_tags.environment
         result = result.withColumn(
             "environment",
             F.coalesce(F.col("custom_tags.environment"), F.lit("dev"))
         )
         
-        # 5. Normalize environment
+        # 3. Normalize environment
         result = result.withColumn("environment", cls.normalize_environment(F.col("environment")))
         
         return result

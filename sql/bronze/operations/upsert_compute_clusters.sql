@@ -6,6 +6,7 @@ USING {source_table} S
 ON T.workspace_id = S.workspace_id
    AND T.cluster_id = S.cluster_id
    AND T.create_time = S.create_time
+   AND T.change_time = S.change_time
 WHEN MATCHED AND T.row_hash != S.row_hash THEN
     UPDATE SET
         T.cluster_name = S.cluster_name,

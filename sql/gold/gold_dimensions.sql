@@ -26,8 +26,6 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_entity (
     description STRING,
     creator_id STRING,
     run_as STRING,
-    workspace_name STRING,
-    workspace_url STRING,
     created_time TIMESTAMP,
     updated_time TIMESTAMP,
     -- SCD2 columns
@@ -83,30 +81,6 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_cluster (
     enable_elastic_disk BOOLEAN,
     cluster_source STRING,
     init_scripts STRING,
-    cloud STRING,                        -- Cloud provider (AWS, Azure, GCP)
-    aws_attributes STRUCT<
-        instance_profile_arn:STRING,
-        zone_id:STRING,
-        first_on_demand:INT,
-        availability:STRING,
-        spot_bid_price_percent:INT,
-        ebs_volume_type:STRING,
-        ebs_volume_count:INT,
-        ebs_volume_size:INT,
-        ebs_volume_iops:INT,
-        ebs_volume_throughput:INT
-    >,
-    azure_attributes STRUCT<
-        first_on_demand:INT,
-        availability:STRING,
-        spot_bid_max_price:DOUBLE
-    >,
-    gcp_attributes STRUCT<
-        use_preemptible_executors:BOOLEAN,
-        zone_id:STRING,
-        first_on_demand:INT,
-        availability:STRING
-    >,
     driver_instance_pool_id STRING,
     worker_instance_pool_id STRING,
     dbr_version STRING,                  -- Databricks Runtime version
@@ -121,7 +95,6 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_cluster (
     is_current BOOLEAN DEFAULT TRUE      -- Flag for current version
 )
 USING DELTA
-PARTITIONED BY (cloud)
 TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported'
 );
@@ -135,7 +108,6 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_node_type (
     memory_mb BIGINT,                    -- Renamed from memory_gb and changed type
     gpu_count BIGINT,                    -- Changed type to match source
     category STRING,                     -- Node type category from Silver layer
-    worker_node_type_category STRING     -- Categorized node type (General Purpose, Memory Optimized, etc.)
 )
 USING DELTA;
 

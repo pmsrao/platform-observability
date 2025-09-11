@@ -32,6 +32,7 @@ from typing import Dict, List, Optional, Tuple
 # PySpark imports
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
+from pyspark.sql import Window
 
 # Import from libs package (cloud-agnostic approach)
 from libs.path_setup import setup_paths_and_import_config
@@ -218,8 +219,8 @@ def read_bronze_since_timestamp(spark, table_name: str, last_timestamp: Optional
         SELECT * FROM table_changes('{bronze_table}', 0)
         """
         logger.info(f"Reading all data from {bronze_table} for initial load using CDF")
-    
-    return spark.sql(query)
+    df = spark.sql(query).filter(~F.col("_change_type").isin("delete", "update_preimage"))
+    return df
 
 def get_max_timestamp(df: 'DataFrame', timestamp_col: str = '_commit_timestamp') -> Optional[datetime]:
     """Get maximum timestamp from DataFrame (CDF output)"""
@@ -249,6 +250,220 @@ def validate_silver_data(df: 'DataFrame', table_name: str) -> bool:
 
 # MAGIC %md
 # MAGIC ## Silver Table Builders
+
+# COMMAND ----------
+
+def build_silver_entity_latest(spark) -> bool:
+    """Build unified Silver entity latest view from JOB and PIPELINE sources"""
+    logger.info("Building unified Silver entity latest view from JOB and PIPELINE sources")
+    
+    try:
+        # Get last processed timestamp
+        task_name = get_silver_task_name("slv_job_entity_latest")
+        last_job_ts, _ = get_last_processed_timestamp(spark, "brz_lakeflow_jobs", task_name, "silver")
+
+        task_name = get_silver_task_name("slv_pipeline_entity_latest")
+        last_entity_ts, _ = get_last_processed_timestamp(spark, "brz_lakeflow_pipelines", task_name, "silver")
+        
+        # Process JOBS
+        logger.info("Processing JOB entities from brz_lakeflow_jobs")
+        jobs_df = read_bronze_since_timestamp(spark, "brz_lakeflow_jobs", last_job_ts).withColumn("row_number", F.row_number().over(Window.partitionBy("account_id", "workspace_id", "job_id").orderBy(F.desc("_commit_timestamp")))).filter(F.col("row_number") == 1).drop("row_number")
+        
+        # Process PIPELINES
+        logger.info("Processing PIPELINE entities from brz_lakeflow_pipelines")
+        pipelines_df = read_bronze_since_timestamp(spark, "brz_lakeflow_pipelines", last_entity_ts).withColumn("row_number", F.row_number().over(Window.partitionBy("account_id", "workspace_id", "pipeline_id").orderBy(F.desc("_commit_timestamp")))).filter(F.col("row_number") == 1).drop("row_number")
+        
+        # Transform JOB data - FIXED: Use correct column names from bronze schema
+        jobs_entities = None
+        if jobs_df.count() > 0:
+            jobs_entities = jobs_df.select(
+                jobs_df.account_id,
+                jobs_df.workspace_id,
+                jobs_df.job_id.alias("entity_id"),
+                jobs_df.name,  # FIXED: Use 'name' column from bronze, not 'job_name'
+                jobs_df.run_as,
+                # Pipeline-specific attributes (NULL for jobs)
+                F.lit(None).cast("string").alias("pipeline_type"),
+                # Job-specific workflow attributes - FIXED: These columns don't exist in bronze yet
+                F.lit(False).alias("is_parent_workflow"),  # Will be computed by tag processor
+                F.lit(False).alias("is_sub_workflow"),     # Will be computed by tag processor
+                F.lit("STANDALONE").alias("workflow_level"),  # Default value
+                F.lit("None").alias("parent_workflow_name"),  # Default value
+                # Common attributes - FIXED: Use correct column names
+                jobs_df.change_time.alias("created_time"),  # Use change_time as created_time
+                jobs_df.creator_id.alias("creator_id"),  
+                jobs_df.change_time.alias("updated_time"),  # Use change_time as updated_time
+                F.current_timestamp().alias("_loaded_at")
+            ).withColumn("entity_type", F.lit("JOB"))
+            logger.info(f"Transformed {jobs_entities.count()} JOB entities")
+        
+        # Transform PIPELINE data - FIXED: Use correct column names from bronze schema
+        pipelines_entities = None
+        if pipelines_df.count() > 0:
+            pipelines_entities = pipelines_df.select(
+                pipelines_df.account_id,
+                pipelines_df.workspace_id,
+                pipelines_df.pipeline_id.alias("entity_id"),
+                pipelines_df.name,
+                pipelines_df.run_as,
+                # Pipeline-specific attributes
+                pipelines_df.pipeline_type,
+                # Job-specific workflow attributes (NULL for pipelines)
+                F.lit(None).cast("boolean").alias("is_parent_workflow"),
+                F.lit(None).cast("boolean").alias("is_sub_workflow"),
+                F.lit(None).cast("string").alias("workflow_level"),
+                F.lit(None).cast("string").alias("parent_workflow_name"),
+                # Common attributes - FIXED: Use correct column names
+                pipelines_df.change_time.alias("created_time"),  # Use change_time as created_time
+                F.coalesce(F.col("created_by"),F.col("run_as")).alias("creator_id"),
+                pipelines_df.change_time.alias("updated_time"),  # Use change_time as updated_time
+                F.current_timestamp().alias("_loaded_at")
+            ).withColumn("entity_type", F.lit("PIPELINE"))
+            logger.info(f"Transformed {pipelines_entities.count()} PIPELINE entities")
+        
+        # Union both sources
+        unified_entities = None
+        if jobs_entities is not None and pipelines_entities is not None:
+            unified_entities = jobs_entities.union(pipelines_entities)
+        elif jobs_entities is not None:
+            unified_entities = jobs_entities
+        elif pipelines_entities is not None:
+            unified_entities = pipelines_entities
+        else:
+            logger.info("No new data for Silver entity latest view")
+            return True
+        
+        # Validate data - DISABLED for performance optimization
+        # if not validate_silver_data(unified_entities, "silver_entity_latest"):
+        #     logger.error("Data validation failed for Silver entity latest view")
+        #     return False
+        logger.info("Data validation disabled - processing data")
+        
+        # Write to Silver table using MERGE to avoid duplicates
+        silver_table = get_silver_table_name("slv_entity_latest")
+        unified_entities = unified_entities.filter(F.col("account_id").isNotNull()).filter(F.col("entity_id").isNotNull()).filter(F.col("workspace_id").isNotNull())
+        success = upsert_silver_table(unified_entities, silver_table, ["workspace_id", "entity_id", "entity_type"])
+        if not success:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
+        
+        # Update processing state (use max timestamp from both sources)
+        max_ts_jobs = get_max_timestamp(jobs_df) if jobs_df.count() > 0 else None
+        max_ts_pipelines = get_max_timestamp(pipelines_df) if pipelines_df.count() > 0 else None
+        
+        if max_ts_jobs:
+            task_name = get_silver_task_name("slv_job_entity_latest")
+            commit_processing_state(spark, "brz_lakeflow_jobs", max_ts_jobs, task_name=task_name, layer="silver")
+        if max_ts_pipelines:
+            task_name = get_silver_task_name("slv_pipeline_entity_latest")
+            commit_processing_state(spark, "brz_lakeflow_pipelines", max_ts_pipelines, task_name=task_name, layer="silver")
+        
+        logger.info(f"Successfully built unified Silver entity latest view with {unified_entities.count()} records")
+        return True
+        
+    except Exception as e:
+        # Capture error for persistence
+        logger.error(f"Error building Silver entity latest view: {str(e)}", exc_info=True)
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+# COMMAND ----------
+
+def build_silver_clusters(spark) -> bool:
+    """Build Silver clusters table with SCD2"""
+    logger.info("Building Silver clusters table with SCD2")
+    
+    try:
+        # Get last processed timestamp
+        task_name = get_silver_task_name("slv_clusters")
+        last_ts, _ = get_last_processed_timestamp(spark, "brz_compute_clusters", task_name, "silver")
+        
+        # Read new data from Bronze
+        df = read_bronze_since_timestamp(spark, "brz_compute_clusters", last_ts)
+        
+        if df.count() == 0:
+            logger.info("No new data for Silver clusters table")
+            return True
+        
+        # Validate data - DISABLED for performance optimization
+        # if not validate_silver_data(df, "silver_clusters"):
+        #     logger.error("Data validation failed for Silver clusters table")
+        #     return False
+        logger.info("Data validation disabled - processing data")
+        
+        # Transform data with SCD2 logic and new schema - FIXED: Handle JSON string attributes
+        transformed_df = df.select(
+            df.account_id,
+            df.workspace_id,
+            df.cluster_id,
+            df.cluster_name,
+            df.owned_by,
+            df.create_time,
+            df.delete_time,
+            df.driver_node_type,
+            df.worker_node_type,
+            df.worker_count,
+            df.min_autoscale_workers,
+            df.max_autoscale_workers,
+            df.auto_termination_minutes,
+            df.enable_elastic_disk,
+            df.tags,
+            df.cluster_source,
+            df.init_scripts,
+            # FIXED: Parse JSON string attributes into structured objects
+            F.from_json(df.aws_attributes, "struct<instance_profile_arn:string,zone_id:string,first_on_demand:int,availability:string,spot_bid_price_percent:int,ebs_volume_type:string,ebs_volume_count:int,ebs_volume_size:int,ebs_volume_iops:int,ebs_volume_throughput:int>").alias("aws_attributes"),
+            F.from_json(df.azure_attributes, "struct<first_on_demand:int,availability:string,spot_bid_max_price:double>").alias("azure_attributes"),
+            F.from_json(df.gcp_attributes, "struct<use_preemptible_executors:boolean,zone_id:string,first_on_demand:int,availability:string>").alias("gcp_attributes"),
+            df.driver_instance_pool_id,
+            df.worker_instance_pool_id,
+            df.dbr_version,
+            df.change_time,
+            df.change_date,
+            df.data_security_mode,
+            df.policy_id,
+            F.current_timestamp().alias("_loaded_at")
+        ).withColumn("valid_from", df.change_time) \
+         .withColumn("valid_to", F.lead("valid_from").over(Window.partitionBy("cluster_id").orderBy("change_time"))) \
+         .withColumn("row_number", F.row_number().over(Window.partitionBy("cluster_id").orderBy(F.col("change_time").desc()))) \
+         .withColumn("is_current", F.when(F.col("row_number")==1, F.lit(True)).otherwise(F.lit(False)))\
+         .drop("row_number")\
+         .withColumn("major_version", F.regexp_extract(F.col("dbr_version"), '^(?:dlt:)?(\\d+)', 1).cast("int"))\
+         .withColumn("minor_version", F.coalesce(F.regexp_extract(F.col("dbr_version"), '^(?:dlt:)?\\d+\\.(\\d+)', 1),F.lit(None)).cast("int"))\
+         .withColumn("is_photon_enabled", F.when(F.col("dbr_version").contains("photon"), F.lit(True)).otherwise(F.lit(False)))\
+         .withColumn("is_ml_enabled", F.when(F.col("dbr_version").contains("ml"), F.lit(True)).otherwise(F.lit(False)))\
+         .withColumn("is_photon", F.when(F.col("dbr_version").contains("photon"), F.lit(True)).otherwise(F.lit(False)))\
+         .withColumn("minor_version", F.coalesce(F.regexp_extract(F.col("dbr_version"), '^(?:dlt:)?\\d+\\.(\\d+)', 1),F.lit(None)).cast("int"))\
+         .withColumn("runtime_age_months", F.lit(None).cast("int"))\
+         .withColumn("is_lts", F.lit(False))\
+         .withColumn("_loaded_at", F.current_timestamp())
+
+        # Add worker node type category
+        tag_processor = TagProcessor()
+        transformed_df = tag_processor.add_worker_node_type_category(transformed_df)
+        # Write to Silver table using SCD2 merge logic
+        silver_table = get_silver_table_name("slv_clusters")
+        success = upsert_scd2_silver_table(transformed_df, silver_table, ["workspace_id", "cluster_id","change_time"], "change_time")
+        if not success:
+            print(f"❌ Failed to upsert SCD2 data to {silver_table}")
+            return False
+        
+        # Update processing state
+        max_ts = get_max_timestamp(df)
+        if max_ts:
+            task_name = get_silver_task_name("slv_clusters")
+            commit_processing_state(spark, "brz_compute_clusters", max_ts, task_name=task_name, layer="silver")
+        
+        logger.info(f"Successfully built Silver clusters table with {transformed_df.count()} records")
+        return True
+        
+    except Exception as e:
+        # Capture error for persistence
+        logger.error(f"Error building Silver clusters table: {str(e)}", exc_info=True)
+        import traceback
+        traceback.print_exc()
+        return False
 
 # COMMAND ----------
 
@@ -320,216 +535,6 @@ def build_silver_workspace(spark) -> bool:
         traceback.print_exc()
         return False
 
-def build_silver_entity_latest(spark) -> bool:
-    """Build unified Silver entity latest view from JOB and PIPELINE sources"""
-    logger.info("Building unified Silver entity latest view from JOB and PIPELINE sources")
-    
-    try:
-        # Get last processed timestamp
-        task_name = get_silver_task_name("slv_entity_latest")
-        last_ts, _ = get_last_processed_timestamp(spark, "slv_entity_latest", task_name, "silver")
-        
-        # Process JOBS
-        logger.info("Processing JOB entities from brz_lakeflow_jobs")
-        jobs_df = read_bronze_since_timestamp(spark, "brz_lakeflow_jobs", last_ts)
-        
-        # Process PIPELINES
-        logger.info("Processing PIPELINE entities from brz_lakeflow_pipelines")
-        pipelines_df = read_bronze_since_timestamp(spark, "brz_lakeflow_pipelines", last_ts)
-        
-        # Transform JOB data - FIXED: Use correct column names from bronze schema
-        jobs_entities = None
-        if jobs_df.count() > 0:
-            jobs_entities = jobs_df.select(
-                jobs_df.account_id,
-                jobs_df.workspace_id,
-                jobs_df.job_id.alias("entity_id"),
-                jobs_df.name,  # FIXED: Use 'name' column from bronze, not 'job_name'
-                jobs_df.run_as,
-                # Pipeline-specific attributes (NULL for jobs)
-                F.lit(None).cast("string").alias("pipeline_type"),
-                # Job-specific workflow attributes - FIXED: These columns don't exist in bronze yet
-                F.lit(False).alias("is_parent_workflow"),  # Will be computed by tag processor
-                F.lit(False).alias("is_sub_workflow"),     # Will be computed by tag processor
-                F.lit("STANDALONE").alias("workflow_level"),  # Default value
-                F.lit("None").alias("parent_workflow_name"),  # Default value
-                # Common attributes - FIXED: Use correct column names
-                jobs_df.change_time.alias("created_time"),  # Use change_time as created_time
-                jobs_df.change_time.alias("updated_time"),  # Use change_time as updated_time
-                F.current_timestamp().alias("_loaded_at")
-            ).withColumn("entity_type", F.lit("JOB"))
-            logger.info(f"Transformed {jobs_entities.count()} JOB entities")
-        
-        # Transform PIPELINE data - FIXED: Use correct column names from bronze schema
-        pipelines_entities = None
-        if pipelines_df.count() > 0:
-            pipelines_entities = pipelines_df.select(
-                pipelines_df.account_id,
-                pipelines_df.workspace_id,
-                pipelines_df.pipeline_id.alias("entity_id"),
-                pipelines_df.name,
-                pipelines_df.run_as,
-                # Pipeline-specific attributes
-                pipelines_df.pipeline_type,
-                # Job-specific workflow attributes (NULL for pipelines)
-                F.lit(None).cast("boolean").alias("is_parent_workflow"),
-                F.lit(None).cast("boolean").alias("is_sub_workflow"),
-                F.lit(None).cast("string").alias("workflow_level"),
-                F.lit(None).cast("string").alias("parent_workflow_name"),
-                # Common attributes - FIXED: Use correct column names
-                pipelines_df.change_time.alias("created_time"),  # Use change_time as created_time
-                pipelines_df.change_time.alias("updated_time"),  # Use change_time as updated_time
-                F.current_timestamp().alias("_loaded_at")
-            ).withColumn("entity_type", F.lit("PIPELINE"))
-            logger.info(f"Transformed {pipelines_entities.count()} PIPELINE entities")
-        
-        # Union both sources
-        unified_entities = None
-        if jobs_entities is not None and pipelines_entities is not None:
-            unified_entities = jobs_entities.union(pipelines_entities)
-        elif jobs_entities is not None:
-            unified_entities = jobs_entities
-        elif pipelines_entities is not None:
-            unified_entities = pipelines_entities
-        else:
-            logger.info("No new data for Silver entity latest view")
-            return True
-        
-        # Validate data - DISABLED for performance optimization
-        # if not validate_silver_data(unified_entities, "silver_entity_latest"):
-        #     logger.error("Data validation failed for Silver entity latest view")
-        #     return False
-        logger.info("Data validation disabled - processing data")
-        
-        # Write to Silver table using MERGE to avoid duplicates
-        silver_table = get_silver_table_name("slv_entity_latest")
-        success = upsert_silver_table(unified_entities, silver_table, ["workspace_id", "entity_id", "entity_type"])
-        if not success:
-            print(f"❌ Failed to upsert to {silver_table}")
-            return False
-        
-        # Update processing state (use max timestamp from both sources)
-        max_ts_jobs = get_max_timestamp(jobs_df) if jobs_df.count() > 0 else None
-        max_ts_pipelines = get_max_timestamp(pipelines_df) if pipelines_df.count() > 0 else None
-        
-        max_ts = None
-        if max_ts_jobs and max_ts_pipelines:
-            max_ts = max(max_ts_jobs, max_ts_pipelines)
-        elif max_ts_jobs:
-            max_ts = max_ts_jobs
-        elif max_ts_pipelines:
-            max_ts = max_ts_pipelines
-        
-        if max_ts:
-            task_name = get_silver_task_name("slv_entity_latest")
-            commit_processing_state(spark, "slv_entity_latest", max_ts, task_name=task_name, layer="silver")
-        
-        logger.info(f"Successfully built unified Silver entity latest view with {unified_entities.count()} records")
-        return True
-        
-    except Exception as e:
-        # Capture error for persistence
-        logger.error(f"Error building Silver entity latest view: {str(e)}", exc_info=True)
-        import traceback
-        traceback.print_exc()
-        return False
-
-def build_silver_clusters(spark) -> bool:
-    """Build Silver clusters table with SCD2"""
-    logger.info("Building Silver clusters table with SCD2")
-    
-    try:
-        # Get last processed timestamp
-        task_name = get_silver_task_name("slv_clusters")
-        last_ts, _ = get_last_processed_timestamp(spark, "slv_clusters", task_name, "silver")
-        
-        # Read new data from Bronze
-        df = read_bronze_since_timestamp(spark, "brz_compute_clusters", last_ts)
-        
-        if df.count() == 0:
-            logger.info("No new data for Silver clusters table")
-            return True
-        
-        # Validate data - DISABLED for performance optimization
-        # if not validate_silver_data(df, "silver_clusters"):
-        #     logger.error("Data validation failed for Silver clusters table")
-        #     return False
-        logger.info("Data validation disabled - processing data")
-        
-        # Transform data with SCD2 logic and new schema - FIXED: Handle JSON string attributes
-        transformed_df = df.select(
-            df.account_id,
-            df.workspace_id,
-            df.cluster_id,
-            df.cluster_name,
-            df.owned_by,
-            df.create_time,
-            df.delete_time,
-            df.driver_node_type,
-            df.worker_node_type,
-            df.worker_count,
-            df.min_autoscale_workers,
-            df.max_autoscale_workers,
-            df.auto_termination_minutes,
-            df.enable_elastic_disk,
-            df.tags,
-            df.cluster_source,
-            df.init_scripts,
-            # FIXED: Parse JSON string attributes into structured objects
-            F.from_json(df.aws_attributes, "struct<instance_profile_arn:string,zone_id:string,first_on_demand:int,availability:string,spot_bid_price_percent:int,ebs_volume_type:string,ebs_volume_count:int,ebs_volume_size:int,ebs_volume_iops:int,ebs_volume_throughput:int>").alias("aws_attributes"),
-            F.from_json(df.azure_attributes, "struct<first_on_demand:int,availability:string,spot_bid_max_price:double>").alias("azure_attributes"),
-            F.from_json(df.gcp_attributes, "struct<use_preemptible_executors:boolean,zone_id:string,first_on_demand:int,availability:string>").alias("gcp_attributes"),
-            df.driver_instance_pool_id,
-            df.worker_instance_pool_id,
-            df.dbr_version,
-            df.change_time,
-            df.change_date,
-            df.data_security_mode,
-            df.policy_id,
-            F.current_timestamp().alias("_loaded_at")
-        ).withColumn("valid_from", df.change_time) \
-         .withColumn("valid_to", F.lit(None)) \
-         .withColumn("is_current", F.lit(True))\
-        .withColumn("inherited_line_of_business", F.lit(None).cast("string"))\
-        .withColumn("inherited_department", F.lit(None).cast("string"))\
-        .withColumn("inherited_cost_center", F.lit(None).cast("string"))\
-        .withColumn("inherited_environment", F.lit(None).cast("string"))\
-        .withColumn("inherited_use_case", F.lit(None).cast("string"))\
-        .withColumn("inherited_workflow_level", F.lit(None).cast("string"))\
-        .withColumn("inherited_parent_workflow", F.lit(None).cast("string"))\
-        .withColumn("major_version", F.lit(None).cast("int"))\
-        .withColumn("minor_version", F.lit(None).cast("int"))\
-        .withColumn("runtime_age_months", F.lit(None).cast("int"))\
-        .withColumn("is_lts", F.lit(None).cast("boolean"))\
-        .withColumn("_loaded_at", F.current_timestamp())
-        
-        # Add worker node type category
-        tag_processor = TagProcessor()
-        transformed_df = tag_processor.add_worker_node_type_category(transformed_df)
-        
-        # Write to Silver table using SCD2 merge logic
-        silver_table = get_silver_table_name("slv_clusters")
-        success = upsert_scd2_silver_table(transformed_df, silver_table, ["workspace_id", "cluster_id"], "change_time")
-        if not success:
-            print(f"❌ Failed to upsert SCD2 data to {silver_table}")
-            return False
-        
-        # Update processing state
-        max_ts = get_max_timestamp(df)
-        if max_ts:
-            task_name = get_silver_task_name("slv_clusters")
-            commit_processing_state(spark, "slv_clusters", max_ts, task_name=task_name, layer="silver")
-        
-        logger.info(f"Successfully built Silver clusters table with {transformed_df.count()} records")
-        return True
-        
-    except Exception as e:
-        # Capture error for persistence
-        logger.error(f"Error building Silver clusters table: {str(e)}", exc_info=True)
-        import traceback
-        traceback.print_exc()
-        return False
-
 def build_silver_usage_txn(spark) -> bool:
     """Build Silver usage transaction table"""
     logger.info("Building Silver usage transaction table")
@@ -579,7 +584,6 @@ def build_silver_usage_txn(spark) -> bool:
             F.coalesce(df.usage_metadata.job_run_id, F.lit("UNKNOWN")).alias("job_run_id"),
             F.coalesce(df.usage_metadata.cluster_id, F.lit("UNKNOWN")).alias("cluster_id"),
             F.date_format(df.usage_date, "yyyyMMdd").cast("int").alias("date_sk"),
-            ((F.col("usage_end_time").cast("long") - F.col("usage_start_time").cast("long")) / 3600.0).cast("decimal(38,18)").alias("duration_hours"),
             F.current_timestamp().alias("_loaded_at"),
             # Note: parent_workflow_name will be created by tag processor from custom_tags
         )
@@ -748,6 +752,87 @@ def build_silver_job_task_run_timeline(spark) -> bool:
         traceback.print_exc()
         return False
 
+
+# COMMAND ----------
+
+def build_silver_compute_node_type_scd(spark) -> bool:
+    """Build Silver compute node type SCD2 table from bronze compute node types"""
+    logger.info("Building Silver compute node type SCD2 table from bronze compute node types")
+    print("🔧 Building Silver compute node type SCD2 table...")
+    
+    try:
+        # Get last processed timestamp
+        print("📅 Getting last processed timestamp...")
+        task_name = get_silver_task_name("slv_compute_node_type_scd")
+        last_ts, _ = get_last_processed_timestamp(spark, "brz_compute_node_types", task_name, "silver")
+        print(f"📅 Last timestamp: {last_ts}")
+        
+        # Read new data from Bronze
+        print("📖 Reading data from Bronze...")
+        df = read_bronze_since_timestamp(spark, "brz_compute_node_types", last_ts)
+        record_count = df.count()
+        print(f"📖 Found {record_count} records in Bronze")
+        
+        if record_count == 0:
+            logger.info("No new data for Silver compute node type SCD2 table")
+            print("✅ No new data - skipping compute node type SCD2 table")
+            return True
+        
+        # Validate data - DISABLED for performance optimization
+        # if not validate_silver_data(df, "silver_compute_node_type_scd"):
+        #     logger.error("Data validation failed for Silver compute node type SCD2 table")
+        #     return False
+        logger.info("Data validation disabled - processing data")
+        
+        # Transform data with SCD2 logic and node type categorization
+        print("🔄 Transforming data...")
+        transformed_df = df.select(
+            df.account_id,
+            df.node_type,
+            df.core_count,
+            df.memory_mb,
+            df.gpu_count,
+            F.col("_loaded_at")
+        ).withColumn("valid_from", F.col("_loaded_at")) \
+         .withColumn("valid_to", F.lead("valid_from").over(Window.partitionBy("node_type").orderBy("_loaded_at")))\
+         .withColumn("row_number", F.row_number().over(Window.partitionBy("node_type").orderBy(F.col("_loaded_at").desc()))) \
+         .withColumn("is_current", F.when(F.col("row_number")==1, F.lit(True)).otherwise(F.lit(False)))\
+         .drop("row_number")\
+        
+        # Add node type categorization using TagProcessor
+        tag_processor = TagProcessor()
+        transformed_df = tag_processor.add_worker_node_type_category(transformed_df, "node_type", "category")
+        
+        print(f"🔄 Transformed {transformed_df.count()} records")
+        
+        # Write to Silver table using SCD2 merge logic
+        print("💾 Upserting to Silver table...")
+        silver_table = get_silver_table_name("slv_compute_node_type_scd")
+        success = upsert_scd2_silver_table(transformed_df, silver_table, ["account_id", "node_type","valid_from"], "valid_from")
+        if success:
+            print(f"✅ Successfully upserted to {silver_table}")
+        else:
+            print(f"❌ Failed to upsert to {silver_table}")
+            return False
+        
+        # Update processing state
+        max_ts = get_max_timestamp(df)
+        if max_ts:
+            task_name = get_silver_task_name("slv_compute_node_type_scd")
+            commit_processing_state(spark, "brz_compute_node_types", max_ts, task_name=task_name, layer="silver")
+        
+        logger.info(f"Successfully built Silver compute node type SCD2 table with {transformed_df.count()} records")
+        return True
+        
+    except Exception as e:
+        # Capture error for persistence
+        logger.error(f"Error building Silver compute node type SCD2 table: {str(e)}", exc_info=True)
+        import traceback
+        traceback.print_exc()
+        return False
+
+# COMMAND ----------
+
 def build_silver_price_scd(spark) -> bool:
     """Build Silver price SCD2 table from billing list prices"""
     logger.info("Building Silver price SCD2 table from billing list prices")
@@ -795,14 +880,14 @@ def build_silver_price_scd(spark) -> bool:
             F.current_timestamp().alias("_loaded_at")
         ).withColumn("valid_from", df.price_start_time) \
          .withColumn("valid_to", df.price_end_time) \
-         .withColumn("is_current", F.lit(True))
+         .withColumn("is_current", F.when(F.col("price_end_time").isNull(),F.lit(True)).otherwise(F.lit(False)))
         
         print(f"🔄 Transformed {transformed_df.count()} records")
         
         # Write to Silver table using SCD2 merge logic
         print("💾 Upserting to Silver table...")
         silver_table = get_silver_table_name("slv_price_scd")
-        success = upsert_scd2_silver_table(transformed_df, silver_table, ["account_id", "cloud", "sku_name", "usage_unit"], "price_start_time")
+        success = upsert_scd2_silver_table(transformed_df, silver_table, ["account_id", "cloud", "sku_name", "usage_unit"], "price_end_time")
         if success:
             print(f"✅ Successfully upserted to {silver_table}")
         else:
@@ -821,80 +906,6 @@ def build_silver_price_scd(spark) -> bool:
     except Exception as e:
         # Capture error for persistence
         logger.error(f"Error building Silver price SCD2 table: {str(e)}", exc_info=True)
-        import traceback
-        traceback.print_exc()
-        return False
-
-def build_silver_compute_node_type_scd(spark) -> bool:
-    """Build Silver compute node type SCD2 table from bronze compute node types"""
-    logger.info("Building Silver compute node type SCD2 table from bronze compute node types")
-    print("🔧 Building Silver compute node type SCD2 table...")
-    
-    try:
-        # Get last processed timestamp
-        print("📅 Getting last processed timestamp...")
-        task_name = get_silver_task_name("slv_compute_node_type_scd")
-        last_ts, _ = get_last_processed_timestamp(spark, "slv_compute_node_type_scd", task_name, "silver")
-        print(f"📅 Last timestamp: {last_ts}")
-        
-        # Read new data from Bronze
-        print("📖 Reading data from Bronze...")
-        df = read_bronze_since_timestamp(spark, "brz_compute_node_types", last_ts)
-        record_count = df.count()
-        print(f"📖 Found {record_count} records in Bronze")
-        
-        if record_count == 0:
-            logger.info("No new data for Silver compute node type SCD2 table")
-            print("✅ No new data - skipping compute node type SCD2 table")
-            return True
-        
-        # Validate data - DISABLED for performance optimization
-        # if not validate_silver_data(df, "silver_compute_node_type_scd"):
-        #     logger.error("Data validation failed for Silver compute node type SCD2 table")
-        #     return False
-        logger.info("Data validation disabled - processing data")
-        
-        # Transform data with SCD2 logic and node type categorization
-        print("🔄 Transforming data...")
-        transformed_df = df.select(
-            df.account_id,
-            df.node_type,
-            df.core_count,
-            df.memory_mb,
-            df.gpu_count,
-            F.current_timestamp().alias("_loaded_at")
-        ).withColumn("valid_from", F.current_timestamp()) \
-         .withColumn("valid_to", F.lit(None)) \
-         .withColumn("is_current", F.lit(True))
-        
-        # Add node type categorization using TagProcessor
-        tag_processor = TagProcessor()
-        transformed_df = tag_processor.add_worker_node_type_category(transformed_df, "node_type", "category")
-        
-        print(f"🔄 Transformed {transformed_df.count()} records")
-        
-        # Write to Silver table using SCD2 merge logic
-        print("💾 Upserting to Silver table...")
-        silver_table = get_silver_table_name("slv_compute_node_type_scd")
-        success = upsert_scd2_silver_table(transformed_df, silver_table, ["account_id", "node_type"], "valid_from")
-        if success:
-            print(f"✅ Successfully upserted to {silver_table}")
-        else:
-            print(f"❌ Failed to upsert to {silver_table}")
-            return False
-        
-        # Update processing state
-        max_ts = get_max_timestamp(df)
-        if max_ts:
-            task_name = get_silver_task_name("slv_compute_node_type_scd")
-            commit_processing_state(spark, "slv_compute_node_type_scd", max_ts, task_name=task_name, layer="silver")
-        
-        logger.info(f"Successfully built Silver compute node type SCD2 table with {transformed_df.count()} records")
-        return True
-        
-    except Exception as e:
-        # Capture error for persistence
-        logger.error(f"Error building Silver compute node type SCD2 table: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
         return False

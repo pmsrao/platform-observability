@@ -13,10 +13,10 @@ WHEN MATCHED AND T.row_hash != S.row_hash THEN
         T._loaded_at = CURRENT_TIMESTAMP()
 WHEN NOT MATCHED THEN
     INSERT (
-        workspace_id, pipeline_id, name, run_as, change_time,
+        workspace_id , account_id , pipeline_id, name, run_as, change_time,
         row_hash, _loaded_at
     )
     VALUES (
-        S.workspace_id, S.pipeline_id, S.name, S.run_as, S.change_time,
+        S.workspace_id, S.account_id, S.pipeline_id, S.name, S.run_as, S.change_time,
         S.row_hash, CURRENT_TIMESTAMP()
     )

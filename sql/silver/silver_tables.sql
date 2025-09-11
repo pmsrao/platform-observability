@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_entity_latest (
     entity_type STRING,                     -- 'JOB' or 'PIPELINE'
     name STRING,                            -- Standardized name
     run_as STRING,
+    creator_id STRING,
     -- Pipeline-specific attributes (NULL for jobs)
     pipeline_type STRING,                   -- Pipeline type (DLT, streaming, batch, etc.)
     -- Job-specific workflow attributes (NULL for pipelines)
@@ -116,7 +117,6 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
     entity_id STRING,
     job_run_id STRING,                   -- Renamed from run_id for clarity
     date_sk INT,
-    duration_hours DECIMAL(38,18),
     billing_origin_product STRING,
     cluster_id STRING,
     custom_tags MAP<STRING, STRING>,     -- Renamed from tags
@@ -175,28 +175,14 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
         serverless_gpu:STRUCT<workload_type:STRING>
     >,
     usage_type STRING,
-    -- NEW: Original business tags (as extracted from source)
-    line_of_business_raw STRING,                -- Original value from custom_tags
-    department_raw STRING,                      -- Original value from custom_tags
-    cost_center_raw STRING,                     -- Original value from custom_tags
-    use_case_raw STRING,                        -- Original value from custom_tags
-    pipeline_name_raw STRING,                   -- Original value from custom_tags
-    workflow_level_raw STRING,                  -- Original value from custom_tags
-    parent_workflow_name_raw STRING,            -- Original value from custom_tags
-    -- NEW: Normalized business tags (with defaults applied)
-    line_of_business STRING,                    -- Normalized with 'Unknown' default
-    department STRING,                          -- Normalized with 'unknown' default
-    cost_center STRING,                         -- Normalized with 'unallocated' default
-    environment STRING,                         -- Normalized with 'dev' default
-    use_case STRING,                            -- Normalized with 'Unknown' default
-    pipeline_name STRING,                       -- Normalized with 'system' default
-    workflow_level STRING,                      -- Normalized with 'STANDALONE' default
-    parent_workflow_name STRING,                -- Normalized with 'None' default
-    -- NEW: Inherited cluster tags
-    inherited_line_of_business STRING,
-    inherited_cost_center STRING,
-    inherited_workflow_level STRING,
-    inherited_parent_workflow_name STRING,
+    line_of_business STRING,                -- Original value from custom_tags
+    department STRING,                      -- Original value from custom_tags
+    cost_center STRING,                     -- Original value from custom_tags
+    environment STRING,
+    use_case STRING,                        -- Original value from custom_tags
+    pipeline_name STRING,                   -- Original value from custom_tags
+    workflow_level STRING,                  -- Original value from custom_tags
+    parent_workflow_name STRING,            -- Original value from custom_tags
     _loaded_at TIMESTAMP
 ) USING DELTA;
 
@@ -304,19 +290,13 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     policy_id STRING,
     -- NEW: Node type categorization (retain original + add categorized)
     worker_node_type_category STRING,    -- Categorized node type (General Purpose, Memory Optimized, etc.)
-    -- NEW: Inherited job tags for cost attribution
-    inherited_line_of_business STRING,
-    inherited_department STRING,
-    inherited_cost_center STRING,
-    inherited_environment STRING,
-    inherited_use_case STRING,
-    inherited_workflow_level STRING,
-    inherited_parent_workflow STRING,
     -- NEW: Computed runtime fields
     major_version INT,
     minor_version INT,
     runtime_age_months INT,
     is_lts BOOLEAN,
+    is_photon_enabled BOOLEAN,
+    is_ml_enabled BOOLEAN,
     _loaded_at TIMESTAMP,
     -- SCD2 columns
     valid_from TIMESTAMP,
