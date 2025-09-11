@@ -239,8 +239,24 @@ def extract_jobs_to_bronze():
         
         # Convert to DataFrame
         if transformed_jobs:
-            # Create DataFrame
-            df = spark.createDataFrame(transformed_jobs)
+            # Define explicit schema for the bronze table
+            schema = StructType([
+                StructField("account_id", StringType(), True),
+                StructField("workspace_id", StringType(), True),
+                StructField("job_id", StringType(), True),
+                StructField("name", StringType(), True),
+                StructField("description", StringType(), True),
+                StructField("creator_id", StringType(), True),
+                StructField("tags", MapType(StringType(), StringType()), True),
+                StructField("change_time", TimestampType(), True),
+                StructField("delete_time", TimestampType(), True),
+                StructField("run_as", StringType(), True),
+                StructField("row_hash", StringType(), True),
+                StructField("_loaded_at", TimestampType(), True)
+            ])
+            
+            # Create DataFrame with explicit schema
+            df = spark.createDataFrame(transformed_jobs, schema)
             
             # Define the target table
             target_table = f"{CATALOG}.{BRONZE_SCHEMA}.brz_lakeflow_jobs"
