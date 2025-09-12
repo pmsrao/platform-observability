@@ -164,13 +164,14 @@ SELECT
     f.workflow_level,
     f.parent_workflow_name,
     -- Cost and usage data
-    f.list_cost_usd,
-    f.usage_quantity,
-    f.duration_hours
+    f.usage_cost,
+    f.usage_quantity
+    --,
+    -- f.duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
 LEFT JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
-LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster e ON f.cluster_key = c.cluster_key;
+LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster c ON f.cluster_key = c.cluster_key;
 
 -- Tag Coverage Summary View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_tag_coverage_summary AS
@@ -200,7 +201,7 @@ SELECT
     -- Total cost for context
     SUM(f.usage_cost) as total_cost_usd
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
-LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster e ON f.cluster_key = c.cluster_key
+LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster c ON f.cluster_key = c.cluster_key
 GROUP BY f.date_key;
 
 -- Enhanced Chargeback Views with New Tags
