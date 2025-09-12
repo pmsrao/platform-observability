@@ -140,7 +140,7 @@ SELECT
     CASE WHEN f.environment = 'dev' THEN 'Missing' ELSE 'Present' END as environment_status,
     CASE WHEN f.use_case = 'Unknown' THEN 'Missing' ELSE 'Present' END as use_case_status,
     CASE WHEN f.pipeline_name = 'system' THEN 'Missing' ELSE 'Present' END as pipeline_name_status,
-    CASE WHEN f.cluster_identifier = 'Unknown' THEN 'Missing' ELSE 'Present' END as cluster_identifier_status,
+    CASE WHEN c.cluster_name = 'Unknown' THEN 'Missing' ELSE 'Present' END as cluster_identifier_status,
     CASE WHEN f.workflow_level = 'STANDALONE' THEN 'Missing' ELSE 'Present' END as workflow_level_status,
     CASE WHEN f.parent_workflow_name = 'None' THEN 'Missing' ELSE 'Present' END as parent_workflow_status,
     -- Count of missing tags
@@ -150,7 +150,7 @@ SELECT
     CASE WHEN f.environment = 'dev' THEN 1 ELSE 0 END +
     CASE WHEN f.use_case = 'Unknown' THEN 1 ELSE 0 END +
     CASE WHEN f.pipeline_name = 'system' THEN 1 ELSE 0 END +
-    CASE WHEN f.cluster_identifier = 'Unknown' THEN 1 ELSE 0 END +
+    CASE WHEN c.cluster_name = 'Unknown' THEN 1 ELSE 0 END +
     CASE WHEN f.workflow_level = 'STANDALONE' THEN 1 ELSE 0 END +
     CASE WHEN f.parent_workflow_name = 'None' THEN 1 ELSE 0 END as missing_tags_count,
     -- Tag values for analysis
@@ -160,7 +160,7 @@ SELECT
     f.environment,
     f.use_case,
     f.pipeline_name,
-    f.cluster_identifier,
+    c.cluster_name,
     f.workflow_level,
     f.parent_workflow_name,
     -- Cost and usage data
@@ -169,7 +169,8 @@ SELECT
     f.duration_hours
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
-LEFT JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key;
+LEFT JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
+LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster e ON f.cluster_key = c.cluster_key;
 
 -- Tag Coverage Summary View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_tag_coverage_summary AS
@@ -183,7 +184,7 @@ SELECT
     SUM(CASE WHEN f.environment != 'dev' THEN 1 ELSE 0 END) as records_with_environment,
     SUM(CASE WHEN f.use_case != 'Unknown' THEN 1 ELSE 0 END) as records_with_use_case,
     SUM(CASE WHEN f.pipeline_name != 'system' THEN 1 ELSE 0 END) as records_with_pipeline_name,
-    SUM(CASE WHEN f.cluster_identifier != 'Unknown' THEN 1 ELSE 0 END) as records_with_cluster_identifier,
+    SUM(CASE WHEN c.cluster_name != 'Unknown' THEN 1 ELSE 0 END) as records_with_cluster_identifier,
     SUM(CASE WHEN f.workflow_level != 'STANDALONE' THEN 1 ELSE 0 END) as records_with_workflow_level,
     SUM(CASE WHEN f.parent_workflow_name != 'None' THEN 1 ELSE 0 END) as records_with_parent_workflow,
     -- Coverage percentages
@@ -193,12 +194,13 @@ SELECT
     ROUND(SUM(CASE WHEN f.environment != 'dev' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as environment_coverage_pct,
     ROUND(SUM(CASE WHEN f.use_case != 'Unknown' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as use_case_coverage_pct,
     ROUND(SUM(CASE WHEN f.pipeline_name != 'system' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as pipeline_name_coverage_pct,
-    ROUND(SUM(CASE WHEN f.cluster_identifier != 'Unknown' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as cluster_identifier_coverage_pct,
+    ROUND(SUM(CASE WHEN c.cluster_name != 'Unknown' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as cluster_identifier_coverage_pct,
     ROUND(SUM(CASE WHEN f.workflow_level != 'STANDALONE' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as workflow_level_coverage_pct,
     ROUND(SUM(CASE WHEN f.parent_workflow_name != 'None' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as parent_workflow_coverage_pct,
     -- Total cost for context
     SUM(f.usage_cost) as total_cost_usd
 FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
+LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster e ON f.cluster_key = c.cluster_key
 GROUP BY f.date_key;
 
 -- Enhanced Chargeback Views with New Tags
