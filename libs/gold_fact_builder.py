@@ -158,7 +158,7 @@ class UsageFactBuilder(FactBuilder):
                                              silver_price_df.price_end_time.isNull()))
                              .select( silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
-            
+
             # Join with dimensions using SCD2 temporal logic
             fact_df = (silver_with_cost.alias("slv_usage_txn")
                 # Workspace dimension join (no SCD2 needed - workspace doesn't change frequently)
@@ -172,16 +172,16 @@ class UsageFactBuilder(FactBuilder):
                       (silver_with_cost.entity_type == entity_dim.entity_type) & 
                       (silver_with_cost.entity_id == entity_dim.entity_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_with_cost.usage_start_time) >= entity_dim.valid_from) &
-                      ((entity_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < entity_dim.valid_to)), 
+                      (silver_with_cost.usage_start_time >= entity_dim.valid_from) &
+                      ((entity_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < entity_dim.valid_to)), 
                       "left")
                 # Cluster dimension join with SCD2 temporal logic
-                .join(cluster_dim, 
+                .join(cluster_dim, [
                       (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
                       (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_with_cost.usage_start_time) >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < cluster_dim.valid_to)), 
+                      (silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
+                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to))], 
                       "left")
                 # SKU dimension join with temporal pricing logic
                 .join(sku_dim, 
@@ -192,7 +192,9 @@ class UsageFactBuilder(FactBuilder):
                       (silver_with_cost.usage_start_time <= sku_dim.price_effective_from) &
                       ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time > sku_dim.price_effective_till)), 
                       "left")
-                .select(
+            )
+
+            fact_df = fact_df.select(
                     # FOREIGN KEYS (surrogate keys to dimensions)
                     F.col("date_sk").alias("date_key"),
                     F.col("workspace_key"),
@@ -216,9 +218,10 @@ class UsageFactBuilder(FactBuilder):
                     F.col("parent_workflow_name"),
                     # MEASURES
                     F.col("usage_quantity"),
-                    F.col("usage_cost")
+                    F.col("usage_cost"),
+                    F.col("usage_start_time"),
+                    F.col("usage_end_time")
                 )
-            )
             
             # Upsert fact
             result = self.upsert_fact(fact_df, "gld_fact_usage_priced_day", 
@@ -353,15 +356,15 @@ class RunCostFactBuilder(FactBuilder):
                       (silver_with_cost.entity_type == entity_dim.entity_type) & 
                       (silver_with_cost.entity_id == entity_dim.entity_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_with_cost.usage_start_time) >= entity_dim.valid_from) &
-                      ((entity_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < entity_dim.valid_to)), 
+                      (silver_with_cost.usage_start_time >= entity_dim.valid_from) &
+                      ((entity_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < entity_dim.valid_to)), 
                       "left")
                 .join(cluster_dim, 
                       (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
                       (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (F.to_date(silver_with_cost.usage_start_time) >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (F.to_date(silver_with_cost.usage_start_time) < cluster_dim.valid_to)), 
+                      (silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
+                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to)), 
                       "left")
                 .join(sku_dim, 
                       (silver_with_cost.sku_name == sku_dim.sku_name) & 
@@ -421,7 +424,7 @@ class RunStatusCostFactBuilder(FactBuilder):
                                             (silver_usage_df.usage_start_time >= silver_price_df.price_start_time) & 
                                             ((silver_usage_df.usage_start_time < silver_price_df.price_end_time) | 
                                              silver_price_df.price_end_time.isNull()))
-                            .select( silver_df["*"],  silver_price_df["price_usd"])
+                            .select( silver_usage_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
             
             # Aggregate usage cost by job run

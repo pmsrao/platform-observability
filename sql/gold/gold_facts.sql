@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_usage_priced_day (
     parent_workflow_name STRING,
     -- MEASURES
     usage_quantity DECIMAL(38,18),
-    usage_cost DECIMAL(38,18)
+    usage_cost DECIMAL(38,18),
+    usage_start_time TIMESTAMP,
+    usage_end_time TIMESTAMP
 )
 USING DELTA
 PARTITIONED BY (date_key, cloud);
