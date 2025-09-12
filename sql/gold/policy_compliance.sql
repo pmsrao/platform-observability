@@ -48,7 +48,7 @@ FROM {catalog}.{gold_schema}.policy_baseline p
 CROSS JOIN (
     SELECT 
         f.date_key,
-        SUM(f.list_cost_usd) as daily_cost,
+        SUM(f.usage_cost) as daily_cost,
 --        AVG(f.duration_hours) as avg_duration,
         SUM(r.failed_runs) * 1.0 / NULLIF(SUM(r.finished_runs), 0) as failure_rate
     FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
