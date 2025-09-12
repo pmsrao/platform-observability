@@ -34,14 +34,14 @@ SELECT
     CASE 
         WHEN p.policy_type = 'COST' THEN 
             CASE WHEN f.daily_cost > p.threshold_value THEN 'VIOLATION' ELSE 'COMPLIANT' END
-        WHEN p.policy_type = 'PERFORMANCE' THEN 
-            CASE WHEN f.avg_duration > p.threshold_value THEN 'VIOLATION' ELSE 'COMPLIANT' END
+--        WHEN p.policy_type = 'PERFORMANCE' THEN 
+--            CASE WHEN f.avg_duration > p.threshold_value THEN 'VIOLATION' ELSE 'COMPLIANT' END
         WHEN p.policy_type = 'QUALITY' THEN 
             CASE WHEN f.failure_rate > p.threshold_value THEN 'VIOLATION' ELSE 'COMPLIANT' END
         ELSE 'UNKNOWN'
     END as compliance_status,
     f.daily_cost,
-    f.avg_duration,
+--    f.avg_duration,
     f.failure_rate,
     f.date_key
 FROM {catalog}.{gold_schema}.policy_baseline p
@@ -49,7 +49,7 @@ CROSS JOIN (
     SELECT 
         f.date_key,
         SUM(f.list_cost_usd) as daily_cost,
-        AVG(f.duration_hours) as avg_duration,
+--        AVG(f.duration_hours) as avg_duration,
         SUM(r.failed_runs) * 1.0 / NULLIF(SUM(r.finished_runs), 0) as failure_rate
     FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
     LEFT JOIN {catalog}.{gold_schema}.gld_fact_runs_finished_day r 
