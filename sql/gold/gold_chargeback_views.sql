@@ -123,7 +123,7 @@ FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
 LEFT JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster c ON f.cluster_key = c.cluster_key
-GROUP BY f.date_key, f.cluster_identifier, f.line_of_business, f.department;
+GROUP BY f.date_key, c.cluster_name, f.line_of_business, f.department;
 
 -- Tag Quality and Missing Tags Visibility View
 CREATE OR REPLACE VIEW {catalog}.{gold_schema}.v_tag_quality_analysis AS
@@ -258,4 +258,4 @@ FROM {catalog}.{gold_schema}.gld_fact_usage_priced_day f
 JOIN {catalog}.{gold_schema}.gld_dim_workspace w ON f.workspace_key = w.workspace_key
 LEFT JOIN {catalog}.{gold_schema}.gld_dim_entity e ON f.entity_key = e.entity_key
 LEFT JOIN {catalog}.{gold_schema}.gld_dim_cluster c ON f.cluster_key = c.cluster_key
-GROUP BY f.date_key, f.cluster_identifier, f.workflow_level, f.parent_workflow_name, f.cost_center;
+GROUP BY f.date_key, c.cluster_name, f.workflow_level, f.parent_workflow_name, f.cost_center;
