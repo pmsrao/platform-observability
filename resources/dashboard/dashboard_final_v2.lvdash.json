@@ -1,4 +1,81 @@
 {
+  "globalParameters": [
+    {
+      "displayName": "Start Date",
+      "keyword": "param_start_date",
+      "dataType": "DATE",
+      "defaultSelection": {
+        "values": {
+          "dataType": "DATE",
+          "values": [
+            {
+              "value": "now-30d/d"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "displayName": "End Date",
+      "keyword": "param_end_date",
+      "dataType": "DATE",
+      "defaultSelection": {
+        "values": {
+          "dataType": "DATE",
+          "values": [
+            {
+              "value": "now/d"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "displayName": "Workspace",
+      "keyword": "param_workspace",
+      "dataType": "STRING",
+      "defaultSelection": {
+        "values": {
+          "dataType": "STRING",
+          "values": [
+            {
+              "value": "<ALL WORKSPACES>"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "displayName": "Cost Center",
+      "keyword": "param_cost_center",
+      "dataType": "STRING",
+      "defaultSelection": {
+        "values": {
+          "dataType": "STRING",
+          "values": [
+            {
+              "value": "<ALL COST CENTERS>"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "displayName": "Environment",
+      "keyword": "param_environment",
+      "dataType": "STRING",
+      "defaultSelection": {
+        "values": {
+          "dataType": "STRING",
+          "values": [
+            {
+              "value": "<ALL ENVIRONMENTS>"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "datasets": [
     {
       "name": "dataset_001",
@@ -11,7 +88,11 @@
         "    COUNT(DISTINCT entity_key) as active_entities,",
         "    AVG(usage_cost) as avg_daily_cost ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         ") ",
         "SELECT ",
         "  'Total Cost (30 days)' as metric,",
@@ -47,7 +128,11 @@
         "  SUM(usage_cost) as daily_cost_usd,",
         "  AVG(SUM(usage_cost)) OVER (ORDER BY date_key ROWS 6 PRECEDING) as rolling_7day_avg ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "GROUP BY date_key ",
         "ORDER BY date_key "
       ]
@@ -63,7 +148,11 @@
         "  COUNT(DISTINCT entity_key) as active_entities,",
         "  ROUND(try_divide(SUM(usage_cost), COUNT(DISTINCT entity_key)), 2) as cost_per_entity ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND cost_center != 'unallocated' ",
         "GROUP BY cost_center, line_of_business ",
         "ORDER BY total_cost_usd DESC ",
@@ -86,8 +175,13 @@
         "      ELSE 'Legacy' ",
         "    END as version_category ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day f ",
+        "  JOIN platform_observability.plt_gold.gld_dim_workspace w ON f.workspace_key = w.workspace_key",
         "  JOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key ",
-        "  WHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "    AND c.is_current = true ",
         "  GROUP BY c.dbr_version, version_category ",
         ") ",
@@ -120,7 +214,11 @@
         "  ROUND(try_divide(SUM(usage_cost), COUNT(DISTINCT entity_key)), 2) as cost_per_entity ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
         "WHERE cost_center != 'unallocated' ",
-        "  AND date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "GROUP BY DATE_FORMAT(TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd'), 'yyyy-MM'), cost_center, line_of_business ",
         "ORDER BY month DESC, total_cost_usd DESC "
       ]
@@ -131,17 +229,23 @@
       "queryLines": [
         "SELECT ",
         "  e.name as job_name,",
-        "  e.workspace_name,",
+        "  w.workspace_name,",
         "  COUNT(DISTINCT f.job_run_id) as total_runs,",
-        "  AVG(f.duration_hours) as avg_duration_hours,",
         "  SUM(f.usage_cost) as total_cost_usd,",
         "  ROUND(try_divide(SUM(f.usage_cost), COUNT(DISTINCT f.job_run_id)), 2) as cost_per_run ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day f ",
-        "JOIN platform_observability.plt_gold.gld_dim_entity e ON f.entity_key = e.entity_key ",
-        "WHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  JOIN platform_observability.plt_gold.gld_dim_workspace w ON f.workspace_key = w.workspace_key",
+        "LEFT JOIN platform_observability.plt_gold.gld_dim_entity e ON f.entity_key = e.entity_key ",
+        "LEFT JOIN platform_observability.plt_gold.gld_dim_workspace w ON f.workspace_key = w.workspace_key ",
+        "LEFT JOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND e.is_current = true ",
         "  AND e.entity_type IN ('JOB', 'PIPELINE') ",
-        "GROUP BY e.name, e.workspace_name ",
+        "GROUP BY e.name, w.workspace_name ",
         "HAVING COUNT(DISTINCT f.job_run_id) >= 5 ",
         "ORDER BY total_cost_usd DESC ",
         "LIMIT 15 "
@@ -171,7 +275,11 @@
         "  COUNT(DISTINCT workspace_key) as active_workspaces,",
         "  ROUND(try_divide(SUM(usage_cost), COUNT(DISTINCT entity_key)), 2) as cost_per_entity ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND cost_center != 'unallocated' ",
         "  AND line_of_business != 'Unknown' ",
         "GROUP BY line_of_business, cost_center, department ",
@@ -188,7 +296,11 @@
         "    SUM(usage_cost) as actual_cost,",
         "    LAG(SUM(usage_cost)) OVER (ORDER BY DATE_FORMAT(TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd'), 'yyyy-MM')) as prev_month_cost ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "  WHERE date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  GROUP BY DATE_FORMAT(TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd'), 'yyyy-MM') ",
         ") ",
         "SELECT ",
@@ -255,13 +367,17 @@
         "  c.worker_node_type_category,",
         "  c.min_autoscale_workers,",
         "  c.max_autoscale_workers,",
-        "  AVG(f.duration_hours) as avg_duration,",
         "  SUM(f.usage_cost) as total_cost,",
         "  COUNT(DISTINCT f.job_run_id) as total_runs,",
         "  ROUND(try_divide(SUM(f.usage_cost), COUNT(DISTINCT f.job_run_id)), 2) as cost_per_run ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day f ",
+        "  JOIN platform_observability.plt_gold.gld_dim_workspace w ON f.workspace_key = w.workspace_key",
         "JOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key ",
-        "WHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND c.is_current = true ",
         "GROUP BY c.cluster_name, c.worker_node_type_category, c.min_autoscale_workers, c.max_autoscale_workers ",
         "HAVING COUNT(DISTINCT f.job_run_id) >= 3 ",
@@ -277,12 +393,16 @@
         "  c.worker_node_type_category,",
         "  c.dbr_version,",
         "  SUM(f.usage_cost) as total_cost,",
-        "  AVG(f.duration_hours) as avg_duration,",
         "  COUNT(DISTINCT f.job_run_id) as total_runs,",
         "  ROUND(try_divide(SUM(f.usage_cost), COUNT(DISTINCT f.job_run_id)), 2) as cost_per_run ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day f ",
+        "  JOIN platform_observability.plt_gold.gld_dim_workspace w ON f.workspace_key = w.workspace_key",
         "JOIN platform_observability.plt_gold.gld_dim_cluster c ON f.cluster_key = c.cluster_key ",
-        "WHERE f.date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND c.is_current = true ",
         "GROUP BY c.worker_node_type_category, c.dbr_version ",
         "ORDER BY total_cost DESC "
@@ -302,7 +422,11 @@
         "  COUNT(DISTINCT workspace_key) as workspace_count,",
         "  ROUND(try_divide(SUM(usage_cost), COUNT(DISTINCT entity_key)), 2) as cost_per_entity ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND workflow_level != 'STANDALONE' ",
         "  AND cost_center != 'unallocated' ",
         "GROUP BY workflow_level, parent_workflow_name, line_of_business, cost_center ",
@@ -321,7 +445,11 @@
         "    SUM(CASE WHEN line_of_business != 'Unknown' THEN 1 ELSE 0 END) as lob_tagged,",
         "    SUM(CASE WHEN department IS NOT NULL AND department != '' THEN 1 ELSE 0 END) as dept_tagged ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  GROUP BY workspace_key ",
         ") ",
         "SELECT ",
@@ -351,7 +479,11 @@
         "  AVG(usage_quantity) as avg_usage,",
         "  SUM(usage_cost) as total_cost ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND usage_start_time IS NOT NULL ",
         "GROUP BY environment, HOUR(usage_start_time) ",
         "ORDER BY environment, hour_of_day "
@@ -370,7 +502,11 @@
         "  ROUND(try_divide(SUM(usage_cost), COUNT(DISTINCT entity_key)), 2) as cost_per_entity,",
         "  ROUND(try_divide(SUM(usage_cost), SUM(usage_quantity)), 4) as cost_per_unit ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND line_of_business != 'Unknown' ",
         "  AND use_case IS NOT NULL ",
         "GROUP BY line_of_business, use_case ",
@@ -389,7 +525,11 @@
         "  COUNT(DISTINCT entity_key) as active_entities,",
         "  COUNT(DISTINCT workspace_key) as active_workspaces ",
         "FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "WHERE date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  AND line_of_business != 'Unknown' ",
         "  AND department IS NOT NULL ",
         "GROUP BY DATE_FORMAT(TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd'), 'yyyy-MM'), line_of_business, department ",
@@ -410,7 +550,11 @@
         "    COUNT(DISTINCT entity_key) as active_entities ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
         "  WHERE cost_center != 'unallocated' ",
-        "    AND date_key >= date_format(date_sub(current_date(), 90), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         "  GROUP BY cost_center, line_of_business, department, DATE_FORMAT(TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd'), 'yyyy-MM') ",
         ") ",
         "SELECT ",
@@ -438,7 +582,11 @@
         "    COUNT(DISTINCT entity_key) as active_entities,",
         "    AVG(usage_cost) as avg_daily_cost ",
         "  FROM platform_observability.plt_gold.gld_fact_usage_priced_day ",
-        "  WHERE date_key >= date_format(date_sub(current_date(), 30), 'yyyyMMdd') ",
+        "  WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')",
+        "    AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd')",
+        "    AND (:param_workspace = '<ALL WORKSPACES>' OR w.workspace_name = :param_workspace)",
+        "    AND (:param_cost_center = '<ALL COST CENTERS>' OR f.cost_center = :param_cost_center)",
+        "    AND (:param_environment = '<ALL ENVIRONMENTS>' OR f.environment = :param_environment)",
         ") ",
         "SELECT ",
         "  total_cost_usd,",
@@ -456,41 +604,35 @@
       "layout": [
         {
           "widget": {
-            "name": "filter_date_range",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "dataset_007",
-                  "fields": [
-                    {
-                      "name": "workspace_name",
-                      "expression": "`workspace_name`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
+            "name": "global_date_range",
+            "queries": [],
             "spec": {
               "version": 2,
               "widgetType": "filter-date-picker",
               "encodings": {
                 "fields": [
                   {
-                    "fieldName": "workspace_name",
-                    "displayName": "workspace_name",
-                    "queryName": "main_query"
+                    "fieldName": "param_start_date",
+                    "displayName": "Start Date",
+                    "queryName": "date_range"
+                  },
+                  {
+                    "fieldName": "param_end_date",
+                    "displayName": "End Date",
+                    "queryName": "date_range"
                   }
                 ]
               },
               "selection": {
                 "defaultSelection": {
                   "values": {
-                    "dataType": "STRING",
+                    "dataType": "DATE",
                     "values": [
                       {
-                        "value": "<ALL>"
+                        "value": "now-30d/d"
+                      },
+                      {
+                        "value": "now/d"
                       }
                     ]
                   }
@@ -505,36 +647,22 @@
           "position": {
             "x": 0,
             "y": 0,
-            "width": 3,
+            "width": 4,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "filter_workspace",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "dataset_007",
-                  "fields": [
-                    {
-                      "name": "workspace_name",
-                      "expression": "`workspace_name`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
+            "name": "global_workspace_filter",
+            "queries": [],
             "spec": {
               "version": 2,
               "widgetType": "filter-single-select",
               "encodings": {
                 "fields": [
                   {
-                    "fieldName": "workspace_name",
-                    "displayName": "workspace_name",
+                    "fieldName": "param_workspace",
+                    "displayName": "param_workspace",
                     "queryName": "main_query"
                   }
                 ]
@@ -545,7 +673,7 @@
                     "dataType": "STRING",
                     "values": [
                       {
-                        "value": "<ALL>"
+                        "value": "<ALL WORKSPACES>"
                       }
                     ]
                   }
@@ -558,9 +686,9 @@
             }
           },
           "position": {
-            "x": 3,
+            "x": 4,
             "y": 0,
-            "width": 3,
+            "width": 4,
             "height": 1
           }
         },
@@ -596,7 +724,7 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Total Cost (30 days)"
+                "title": "Total Cost"
               }
             }
           },
@@ -785,7 +913,7 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Cost Trend (30 Days)"
+                "title": "Cost Trend"
               }
             }
           },
@@ -1057,6 +1185,96 @@
       "layout": [
         {
           "widget": {
+            "name": "global_date_range",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_start_date",
+                    "displayName": "Start Date",
+                    "queryName": "date_range"
+                  },
+                  {
+                    "fieldName": "param_end_date",
+                    "displayName": "End Date",
+                    "queryName": "date_range"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "now-30d/d"
+                      },
+                      {
+                        "value": "now/d"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Date Range"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "global_workspace_filter",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_workspace",
+                    "displayName": "param_workspace",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "<ALL WORKSPACES>"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
             "name": "finance_cost_allocation",
             "queries": [
               {
@@ -1222,7 +1440,7 @@
           },
           "position": {
             "x": 0,
-            "y": 0,
+            "y": 1,
             "width": 12,
             "height": 6
           }
@@ -1282,7 +1500,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
@@ -1454,7 +1672,7 @@
           },
           "position": {
             "x": 6,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
@@ -1626,7 +1844,7 @@
           },
           "position": {
             "x": 0,
-            "y": 12,
+            "y": 13,
             "width": 12,
             "height": 6
           }
@@ -1638,6 +1856,96 @@
       "name": "platform-page-003",
       "displayName": "Platform Engineering",
       "layout": [
+        {
+          "widget": {
+            "name": "global_date_range",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_start_date",
+                    "displayName": "Start Date",
+                    "queryName": "date_range"
+                  },
+                  {
+                    "fieldName": "param_end_date",
+                    "displayName": "End Date",
+                    "queryName": "date_range"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "now-30d/d"
+                      },
+                      {
+                        "value": "now/d"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Date Range"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "global_workspace_filter",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_workspace",
+                    "displayName": "param_workspace",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "<ALL WORKSPACES>"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
         {
           "widget": {
             "name": "platform_runtime_modernization",
@@ -1782,7 +2090,7 @@
           },
           "position": {
             "x": 0,
-            "y": 0,
+            "y": 1,
             "width": 12,
             "height": 6
           }
@@ -1811,10 +2119,6 @@
                     {
                       "name": "max_autoscale_workers",
                       "expression": "`max_autoscale_workers`"
-                    },
-                    {
-                      "name": "avg_duration",
-                      "expression": "`avg_duration`"
                     },
                     {
                       "name": "total_cost",
@@ -1907,25 +2211,6 @@
                     "order": 3
                   },
                   {
-                    "fieldName": "avg_duration",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 4
-                  },
-                  {
                     "fieldName": "total_cost",
                     "booleanValues": [
                       "false",
@@ -1942,7 +2227,7 @@
                     "type": "string",
                     "displayAs": "string",
                     "visible": true,
-                    "order": 5
+                    "order": 4
                   }
                 ]
               },
@@ -1954,7 +2239,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
@@ -2014,7 +2299,7 @@
           },
           "position": {
             "x": 6,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
@@ -2074,7 +2359,7 @@
           },
           "position": {
             "x": 0,
-            "y": 12,
+            "y": 13,
             "width": 6,
             "height": 6
           }
@@ -2246,7 +2531,7 @@
           },
           "position": {
             "x": 6,
-            "y": 12,
+            "y": 13,
             "width": 6,
             "height": 6
           }
@@ -2258,6 +2543,96 @@
       "name": "data-quality-page-004",
       "displayName": "Data Quality & Governance",
       "layout": [
+        {
+          "widget": {
+            "name": "global_date_range",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_start_date",
+                    "displayName": "Start Date",
+                    "queryName": "date_range"
+                  },
+                  {
+                    "fieldName": "param_end_date",
+                    "displayName": "End Date",
+                    "queryName": "date_range"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "now-30d/d"
+                      },
+                      {
+                        "value": "now/d"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Date Range"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "global_workspace_filter",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_workspace",
+                    "displayName": "param_workspace",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "<ALL WORKSPACES>"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
         {
           "widget": {
             "name": "data_quality_tag_analysis",
@@ -2425,7 +2800,7 @@
           },
           "position": {
             "x": 0,
-            "y": 0,
+            "y": 1,
             "width": 12,
             "height": 8
           }
@@ -2485,7 +2860,7 @@
           },
           "position": {
             "x": 0,
-            "y": 8,
+            "y": 9,
             "width": 6,
             "height": 6
           }
@@ -2510,10 +2885,6 @@
                     {
                       "name": "total_runs",
                       "expression": "`total_runs`"
-                    },
-                    {
-                      "name": "avg_duration_hours",
-                      "expression": "`avg_duration_hours`"
                     },
                     {
                       "name": "total_cost_usd",
@@ -2591,7 +2962,7 @@
                     "order": 2
                   },
                   {
-                    "fieldName": "avg_duration_hours",
+                    "fieldName": "total_cost_usd",
                     "booleanValues": [
                       "false",
                       "true"
@@ -2610,25 +2981,6 @@
                     "order": 3
                   },
                   {
-                    "fieldName": "total_cost_usd",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 4
-                  },
-                  {
                     "fieldName": "cost_per_run",
                     "booleanValues": [
                       "false",
@@ -2645,7 +2997,7 @@
                     "type": "string",
                     "displayAs": "string",
                     "visible": true,
-                    "order": 5
+                    "order": 4
                   }
                 ]
               },
@@ -2657,7 +3009,7 @@
           },
           "position": {
             "x": 6,
-            "y": 8,
+            "y": 9,
             "width": 6,
             "height": 6
           }
@@ -2669,6 +3021,96 @@
       "name": "business-page-005",
       "displayName": "Business Intelligence",
       "layout": [
+        {
+          "widget": {
+            "name": "global_date_range",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_start_date",
+                    "displayName": "Start Date",
+                    "queryName": "date_range"
+                  },
+                  {
+                    "fieldName": "param_end_date",
+                    "displayName": "End Date",
+                    "queryName": "date_range"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "now-30d/d"
+                      },
+                      {
+                        "value": "now/d"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Date Range"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "global_workspace_filter",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_workspace",
+                    "displayName": "param_workspace",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "<ALL WORKSPACES>"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
         {
           "widget": {
             "name": "business_unit_performance",
@@ -2836,7 +3278,7 @@
           },
           "position": {
             "x": 0,
-            "y": 0,
+            "y": 1,
             "width": 12,
             "height": 6
           }
@@ -3008,7 +3450,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 7,
             "width": 12,
             "height": 6
           }
@@ -3020,6 +3462,96 @@
       "name": "operations-page-006",
       "displayName": "Operations & Performance",
       "layout": [
+        {
+          "widget": {
+            "name": "global_date_range",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_start_date",
+                    "displayName": "Start Date",
+                    "queryName": "date_range"
+                  },
+                  {
+                    "fieldName": "param_end_date",
+                    "displayName": "End Date",
+                    "queryName": "date_range"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "now-30d/d"
+                      },
+                      {
+                        "value": "now/d"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Date Range"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "global_workspace_filter",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "param_workspace",
+                    "displayName": "param_workspace",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "<ALL WORKSPACES>"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 1
+          }
+        },
         {
           "widget": {
             "name": "operations_runtime_health",
@@ -3075,7 +3607,7 @@
           },
           "position": {
             "x": 0,
-            "y": 0,
+            "y": 1,
             "width": 6,
             "height": 6
           }
@@ -3100,10 +3632,6 @@
                     {
                       "name": "total_runs",
                       "expression": "`total_runs`"
-                    },
-                    {
-                      "name": "avg_duration_hours",
-                      "expression": "`avg_duration_hours`"
                     },
                     {
                       "name": "total_cost_usd",
@@ -3181,7 +3709,7 @@
                     "order": 2
                   },
                   {
-                    "fieldName": "avg_duration_hours",
+                    "fieldName": "total_cost_usd",
                     "booleanValues": [
                       "false",
                       "true"
@@ -3200,25 +3728,6 @@
                     "order": 3
                   },
                   {
-                    "fieldName": "total_cost_usd",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 4
-                  },
-                  {
                     "fieldName": "cost_per_run",
                     "booleanValues": [
                       "false",
@@ -3235,7 +3744,7 @@
                     "type": "string",
                     "displayAs": "string",
                     "visible": true,
-                    "order": 5
+                    "order": 4
                   }
                 ]
               },
@@ -3247,7 +3756,7 @@
           },
           "position": {
             "x": 6,
-            "y": 0,
+            "y": 1,
             "width": 6,
             "height": 6
           }
@@ -3307,7 +3816,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
@@ -3367,7 +3876,7 @@
           },
           "position": {
             "x": 6,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
