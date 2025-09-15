@@ -3,7 +3,7 @@
 -- It handles both new records and updates to existing records
 
 MERGE INTO {target_table} AS target
-USING {source_view} AS source
+USING {source_table} AS source
 ON target.warehouse_id = source.warehouse_id 
    AND target.workspace_id = source.workspace_id
    AND target.account_id = source.account_id
@@ -21,7 +21,7 @@ WHEN MATCHED AND target.row_hash != source.row_hash THEN
     change_time = source.change_time,
     delete_time = source.delete_time,
     row_hash = source.row_hash,
-    _loaded_at = source._loaded_at
+    _loaded_at = CURRENT_TIMESTAMP()
 WHEN NOT MATCHED THEN
   INSERT (
     warehouse_id,
@@ -55,5 +55,5 @@ WHEN NOT MATCHED THEN
     source.change_time,
     source.delete_time,
     source.row_hash,
-    source._loaded_at
+    CURRENT_TIMESTAMP()
   )
