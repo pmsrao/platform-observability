@@ -664,6 +664,64 @@ def upsert_compute_node_types():
     logger.info(f"Successfully processed {record_count} compute node types records")
     return record_count
 
+@performance_monitor("upsert_compute_warehouses")
+@safe_execute(logger, "upsert_compute_warehouses")
+def upsert_compute_warehouses():
+    """
+    Upsert compute warehouses data (HWM-based incremental).
+    
+    Sources: system.compute.warehouses
+            Target: brz_compute_warehouses
+    
+    Business Logic:
+    - HWM-based incremental processing using updated_at timestamp
+    - Tracks warehouse configurations and usage patterns
+    - Used for cost analysis and resource optimization
+    """
+    src = "system.compute.warehouses"
+    tgt = config.get_table_name("bronze", "brz_compute_warehouses")
+    
+    logger.info(f"Processing compute warehouses from {src} to {tgt}")
+    
+    # Get HWM for incremental processing
+    last_processed = get_last_processed_timestamp(spark, src, "upsert_compute_warehouses", "bronze")
+    
+    # Build query with HWM filter
+    if last_processed:
+        logger.info(f"Processing warehouses data after {last_processed}")
+        stg = spark.table(src).filter(F.col("change_time") > last_processed)
+    else:
+        logger.info("Processing all warehouses data (first run)")
+        stg = spark.table(src)
+    
+    # Add row hash for change detection
+    stg = stg.withColumn("row_hash", sha256_concat([
+        "warehouse_id", "warehouse_name", "warehouse_type", "warehouse_channel",
+        "warehouse_size", "min_clusters", "max_clusters", "auto_stop_minutes",
+        "change_time", "delete_time"
+    ]))
+    
+    # Validate data quality
+    try:
+        if not validate_data_quality(stg, "compute_warehouses", logger):
+            logger.warning("Data quality validation failed for compute warehouses - continuing with processing")
+    except Exception as e:
+        logger.warning(f"Data quality validation error for compute warehouses: {str(e)} - continuing with processing")
+    
+    # Create staging view and execute SQL operation
+    stg.createOrReplaceTempView("stg_warehouses")
+    execute_sql_operation("bronze/operations/upsert_compute_warehouses", tgt, "stg_warehouses", logger)
+    
+    # Update processing state
+    mx = stg.select(F.max("change_time").alias("mx")).first().mx
+    if mx is not None:
+        commit_processing_state(spark, src, mx)
+        logger.info(f"Updated processing state for {src} to {mx}")
+    
+    record_count = stg.count()
+    logger.info(f"Successfully processed {record_count} compute warehouses records")
+    return record_count
+
 @performance_monitor("upsert_access_workspaces")
 @safe_execute(logger, "upsert_access_workspaces")
 def upsert_access_workspaces():
@@ -755,6 +813,7 @@ def main():
             ("lakeflow_pipelines", upsert_lakeflow_pipelines),
             ("compute_clusters", upsert_compute_clusters),
             ("compute_node_types", upsert_compute_node_types),
+            ("compute_warehouses", upsert_compute_warehouses),
             ("access_workspaces", upsert_access_workspaces)
         ]
         

@@ -239,6 +239,28 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_compute_node_type_scd (
     is_current BOOLEAN
 ) USING DELTA;
 
+-- Warehouses SCD2 Table (Type 2 - Historical tracking)
+CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_warehouses (
+    warehouse_id STRING,
+    workspace_id STRING,
+    account_id STRING,
+    warehouse_name STRING,
+    warehouse_type STRING,
+    warehouse_channel STRING,
+    warehouse_size STRING,
+    min_clusters INTEGER,
+    max_clusters INTEGER,
+    auto_stop_minutes INTEGER,
+    tags MAP<STRING, STRING>,
+    change_time TIMESTAMP,
+    delete_time TIMESTAMP,
+    _loaded_at TIMESTAMP,
+    -- SCD2 columns
+    valid_from TIMESTAMP,
+    valid_to TIMESTAMP,
+    is_current BOOLEAN
+) USING DELTA;
+
 -- Clusters SCD2 Table (Type 2 - Historical tracking)
 CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     account_id STRING,

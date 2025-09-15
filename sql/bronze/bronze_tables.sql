@@ -261,3 +261,26 @@ TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
     'delta.autoOptimize.optimizeWrite' = 'true'
 );
+
+-- Compute Warehouses Table
+CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_compute_warehouses (
+    warehouse_id STRING,
+    workspace_id STRING,
+    account_id STRING,
+    warehouse_name STRING,
+    warehouse_type STRING,
+    warehouse_channel STRING,
+    warehouse_size STRING,
+    min_clusters INTEGER,
+    max_clusters INTEGER,
+    auto_stop_minutes INTEGER,
+    tags MAP<STRING, STRING>,
+    change_time TIMESTAMP,
+    delete_time TIMESTAMP,
+    row_hash STRING,
+    _loaded_at TIMESTAMP
+) USING DELTA
+TBLPROPERTIES (
+    'delta.enableChangeDataFeed' = 'true',
+    'delta.autoOptimize.optimizeWrite' = 'true'
+);

@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_dim_cluster (
     auto_termination_minutes INT,
     enable_elastic_disk BOOLEAN,
     cluster_source STRING,
+    cluster_type STRING,                 -- warehouse_type for warehouses
+    warehouse_size STRING,               -- warehouse_size for warehouses
     init_scripts STRING,
     driver_instance_pool_id STRING,
     worker_instance_pool_id STRING,

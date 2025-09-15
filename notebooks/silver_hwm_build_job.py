@@ -912,6 +912,81 @@ def build_silver_price_scd(spark) -> bool:
 
 # COMMAND ----------
 
+def build_silver_warehouses(spark) -> bool:
+    """Build Silver warehouses table with SCD2"""
+    logger.info("Building Silver warehouses table with SCD2")
+    print("🔧 Building Silver warehouses table...")
+    
+    try:
+        # Get last processed timestamp
+        print("📅 Getting last processed timestamp...")
+        task_name = get_silver_task_name("slv_warehouses")
+        last_ts, _ = get_last_processed_timestamp(spark, "slv_warehouses", task_name, "silver")
+        print(f"📅 Last timestamp: {last_ts}")
+        
+        # Read new data from Bronze
+        print("📖 Reading data from Bronze...")
+        df = read_bronze_since_timestamp(spark, "brz_compute_warehouses", last_ts)
+        record_count = df.count()
+        print(f"📖 Found {record_count} records in Bronze")
+        
+        if record_count == 0:
+            logger.info("No new data for Silver warehouses table")
+            print("✅ No new data - skipping warehouses table")
+            return True
+        
+        # Validate data - DISABLED for performance optimization
+        logger.info("Data validation disabled - processing data")
+        
+        # Transform data with SCD2 logic
+        print("🔄 Transforming data...")
+        transformed_df = df.select(
+            df.warehouse_id,
+            df.workspace_id,
+            df.account_id,
+            df.warehouse_name,
+            df.warehouse_type,
+            df.warehouse_channel,
+            df.warehouse_size,
+            df.min_clusters,
+            df.max_clusters,
+            df.auto_stop_minutes,
+            df.tags,
+            df.change_time,
+            df.delete_time,
+            F.current_timestamp().alias("_loaded_at")
+        ).withColumn("valid_from", df.change_time) \
+         .withColumn("valid_to", F.lead("valid_from").over(Window.partitionBy("warehouse_id").orderBy("change_time"))) \
+         .withColumn("row_number", F.row_number().over(Window.partitionBy("warehouse_id").orderBy(F.col("change_time").desc()))) \
+         .withColumn("is_current", F.when(F.col("row_number")==1, F.lit(True)).otherwise(F.lit(False)))\
+         .drop("row_number")
+        
+        # Write to Silver table
+        print("💾 Writing to Silver table...")
+        target_table = f"{config.catalog}.{config.silver_schema}.slv_warehouses"
+        transformed_df.write \
+            .mode("append") \
+            .option("mergeSchema", "true") \
+            .saveAsTable(target_table)
+        
+        # Commit processing state
+        print("💾 Committing processing state...")
+        max_ts = transformed_df.select(F.max("change_time")).collect()[0][0]
+        commit_processing_state(spark, "slv_warehouses", max_ts, task_name, "silver")
+        
+        logger.info(f"Successfully built Silver warehouses table with {record_count} records")
+        print(f"✅ Successfully built Silver warehouses table with {record_count} records")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error building Silver warehouses table: {str(e)}", exc_info=True)
+        print(f"❌ Error building Silver warehouses table: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Main Execution Function
 
@@ -928,6 +1003,7 @@ def build_silver_layer(spark) -> Dict[str, bool]:
         ("workspace", build_silver_workspace),
         ("entity_latest", build_silver_entity_latest),
         ("clusters", build_silver_clusters),
+        ("warehouses", build_silver_warehouses),
         ("compute_node_type_scd", build_silver_compute_node_type_scd),
         ("price_scd", build_silver_price_scd),
         ("usage_txn", build_silver_usage_txn),
