@@ -326,7 +326,7 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 F.lit("WAREHOUSE").alias("cluster_source"),  # Constant value "WAREHOUSE"
                 F.col("warehouse_type").alias("cluster_type"),  # warehouse_type -> cluster_type
                 F.col("warehouse_size"),  # warehouse_size -> warehouse_size
-                F.lit(None).cast("string").alias("init_scripts"),  # No init_scripts for warehouses
+                F.lit(None).cast("array<string>").alias("init_scripts"),  # No init_scripts for warehouses
                 F.lit(None).cast("string").alias("driver_instance_pool_id"),  # No driver_instance_pool_id for warehouses
                 F.lit(None).cast("string").alias("worker_instance_pool_id"),  # No worker_instance_pool_id for warehouses
                 F.lit(None).cast("string").alias("dbr_version"),  # No dbr_version for warehouses
@@ -346,8 +346,7 @@ class ClusterDimensionBuilder(DimensionBuilder):
             )
             
             # Union clusters and warehouses
-            dim_df = clusters_dim.union(warehouses_dim)
-            
+            dim_df = clusters_dim.unionByName(warehouses_dim, allowMissingColumns=True).dropDuplicates(["workspace_id", "cluster_id", "valid_from"])
             # For SCD2, we need to handle updates differently
             return self.upsert_dimension(dim_df, "gld_dim_cluster", ["workspace_id", "cluster_id", "valid_from"])
             

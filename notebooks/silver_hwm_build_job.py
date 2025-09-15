@@ -921,7 +921,7 @@ def build_silver_warehouses(spark) -> bool:
         # Get last processed timestamp
         print("📅 Getting last processed timestamp...")
         task_name = get_silver_task_name("slv_warehouses")
-        last_ts, _ = get_last_processed_timestamp(spark, "slv_warehouses", task_name, "silver")
+        last_ts, _ = get_last_processed_timestamp(spark, "brz_compute_warehouses", task_name, "silver")
         print(f"📅 Last timestamp: {last_ts}")
         
         # Read new data from Bronze
@@ -972,7 +972,7 @@ def build_silver_warehouses(spark) -> bool:
         # Commit processing state
         print("💾 Committing processing state...")
         max_ts = transformed_df.select(F.max("change_time")).collect()[0][0]
-        commit_processing_state(spark, "slv_warehouses", max_ts, task_name, "silver")
+        commit_processing_state(spark, "brz_compute_warehouses", max_ts, task_name=task_name, layer ="silver")
         
         logger.info(f"Successfully built Silver warehouses table with {record_count} records")
         print(f"✅ Successfully built Silver warehouses table with {record_count} records")
