@@ -286,7 +286,7 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 F.col("auto_termination_minutes"),
                 F.col("enable_elastic_disk"),
                 F.col("cluster_source"),
-                F.lit(None).cast("string").alias("cluster_type"),
+                F.lit("CLUSTER").alias("cluster_type"),
                 F.lit(None).cast("string").alias("warehouse_size"),
                 F.col("init_scripts"),
                 F.col("driver_instance_pool_id"),
