@@ -319,7 +319,7 @@ class RunCostFactBuilder(FactBuilder):
         try:
             # Get incremental data using task-based processing state
             silver_df = self.get_incremental_data("slv_usage_txn", "gld_fact_run_cost")
-            
+
             # Check if there's any data to process
             if silver_df.count() == 0:
                 print("No new data to process for gld_fact_run_cost")
@@ -345,6 +345,7 @@ class RunCostFactBuilder(FactBuilder):
                              .select(silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
             
+
             # Join with dimensions using SCD2 temporal logic
             fact_df = (silver_with_cost.alias("slv_usage_txn")
                 .join(workspace_dim, 
@@ -434,15 +435,17 @@ class RunStatusCostFactBuilder(FactBuilder):
             
             # Join job run timeline with calculated costs
             silver_df = (silver_job_df
-                        .withColumnRenamed("date_sk_end", "date_sk")
-                        .withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type")))
-                        .withColumnRenamed("job_id", "entity_id")
-                        .join(run_costs, 
+                         .join(run_costs, 
                               (silver_job_df.workspace_id == run_costs.workspace_id) & 
                               (silver_job_df.account_id == run_costs.account_id) & 
                               (silver_job_df.job_run_id == run_costs.job_run_id), 
                               "left")
-                        .withColumn("usage_cost", F.coalesce(F.col("usage_cost"), F.lit(0.0))))
+                         .select(silver_job_df["*"], run_costs["usage_cost"])
+                        .withColumnRenamed("date_sk_end", "date_sk")
+                        .withColumn("entity_type", F.when(F.col("run_type")=="JOB_RUN", "JOB").otherwise(F.col("run_type")))
+                        .withColumnRenamed("job_id", "entity_id")
+                        .withColumn("usage_cost", F.coalesce(F.col("usage_cost"), F.lit(0.0)))
+                        )
             
             # Get dimension keys
             workspace_dim = self.spark.table(f"{self.catalog}.{self.gold_schema}.gld_dim_workspace")
