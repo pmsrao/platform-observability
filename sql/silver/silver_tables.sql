@@ -255,6 +255,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_warehouses (
     change_time TIMESTAMP,
     delete_time TIMESTAMP,
     _loaded_at TIMESTAMP,
+    row_hash STRING,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
@@ -320,6 +321,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_clusters (
     is_photon_enabled BOOLEAN,
     is_ml_enabled BOOLEAN,
     _loaded_at TIMESTAMP,
+    row_hash STRING,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,

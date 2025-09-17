@@ -127,8 +127,13 @@ def upsert_scd2_silver_table(df, table_name, natural_keys, change_time_col="chan
     Handles historical tracking with valid_from/valid_to timestamps.
     """
     try:
+        # Add row hash for change detection
+        df_with_hash = df.withColumn("row_hash", F.sha2(F.concat_ws("|", 
+            *[F.col(col) for col in natural_keys + [change_time_col]]
+        ), 256))
+        
         # Create temporary view for merge
-        df.createOrReplaceTempView("temp_silver_scd2")
+        df_with_hash.createOrReplaceTempView("temp_silver_scd2")
         
         # Build merge condition for natural keys
         merge_conditions = []
@@ -138,15 +143,17 @@ def upsert_scd2_silver_table(df, table_name, natural_keys, change_time_col="chan
         
         # SCD2 Merge logic:
         # 1. Close existing current records (set valid_to and is_current=false)
-        # 2. Insert new records with valid_from=change_time and is_current=true
+        # 2. Insert new records with proper change detection
         merge_sql = f"""
         MERGE INTO {table_name} AS target
         USING temp_silver_scd2 AS source
-        ON {merge_condition} AND target.is_current = true
-        WHEN MATCHED AND target.valid_from < source.{change_time_col} THEN 
+        ON {merge_condition} AND target.valid_from = source.{change_time_col}
+        WHEN MATCHED AND target.row_hash != source.row_hash THEN 
             UPDATE SET 
-                valid_to = source.{change_time_col},
-                is_current = false
+                valid_to = source.valid_to,
+                is_current = source.is_current,
+                row_hash = source.row_hash,
+                _loaded_at = source._loaded_at
         WHEN NOT MATCHED THEN 
             INSERT *
         """
@@ -959,15 +966,59 @@ def build_silver_warehouses(spark) -> bool:
          .withColumn("valid_to", F.lead("valid_from").over(Window.partitionBy("warehouse_id").orderBy("change_time"))) \
          .withColumn("row_number", F.row_number().over(Window.partitionBy("warehouse_id").orderBy(F.col("change_time").desc()))) \
          .withColumn("is_current", F.when(F.col("row_number")==1, F.lit(True)).otherwise(F.lit(False)))\
-         .drop("row_number")
+         .drop("row_number") \
+         .withColumn("row_hash", F.sha2(F.concat_ws("|", 
+             F.col("warehouse_id"), F.col("warehouse_name"), F.col("warehouse_type"),
+             F.col("warehouse_channel"), F.col("warehouse_size"), F.col("min_clusters"),
+             F.col("max_clusters"), F.col("auto_stop_minutes"), F.col("change_time")
+         ), 256))
         
-        # Write to Silver table
-        print("💾 Writing to Silver table...")
+        # Write to Silver table using proper SCD2 upsert logic
+        print("💾 Writing to Silver table with SCD2 upsert...")
         target_table = f"{config.catalog}.{config.silver_schema}.slv_warehouses"
-        transformed_df.write \
-            .mode("append") \
-            .option("mergeSchema", "true") \
-            .saveAsTable(target_table)
+        
+        # Create staging view for upsert
+        transformed_df.createOrReplaceTempView("stg_warehouses")
+        
+        # Execute SCD2 upsert
+        upsert_sql = f"""
+        MERGE INTO {target_table} AS target
+        USING stg_warehouses AS source
+        ON target.warehouse_id = source.warehouse_id 
+           AND target.workspace_id = source.workspace_id
+           AND target.account_id = source.account_id
+           AND target.valid_from = source.valid_from
+        WHEN MATCHED AND target.row_hash != source.row_hash THEN
+          UPDATE SET
+            warehouse_name = source.warehouse_name,
+            warehouse_type = source.warehouse_type,
+            warehouse_channel = source.warehouse_channel,
+            warehouse_size = source.warehouse_size,
+            min_clusters = source.min_clusters,
+            max_clusters = source.max_clusters,
+            auto_stop_minutes = source.auto_stop_minutes,
+            tags = source.tags,
+            change_time = source.change_time,
+            delete_time = source.delete_time,
+            valid_from = source.valid_from,
+            valid_to = source.valid_to,
+            is_current = source.is_current,
+            row_hash = source.row_hash,
+            _loaded_at = source._loaded_at
+        WHEN NOT MATCHED THEN
+          INSERT (
+            warehouse_id, workspace_id, account_id, warehouse_name, warehouse_type,
+            warehouse_channel, warehouse_size, min_clusters, max_clusters, auto_stop_minutes,
+            tags, change_time, delete_time, valid_from, valid_to, is_current, row_hash, _loaded_at
+          )
+          VALUES (
+            source.warehouse_id, source.workspace_id, source.account_id, source.warehouse_name, source.warehouse_type,
+            source.warehouse_channel, source.warehouse_size, source.min_clusters, source.max_clusters, source.auto_stop_minutes,
+            source.tags, source.change_time, source.delete_time, source.valid_from, source.valid_to, source.is_current, source.row_hash, source._loaded_at
+          )
+        """
+        
+        spark.sql(upsert_sql)
         
         # Commit processing state
         print("💾 Committing processing state...")
