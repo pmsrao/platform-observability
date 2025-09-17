@@ -1,0 +1,280 @@
+{
+  "validation_checks": {
+    "pre_generation": {
+      "json_structure": {
+        "description": "Validate JSON structure and syntax",
+        "checks": [
+          "Valid JSON syntax",
+          "Proper file extension (.lvdash.json)",
+          "Required top-level keys present",
+          "No syntax errors"
+        ]
+      },
+      "dataset_parameters": {
+        "description": "Validate dataset parameter configuration",
+        "checks": [
+          "Parameters exist in dataset",
+          "Parameter names match SQL placeholders",
+          "Default values are current (not hardcoded old dates)",
+          "Parameter data types are correct",
+          "DefaultSelection is properly formatted"
+        ]
+      },
+      "sql_parameter_binding": {
+        "description": "Validate SQL parameter binding",
+        "checks": [
+          "SQL contains parameter placeholders (:param_start_date, :param_end_date)",
+          "Proper WHERE clause with date filtering",
+          "No syntax errors in SQL",
+          "Table aliases are consistent",
+          "JOIN clauses are present where needed"
+        ]
+      },
+      "default_dates": {
+        "description": "Validate default date configuration",
+        "checks": [
+          "Default dates are current (last 30 days from today)",
+          "No hardcoded old dates (like November 2024)",
+          "Date format is correct (YYYY-MM-DDTHH:MM:SS.000)",
+          "Start date is before end date"
+        ]
+      },
+      "widget_versions": {
+        "description": "Validate widget version compatibility",
+        "checks": [
+          "Counter widgets use version 1",
+          "Table widgets use version 1",
+          "Filter widgets use version 2",
+          "Chart widgets use version 1"
+        ]
+      }
+    },
+    "post_generation": {
+      "json_validation": {
+        "description": "Validate generated JSON file",
+        "checks": [
+          "JSON syntax is valid",
+          "File can be parsed without errors",
+          "Required structure is present",
+          "No malformed JSON"
+        ]
+      },
+      "file_extension": {
+        "description": "Validate file extension",
+        "checks": [
+          "File has .lvdash.json extension",
+          "File is not .json (will cause import errors)",
+          "File name follows naming convention"
+        ]
+      },
+      "widget_connections": {
+        "description": "Validate widget dataset connections",
+        "checks": [
+          "All widgets reference datasets via datasetName",
+          "Widget queries have proper field mappings",
+          "No 'no fields selected' errors",
+          "Field names match dataset output columns"
+        ]
+      },
+      "filter_widgets": {
+        "description": "Validate filter widget structure",
+        "checks": [
+          "Filter widgets follow LakeFlow pattern",
+          "Separate widgets for each parameter",
+          "Parameter queries exist and reference datasets",
+          "Uses parameterName (not fieldName)",
+          "Query names follow LakeFlow convention"
+        ]
+      },
+      "parameter_queries": {
+        "description": "Validate parameter query structure",
+        "checks": [
+          "Parameter queries exist in filter widgets",
+          "Query names follow format: parameter_dashboards/{id}/datasets/{dataset}_{param}",
+          "Queries reference correct dataset",
+          "Parameters array is properly formatted"
+        ]
+      },
+      "column_references": {
+        "description": "Validate column references",
+        "checks": [
+          "No attempts to query parameters as columns",
+          "Filter widgets only reference parameters",
+          "Dataset queries use actual columns",
+          "No UNRESOLVED_COLUMN errors"
+        ]
+      },
+      "layout_positioning": {
+        "description": "Validate widget layout and positioning",
+        "checks": [
+          "Widgets have proper positions",
+          "No overlapping widgets",
+          "Date filters at top (y=0)",
+          "Consistent positioning across pages",
+          "Appropriate widths and heights"
+        ]
+      },
+      "comprehensive_validation": {
+        "description": "Run all validation checks",
+        "checks": [
+          "All pre-generation checks pass",
+          "All post-generation checks pass",
+          "No validation errors",
+          "Dashboard ready for import"
+        ]
+      }
+    },
+    "import_validation": {
+      "databricks_import": {
+        "description": "Validate dashboard can be imported into Databricks",
+        "checks": [
+          "File imports without errors",
+          "No 'failed to parse serialized dashboard' errors",
+          "Dashboard displays correctly",
+          "All widgets render properly"
+        ]
+      },
+      "filter_functionality": {
+        "description": "Validate filter functionality",
+        "checks": [
+          "Date filters are visible and functional",
+          "Changing dates updates widgets",
+          "No 'Filter has no fields or parameters selected' errors",
+          "Filters apply to all relevant widgets"
+        ]
+      },
+      "data_display": {
+        "description": "Validate data display",
+        "checks": [
+          "Widgets show data correctly",
+          "No 'Visualization has no fields selected' errors",
+          "Counter widgets display values",
+          "Table widgets show data rows",
+          "Charts render properly"
+        ]
+      },
+      "parameter_binding": {
+        "description": "Validate parameter binding works",
+        "checks": [
+          "No UNBOUND_SQL_PARAMETER errors",
+          "Parameters are properly bound",
+          "SQL executes with parameter values",
+          "Date filtering works correctly"
+        ]
+      }
+    },
+    "error_patterns": {
+      "common_errors": {
+        "failed_to_parse": {
+          "error": "Failed to import dashboard: failed to parse serialized dashboard",
+          "causes": [
+            "Invalid JSON structure",
+            "Wrong widget versions",
+            "Malformed widget specifications"
+          ],
+          "solutions": [
+            "Use version 1 for most widgets, version 2 for filters",
+            "Validate JSON syntax",
+            "Check widget structure matches LakeFlow pattern"
+          ]
+        },
+        "filter_no_fields": {
+          "error": "Filter has no fields or parameters selected",
+          "causes": [
+            "Filter widget not connected to dataset parameters",
+            "Missing parameter queries",
+            "Wrong filter widget structure"
+          ],
+          "solutions": [
+            "Use LakeFlow pattern with separate filter widgets",
+            "Add parameter queries to filter widgets",
+            "Use parameterName and queryName in encodings"
+          ]
+        },
+        "unresolved_column": {
+          "error": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+          "causes": [
+            "Trying to query parameters as columns",
+            "Invalid field references",
+            "Missing column aliases"
+          ],
+          "solutions": [
+            "Use parameterName in filter encodings",
+            "Check column names match dataset output",
+            "Use proper table aliases"
+          ]
+        },
+        "unbound_parameter": {
+          "error": "UNBOUND_SQL_PARAMETER",
+          "causes": [
+            "SQL has parameter placeholders but no parameter definitions",
+            "Parameter names don't match",
+            "Missing parameter array in dataset"
+          ],
+          "solutions": [
+            "Add parameters array to dataset",
+            "Match parameter keywords with SQL placeholders",
+            "Add defaultSelection to parameters"
+          ]
+        },
+        "missing_selections": {
+          "error": "Missing selections for parameters",
+          "causes": [
+            "Parameters missing defaultSelection",
+            "Invalid defaultSelection format",
+            "Parameter values not properly formatted"
+          ],
+          "solutions": [
+            "Add defaultSelection to all parameters",
+            "Use correct date format",
+            "Ensure parameter values are valid"
+          ]
+        }
+      }
+    },
+    "success_criteria": {
+      "functional": [
+        "Dashboard imports successfully",
+        "Filters work and apply to widgets",
+        "Data displays correctly",
+        "No console errors",
+        "Responsive layout"
+      ],
+      "technical": [
+        "Valid JSON structure",
+        "Proper parameter binding",
+        "LakeFlow pattern compliance",
+        "Comprehensive validation",
+        "Clean, maintainable code"
+      ],
+      "user_experience": [
+        "Intuitive filter controls",
+        "Fast loading times",
+        "Clear data visualization",
+        "Responsive interactions",
+        "Error-free operation"
+      ]
+    }
+  },
+  "validation_script_template": {
+    "description": "Template for validation script",
+    "functions": [
+      "validate_json_structure(dashboard)",
+      "validate_parameters(dataset)",
+      "validate_sql_binding(sql_lines)",
+      "validate_filter_widgets(layout)",
+      "validate_widget_connections(layout)",
+      "validate_layout_positioning(layout)",
+      "validate_column_references(dashboard)",
+      "validate_parameter_queries(dashboard)",
+      "run_comprehensive_validation(dashboard)"
+    ]
+  },
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-09-15",
+    "last_updated": "2025-09-15",
+    "author": "Platform Observability Team",
+    "description": "Comprehensive validation checks for Databricks dashboard development"
+  }
+}

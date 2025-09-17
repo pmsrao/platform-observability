@@ -1,0 +1,305 @@
+{
+  "datasets": [
+    {
+      "name": "filtered_dataset",
+      "displayName": "Filtered Dataset",
+      "queryLines": [
+        "SELECT   date_key,  SUM(usage_cost) as daily_cost_usd,  COUNT(DISTINCT workspace_key) as active_workspaces FROM platform_observability.plt_gold.gld_fact_usage_priced_day f WHERE f.date_key >= date_format(:param_start_date, 'yyyyMMdd')   AND f.date_key <= date_format(:param_end_date, 'yyyyMMdd') GROUP BY date_key ORDER BY date_key "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-16T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-15T00:00:00.000"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "working-page",
+      "displayName": "Working Page",
+      "layout": [
+        {
+          "widget": {
+            "name": "start_date_filter",
+            "queries": [
+              {
+                "name": "parameter_dashboards/dashboard_v12/datasets/filtered_dataset_param_start_date",
+                "query": {
+                  "datasetName": "filtered_dataset",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "param_start_date",
+                    "queryName": "parameter_dashboards/dashboard_v12/datasets/filtered_dataset_param_start_date"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "2025-08-16T00:00:00.000"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Start Date"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "end_date_filter",
+            "queries": [
+              {
+                "name": "parameter_dashboards/dashboard_v12/datasets/filtered_dataset_param_end_date",
+                "query": {
+                  "datasetName": "filtered_dataset",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "param_end_date",
+                    "queryName": "parameter_dashboards/dashboard_v12/datasets/filtered_dataset_param_end_date"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "2025-09-15T00:00:00.000"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "End Date"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "total_cost_counter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "filtered_dataset",
+                  "fields": [
+                    {
+                      "name": "total_cost",
+                      "expression": "SUM(`daily_cost_usd`)"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_cost",
+                  "queryName": "main_query",
+                  "numberFormat": "number-currency"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Cost (Filtered by Date)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "active_workspaces_counter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "filtered_dataset",
+                  "fields": [
+                    {
+                      "name": "max_workspaces",
+                      "expression": "MAX(`active_workspaces`)"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max_workspaces",
+                  "queryName": "main_query",
+                  "numberFormat": "number"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Max Active Workspaces (Filtered by Date)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cost_summary_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "filtered_dataset",
+                  "fields": [
+                    {
+                      "name": "date_key",
+                      "expression": "`date_key`"
+                    },
+                    {
+                      "name": "daily_cost_usd",
+                      "expression": "`daily_cost_usd`"
+                    },
+                    {
+                      "name": "active_workspaces",
+                      "expression": "`active_workspaces`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "date_key",
+                    "queryName": "main_query"
+                  },
+                  {
+                    "fieldName": "daily_cost_usd",
+                    "queryName": "main_query"
+                  },
+                  {
+                    "fieldName": "active_workspaces",
+                    "queryName": "main_query"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cost Summary (Filtered by Date)"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 6,
+            "height": 3
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
+}
