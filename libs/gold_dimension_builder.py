@@ -261,13 +261,16 @@ class ClusterDimensionBuilder(DimensionBuilder):
     """Builder for cluster dimension table with SCD2"""
     
     def build(self) -> bool:
-        """Build cluster dimension from Silver layer with SCD2"""
+        """Build cluster dimension from Silver layer with SCD2, including both clusters and warehouses"""
         try:
             # Read from Silver clusters table
-            silver_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_clusters")
+            clusters_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_clusters")
             
-            # Transform to dimension format with SCD2 logic
-            dim_df = silver_df.select(
+            # Read from Silver warehouses table
+            warehouses_df = self.spark.table(f"{self.catalog}.{self.silver_schema}.slv_warehouses")
+            
+            # Transform clusters data
+            clusters_dim = clusters_df.select(
                 F.col("account_id"),
                 F.col("workspace_id"),
                 F.col("cluster_id"),
@@ -283,6 +286,8 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 F.col("auto_termination_minutes"),
                 F.col("enable_elastic_disk"),
                 F.col("cluster_source"),
+                F.lit("CLUSTER").alias("cluster_type"),
+                F.lit(None).cast("string").alias("warehouse_size"),
                 F.col("init_scripts"),
                 F.col("driver_instance_pool_id"),
                 F.col("worker_instance_pool_id"),
@@ -297,11 +302,51 @@ class ClusterDimensionBuilder(DimensionBuilder):
                 F.col("policy_id"),
                 F.col("worker_node_type_category"),
                 # SCD2 columns
-                F.col("change_time").alias("valid_from"),  # Version becomes valid from change time
+                F.col("change_time").alias("valid_from"),
                 F.col("valid_to").alias("valid_to"),  
-                F.col("is_current").alias("is_current")  # Current version flag
-            ).distinct()
+                F.col("is_current").alias("is_current")
+            )
             
+            # Transform warehouses data with mapping
+            warehouses_dim = warehouses_df.select(
+                F.col("account_id"),
+                F.col("workspace_id"),
+                F.col("warehouse_id").alias("cluster_id"),  # warehouse_id -> cluster_id
+                F.col("warehouse_name").alias("cluster_name"),  # warehouse_name -> cluster_name
+                F.lit(None).cast("string").alias("owned_by"),  # No owned_by for warehouses
+                F.col("change_time").alias("create_time"),  # Use change_time as create_time
+                F.col("delete_time"),
+                F.lit(None).cast("string").alias("driver_node_type"),  # No driver_node_type for warehouses
+                F.lit(None).cast("string").alias("worker_node_type"),  # No worker_node_type for warehouses
+                F.lit(None).cast("int").alias("worker_count"),  # No worker_count for warehouses
+                F.col("min_clusters").alias("min_autoscale_workers"),  # min_clusters -> min_autoscale_workers
+                F.col("max_clusters").alias("max_autoscale_workers"),  # max_clusters -> max_autoscale_workers
+                F.col("auto_stop_minutes").alias("auto_termination_minutes"),  # auto_stop_minutes -> auto_termination_minutes
+                F.lit(None).cast("boolean").alias("enable_elastic_disk"),  # No enable_elastic_disk for warehouses
+                F.lit("WAREHOUSE").alias("cluster_source"),  # Constant value "WAREHOUSE"
+                F.col("warehouse_type").alias("cluster_type"),  # warehouse_type -> cluster_type
+                F.col("warehouse_size"),  # warehouse_size -> warehouse_size
+                F.lit(None).cast("array<string>").alias("init_scripts"),  # No init_scripts for warehouses
+                F.lit(None).cast("string").alias("driver_instance_pool_id"),  # No driver_instance_pool_id for warehouses
+                F.lit(None).cast("string").alias("worker_instance_pool_id"),  # No worker_instance_pool_id for warehouses
+                F.lit(None).cast("string").alias("dbr_version"),  # No dbr_version for warehouses
+                F.lit(None).cast("int").alias("major_version"),  # No major_version for warehouses
+                F.lit(None).cast("int").alias("minor_version"),  # No minor_version for warehouses
+                F.lit(None).cast("boolean").alias("is_photon_enabled"),  # No is_photon_enabled for warehouses
+                F.lit(None).cast("boolean").alias("is_ml_enabled"),  # No is_ml_enabled for warehouses
+                F.col("change_time"),
+                F.to_date(F.col("change_time")).alias("change_date"),
+                F.lit(None).cast("string").alias("data_security_mode"),  # No data_security_mode for warehouses
+                F.lit(None).cast("string").alias("policy_id"),  # No policy_id for warehouses
+                F.lit(None).cast("string").alias("worker_node_type_category"),  # No worker_node_type_category for warehouses
+                # SCD2 columns
+                F.col("change_time").alias("valid_from"),
+                F.col("valid_to").alias("valid_to"),  
+                F.col("is_current").alias("is_current")
+            )
+            
+            # Union clusters and warehouses
+            dim_df = clusters_dim.unionByName(warehouses_dim, allowMissingColumns=True).dropDuplicates(["workspace_id", "cluster_id", "valid_from"])
             # For SCD2, we need to handle updates differently
             return self.upsert_dimension(dim_df, "gld_dim_cluster", ["workspace_id", "cluster_id", "valid_from"])
             
