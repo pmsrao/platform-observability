@@ -188,9 +188,9 @@ class UsageFactBuilder(FactBuilder):
                       (silver_with_cost.sku_name == sku_dim.sku_name) & 
                       (silver_with_cost.cloud == sku_dim.cloud) &
                       (silver_with_cost.usage_unit == sku_dim.usage_unit) &
-                      # Temporal condition: usage_start_time <= price_effective_from and > price_effective_till or price_effective_till is null
-                      (silver_with_cost.usage_start_time <= sku_dim.price_effective_from) &
-                      ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time > sku_dim.price_effective_till)), 
+                      # Temporal condition: usage_start_time >= price_effective_from and (price_effective_from is null or usage_start_time < price_effective_till)
+                      (silver_with_cost.usage_start_time >= sku_dim.price_effective_from) &
+                      ((sku_dim.price_effective_from.isNull()) | (silver_with_cost.usage_start_time < sku_dim.price_effective_till)), 
                       "left")
             )
 
@@ -371,9 +371,9 @@ class RunCostFactBuilder(FactBuilder):
                       (silver_with_cost.sku_name == sku_dim.sku_name) & 
                       (silver_with_cost.cloud == sku_dim.cloud) &
                       (silver_with_cost.usage_unit == sku_dim.usage_unit) &
-                      # Temporal condition: usage_start_time <= price_effective_from and > price_effective_till or price_effective_till is null
-                      (silver_with_cost.usage_start_time <= sku_dim.price_effective_from) &
-                      ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time > sku_dim.price_effective_till)), 
+                      # Temporal condition: usage_start_time >= price_effective_from and (price_effective_from is null or usage_start_time < price_effective_till)
+                      (silver_with_cost.usage_start_time >= sku_dim.price_effective_from) &
+                      ((sku_dim.price_effective_from.isNull()) | (silver_with_cost.usage_start_time < sku_dim.price_effective_till)), 
                       "left")
                 .select(
                     F.col("date_sk").alias("date_key"),
