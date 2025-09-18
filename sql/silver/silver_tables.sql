@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_price_scd (
     price_start_time TIMESTAMP,
     price_end_time TIMESTAMP,
     _loaded_at TIMESTAMP,
+    row_hash STRING,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
@@ -233,6 +234,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_compute_node_type_scd (
     gpu_count BIGINT,                    -- Number of GPUs
     category STRING,                     -- Node type category (General Purpose, Memory Optimized, etc.)
     _loaded_at TIMESTAMP,
+    row_hash STRING,
     -- SCD2 columns
     valid_from TIMESTAMP,
     valid_to TIMESTAMP,
