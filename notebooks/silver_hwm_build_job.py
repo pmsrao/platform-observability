@@ -863,30 +863,46 @@ def build_silver_price_scd(spark) -> bool:
             print("✅ No new data - skipping price SCD2 table")
             return True
         
+        # Filter out records with null account_id or currency_code BEFORE transformation
+        print("🔍 Filtering out records with null account_id or currency_code...")
+        filtered_df = df.filter(
+            F.col("account_id").isNotNull() & 
+            F.col("currency_code").isNotNull()
+        )
+        
+        filtered_count = filtered_df.count()
+        excluded_count = record_count - filtered_count
+        print(f"🔍 Filtered from {record_count} to {filtered_count} records (excluded {excluded_count} records with null account_id or currency_code)")
+        
+        if filtered_count == 0:
+            logger.info("No valid records after filtering for Silver price SCD2 table")
+            print("✅ No valid records after filtering - skipping price SCD2 table")
+            return True
+        
         # Validate data - DISABLED for performance optimization
-        # if not validate_silver_data(df, "silver_price_scd"):
+        # if not validate_silver_data(filtered_df, "silver_price_scd"):
         #     logger.error("Data validation failed for Silver price SCD2 table")
         #     return False
         logger.info("Data validation disabled - processing data")
         
         # Transform data with SCD2 logic - FIXED: Use correct column names from bronze schema
         print("🔄 Transforming data...")
-        transformed_df = df.select(
-            df.account_id,
-            df.cloud,
-            df.sku_name,
-            df.usage_unit,
-            df.currency_code,
+        transformed_df = filtered_df.select(
+            filtered_df.account_id,
+            filtered_df.cloud,
+            filtered_df.sku_name,
+            filtered_df.usage_unit,
+            filtered_df.currency_code,
             # Extract price from pricing struct - use effective_list.default as primary price
             F.coalesce(
-                df.pricing.effective_list.default,
-                df.pricing.default
+                filtered_df.pricing.effective_list.default,
+                filtered_df.pricing.default
             ).alias("price_usd"),
-            df.price_start_time,
-            df.price_end_time,
+            filtered_df.price_start_time,
+            filtered_df.price_end_time,
             F.current_timestamp().alias("_loaded_at")
-        ).withColumn("valid_from", df.price_start_time) \
-         .withColumn("valid_to", df.price_end_time) \
+        ).withColumn("valid_from", filtered_df.price_start_time) \
+         .withColumn("valid_to", filtered_df.price_end_time) \
          .withColumn("is_current", F.when(F.col("price_end_time").isNull(),F.lit(True)).otherwise(F.lit(False)))
         
         print(f"🔄 Transformed {transformed_df.count()} records")
@@ -907,7 +923,7 @@ def build_silver_price_scd(spark) -> bool:
             task_name = get_silver_task_name("slv_price_scd")
             commit_processing_state(spark, "slv_price_scd", max_ts, task_name=task_name, layer="silver")
         
-        logger.info(f"Successfully built Silver price SCD2 table with {transformed_df.count()} records")
+        logger.info(f"Successfully built Silver price SCD2 table with {filtered_count} records (excluded {excluded_count} records with null account_id or currency_code)")
         return True
         
     except Exception as e:
