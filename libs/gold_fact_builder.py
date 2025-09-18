@@ -180,8 +180,9 @@ class UsageFactBuilder(FactBuilder):
                       (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
                       (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to))], 
+                      ((silver_with_cost.billing_origin_product == "JOBS") | 
+                      ((silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
+                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to))))], 
                       "left")
                 # SKU dimension join with temporal pricing logic
                 .join(sku_dim, 
@@ -190,7 +191,7 @@ class UsageFactBuilder(FactBuilder):
                       (silver_with_cost.usage_unit == sku_dim.usage_unit) &
                       # Temporal condition: usage_start_time >= price_effective_from and (price_effective_from is null or usage_start_time < price_effective_till)
                       (silver_with_cost.usage_start_time >= sku_dim.price_effective_from) &
-                      ((sku_dim.price_effective_from.isNull()) | (silver_with_cost.usage_start_time < sku_dim.price_effective_till)), 
+                      ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time < sku_dim.price_effective_till)), 
                       "left")
             )
 
@@ -364,8 +365,9 @@ class RunCostFactBuilder(FactBuilder):
                       (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
                       (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
-                      (silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to)), 
+                      ((silver_with_cost.billing_origin_product == "JOBS") | 
+                      ((silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
+                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to)))), 
                       "left")
                 .join(sku_dim, 
                       (silver_with_cost.sku_name == sku_dim.sku_name) & 
@@ -373,7 +375,7 @@ class RunCostFactBuilder(FactBuilder):
                       (silver_with_cost.usage_unit == sku_dim.usage_unit) &
                       # Temporal condition: usage_start_time >= price_effective_from and (price_effective_from is null or usage_start_time < price_effective_till)
                       (silver_with_cost.usage_start_time >= sku_dim.price_effective_from) &
-                      ((sku_dim.price_effective_from.isNull()) | (silver_with_cost.usage_start_time < sku_dim.price_effective_till)), 
+                      ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time < sku_dim.price_effective_till)), 
                       "left")
                 .select(
                     F.col("date_sk").alias("date_key"),

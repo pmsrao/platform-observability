@@ -868,7 +868,7 @@ def build_silver_price_scd(spark) -> bool:
         filtered_df = df.filter(
             F.col("account_id").isNotNull() & 
             F.col("currency_code").isNotNull()
-        )
+        ).dropDuplicates((["sku_name", "account_id", "currency_code", "usage_unit", "price_start_time"]))
         
         filtered_count = filtered_df.count()
         excluded_count = record_count - filtered_count
