@@ -7,7 +7,7 @@ using proper star schema design with surrogate key references.
 
 from typing import Dict, List, Optional, Tuple
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql import functions as F
+from pyspark.sql import functions as F, Window
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType, BooleanType, DecimalType
 
 from config import Config
@@ -181,8 +181,8 @@ class UsageFactBuilder(FactBuilder):
                       (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
                       ((silver_with_cost.billing_origin_product == "JOBS") | 
-                      ((silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to))))], 
+                      ((silver_with_cost.usage_start_time < F.coalesce(cluster_dim.valid_to, F.lit("9999-12-31")))
+                & (silver_with_cost.usage_end_time > cluster_dim.valid_from)))], 
                       "left")
                 # SKU dimension join with temporal pricing logic
                 .join(sku_dim, 
@@ -195,7 +195,10 @@ class UsageFactBuilder(FactBuilder):
                       "left")
             )
 
-            fact_df = fact_df.select(
+            w = Window.partitionBy("record_id").orderBy(F.col("cluster_key").asc())
+            deduped_df = (fact_df.withColumn("rn", F.row_number().over(w)).filter("rn = 1").drop("rn"))
+
+            fact_df = deduped_df.select(
                     # FOREIGN KEYS (surrogate keys to dimensions)
                     F.col("date_sk").alias("date_key"),
                     F.col("workspace_key"),
@@ -346,7 +349,7 @@ class RunCostFactBuilder(FactBuilder):
                              .select(silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
             
-
+            w = Window.partitionBy("record_id").orderBy(F.col("cluster_key").asc())
             # Join with dimensions using SCD2 temporal logic
             fact_df = (silver_with_cost.alias("slv_usage_txn")
                 .join(workspace_dim, 
@@ -366,8 +369,8 @@ class RunCostFactBuilder(FactBuilder):
                       (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
                       # SCD2 temporal condition: fact date must be within dimension validity period
                       ((silver_with_cost.billing_origin_product == "JOBS") | 
-                      ((silver_with_cost.usage_start_time >= cluster_dim.valid_from) &
-                      ((cluster_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < cluster_dim.valid_to)))), 
+                      ((silver_with_cost.usage_start_time < F.coalesce(cluster_dim.valid_to, F.lit("9999-12-31")))
+                & (silver_with_cost.usage_end_time > cluster_dim.valid_from))), 
                       "left")
                 .join(sku_dim, 
                       (silver_with_cost.sku_name == sku_dim.sku_name) & 
@@ -377,6 +380,7 @@ class RunCostFactBuilder(FactBuilder):
                       (silver_with_cost.usage_start_time >= sku_dim.price_effective_from) &
                       ((sku_dim.price_effective_till.isNull()) | (silver_with_cost.usage_start_time < sku_dim.price_effective_till)), 
                       "left")
+                .withColumn("rn", F.row_number().over(w)).filter("rn = 1").drop("rn")
                 .select(
                     F.col("date_sk").alias("date_key"),
                     F.col("workspace_key"),
@@ -392,6 +396,7 @@ class RunCostFactBuilder(FactBuilder):
                 )
             )
             
+
             # Upsert fact
             result = self.upsert_fact(fact_df, "gld_fact_run_cost", 
                                     ["date_key", "workspace_key", "entity_key", "cluster_key", "sku_key", "job_run_id"])
