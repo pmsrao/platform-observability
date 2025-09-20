@@ -218,6 +218,9 @@ class BillingUsageFactBuilder(FactBuilder):
                     .withColumn("valid_to_hr",   F.date_trunc("hour", F.col("valid_to")))
                     .alias("c_hr")
             )
+
+            # Far-future cap for open-ended SCD2 rows 
+            far_future = F.lit("9999-12-31 00:00:00").cast("timestamp")
             
             # Join with dimensions using SCD2 temporal logic
             print("Joining with dimension tables using SCD2 temporal logic...")
@@ -240,10 +243,10 @@ class BillingUsageFactBuilder(FactBuilder):
                 .join(
                     c_hr,
                     on=[
-                        F.col("s.workspace_id") == F.col("c.workspace_id"),
-                        F.col("s.cluster_id")   == F.col("c.cluster_id"),
-                        (F.col("s.usage_start_time") >= F.col("c.valid_from_hr")) &
-                        (F.col("s.usage_start_time")   <  F.coalesce(F.col("c.valid_to_hr"), far_future))
+                        F.col("silver_with_cost.workspace_id") == F.col("c.workspace_id"),
+                        F.col("silver_with_cost.cluster_id")   == F.col("c.cluster_id"),
+                        (F.col("silver_with_cost.usage_start_time") >= F.col("c.valid_from_hr")) &
+                        (F.col("silver_with_cost.usage_start_time")   <  F.coalesce(F.col("c.valid_to_hr"), far_future))
                     ],
                     how="left"
                 )
