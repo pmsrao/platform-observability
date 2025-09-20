@@ -85,3 +85,37 @@ CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_runs_finished_day (
 )
 USING DELTA
 PARTITIONED BY (date_key);
+
+-- Billing Usage Fact Table - Detailed billing usage with additional attributes
+CREATE TABLE IF NOT EXISTS {catalog}.{gold_schema}.gld_fact_billing_usage (
+    record_id STRING,                    -- Unique identifier from billing.usage (unique in this table)
+    date_key INT,                        -- Date surrogate key
+    workspace_key BIGINT,                -- Workspace dimension key
+    entity_key BIGINT,                   -- Entity dimension key
+    cluster_key BIGINT,                  -- Cluster dimension key
+    sku_key BIGINT,                      -- SKU dimension key
+    job_run_id STRING,                   -- Job run identifier
+    cloud STRING,                        -- Cloud provider
+    billing_origin_product STRING,       -- Product origin (JOBS, SQL, etc.)
+    usage_unit STRING,                   -- Unit of measurement
+    usage_type STRING,                   -- Usage type classification
+    is_serverless STRING,                -- Serverless flag ('Y' or 'N')
+    cost_center STRING,                  -- Cost center for chargeback
+    line_of_business STRING,             -- Business unit
+    department STRING,                   -- Department
+    use_case STRING,                     -- Use case classification
+    pipeline_name STRING,                -- Pipeline name
+    workflow_level STRING,               -- Workflow hierarchy level
+    parent_workflow_name STRING,         -- Parent workflow name
+    -- MEASURES
+    usage_quantity DECIMAL(38,18),       -- Usage quantity
+    usage_cost DECIMAL(38,18),           -- Calculated usage cost
+    usage_start_time TIMESTAMP,          -- Usage period start
+    usage_end_time TIMESTAMP             -- Usage period end
+)
+USING DELTA
+PARTITIONED BY (date_key)
+TBLPROPERTIES (
+    'delta.autoOptimize.optimizeWrite' = 'true',
+    'delta.autoOptimize.autoCompact' = 'true'
+);
