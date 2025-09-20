@@ -159,6 +159,16 @@ class UsageFactBuilder(FactBuilder):
                              .select( silver_df["*"],  silver_price_df["price_usd"])
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
 
+            c_hr = (
+                cluster_dim
+                    .withColumn("valid_from_hr", F.date_trunc("hour", F.col("valid_from")))
+                    .withColumn("valid_to_hr",   F.date_trunc("hour", F.col("valid_to")))
+                    .alias("c_hr")
+            )
+
+            # Far-future cap for open-ended SCD2 rows 
+            far_future = F.lit("9999-12-31 00:00:00").cast("timestamp")
+
             # Join with dimensions using SCD2 temporal logic
             fact_df = (silver_with_cost.alias("slv_usage_txn")
                 # Workspace dimension join (no SCD2 needed - workspace doesn't change frequently)
@@ -176,14 +186,16 @@ class UsageFactBuilder(FactBuilder):
                       ((entity_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < entity_dim.valid_to)), 
                       "left")
                 # Cluster dimension join with SCD2 temporal logic
-                .join(cluster_dim, [
-                      (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
-                      (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
-                      # SCD2 temporal condition: fact date must be within dimension validity period
-                      ((silver_with_cost.billing_origin_product == "JOBS") | 
-                      ((silver_with_cost.usage_start_time < F.coalesce(cluster_dim.valid_to, F.lit("9999-12-31")))
-                & (silver_with_cost.usage_end_time > cluster_dim.valid_from)))], 
-                      "left")
+                .join(
+                    c_hr,
+                    on=[
+                        silver_with_cost.workspace_id == c_hr.workspace_id,
+                        silver_with_cost.cluster_id == c_hr.cluster_id,
+                        (silver_with_cost.usage_start_time >= c_hr.valid_from_hr) &
+                        (silver_with_cost.usage_start_time < F.coalesce(c_hr.valid_to_hr, far_future))
+                    ],
+                    how="left"
+                )
                 # SKU dimension join with temporal pricing logic
                 .join(sku_dim, 
                       (silver_with_cost.sku_name == sku_dim.sku_name) & 

@@ -243,21 +243,13 @@ class BillingUsageFactBuilder(FactBuilder):
                 .join(
                     c_hr,
                     on=[
-                        F.col("silver_with_cost.workspace_id") == F.col("c.workspace_id"),
-                        F.col("silver_with_cost.cluster_id")   == F.col("c.cluster_id"),
-                        (F.col("silver_with_cost.usage_start_time") >= F.col("c.valid_from_hr")) &
-                        (F.col("silver_with_cost.usage_start_time")   <  F.coalesce(F.col("c.valid_to_hr"), far_future))
+                        silver_with_cost.workspace_id == c_hr.workspace_id,
+                        silver_with_cost.cluster_id == c_hr.cluster_id,
+                        (silver_with_cost.usage_start_time >= c_hr.valid_from_hr) &
+                        (silver_with_cost.usage_start_time < F.coalesce(c_hr.valid_to_hr, far_future))
                     ],
                     how="left"
                 )
-                .join(cluster_dim, [
-                      (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
-                      (silver_with_cost.cluster_id == cluster_dim.cluster_id) &
-                      # SCD2 temporal condition: fact date must be within dimension validity period
-                      ((silver_with_cost.billing_origin_product == "JOBS") | 
-                      ((silver_with_cost.usage_start_time < F.coalesce(cluster_dim.valid_to, F.lit("9999-12-31")))
-                & (silver_with_cost.usage_end_time > cluster_dim.valid_from)))], 
-                      "left")
                 # SKU dimension join with temporal pricing logic
                 .join(sku_dim, 
                       (silver_with_cost.sku_name == sku_dim.sku_name) & 
