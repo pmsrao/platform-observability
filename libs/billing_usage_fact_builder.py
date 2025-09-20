@@ -329,7 +329,7 @@ class BillingUsageFactBuilder(FactBuilder):
         """
         try:
             fact_table = self.get_table_name("gld_fact_billing_usage")
-            df = spark.table(fact_table)
+            df = self.spark.table(fact_table)
             
             validation_results = {}
             
@@ -387,7 +387,7 @@ class BillingUsageFactBuilder(FactBuilder):
         """
         try:
             fact_table = self.get_table_name("gld_fact_billing_usage")
-            df = spark.table(fact_table)
+            df = self.spark.table(fact_table)
             
             stats = {}
             

@@ -32,12 +32,12 @@ import os
 from pyspark.sql import SparkSession, functions as F
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType, BooleanType, DecimalType
 
-# Add libs to path
-sys.path.append('/Workspace/Repos/your-repo/platform-observability/libs')
+# Import from libs package (cloud-agnostic approach)
+from libs.path_setup import setup_paths_and_import_config
 
-# Import custom modules
-from config import Config
-from billing_usage_fact_builder import BillingUsageFactBuilder, BillingUsageFactBuilderFactory
+# Setup paths and import Config
+Config = setup_paths_and_import_config()
+from libs.billing_usage_fact_builder import BillingUsageFactBuilder, BillingUsageFactBuilderFactory
 
 # COMMAND ----------
 
@@ -46,7 +46,7 @@ from billing_usage_fact_builder import BillingUsageFactBuilder, BillingUsageFact
 
 # COMMAND ----------
 
-# Get configuration
+# Initialize
 config = Config.get_config()
 print(f"Environment: {config}")
 print(f"Catalog: {config.catalog}")
@@ -90,10 +90,15 @@ for table in required_tables:
 # COMMAND ----------
 
 # Create the fact table using SQL parameterizer
-from sql_parameterizer import SQLParameterizer
+from libs.sql_parameterizer import SQLParameterizer
 
-sql_param = SQLParameterizer(spark, config)
+sql_param = SQLParameterizer(spark)
 print("Creating gld_fact_billing_usage table...")
+
+# Debug information
+print(f"SQLParameterizer config type: {type(sql_param.config)}")
+print(f"SQLParameterizer sql_manager type: {type(sql_param.sql_manager)}")
+print(f"Has parameterize_sql_statements: {hasattr(sql_param.sql_manager, 'parameterize_sql_statements')}")
 
 try:
     # Execute the DDL for the fact table
@@ -103,6 +108,8 @@ try:
     print("✅ Fact table DDL executed successfully")
 except Exception as e:
     print(f"❌ Error creating fact table: {str(e)}")
+    import traceback
+    traceback.print_exc()
 
 # COMMAND ----------
 
