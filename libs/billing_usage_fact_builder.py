@@ -211,6 +211,13 @@ class BillingUsageFactBuilder(FactBuilder):
                              .withColumn("usage_cost", F.col("usage_quantity") * F.col("price_usd")))
             
             print(f"Records after price join: {silver_with_cost.count()}")
+
+            c_hr = (
+                cluster_dim
+                    .withColumn("valid_from_hr", F.date_trunc("hour", F.col("valid_from")))
+                    .withColumn("valid_to_hr",   F.date_trunc("hour", F.col("valid_to")))
+                    .alias("c_hr")
+            )
             
             # Join with dimensions using SCD2 temporal logic
             print("Joining with dimension tables using SCD2 temporal logic...")
@@ -230,6 +237,16 @@ class BillingUsageFactBuilder(FactBuilder):
                       ((entity_dim.valid_to.isNull()) | (silver_with_cost.usage_start_time < entity_dim.valid_to)), 
                       "left")
                 # Cluster dimension join with SCD2 temporal logic
+                .join(
+                    c_hr,
+                    on=[
+                        F.col("s.workspace_id") == F.col("c.workspace_id"),
+                        F.col("s.cluster_id")   == F.col("c.cluster_id"),
+                        (F.col("s.usage_start_time") >= F.col("c.valid_from_hr")) &
+                        (F.col("s.usage_start_time")   <  F.coalesce(F.col("c.valid_to_hr"), far_future))
+                    ],
+                    how="left"
+                )
                 .join(cluster_dim, [
                       (silver_with_cost.workspace_id == cluster_dim.workspace_id) & 
                       (silver_with_cost.cluster_id == cluster_dim.cluster_id) &

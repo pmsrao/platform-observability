@@ -586,10 +586,10 @@ def build_silver_usage_txn(spark) -> bool:
             df.usage_type,
             df.custom_tags,
             # FIXED: Add computed fields that need to be calculated
-            F.when(df.usage_metadata.job_id.isNotNull(), F.lit("JOB")).when(df.usage_metadata.dlt_pipeline_id.isNotNull(), F.lit("PIPELINE")).otherwise(F.lit("UNKNOWN")).alias("entity_type"),
+            F.when(df.usage_metadata.job_id.isNotNull(), F.lit("JOB")).when(df.usage_metadata.dlt_pipeline_id.isNotNull(), F.lit("PIPELINE")).otherwise(df.billing_origin_product ).alias("entity_type"),
             F.coalesce(df.usage_metadata.job_id, df.usage_metadata.dlt_pipeline_id, F.lit("UNKNOWN")).alias("entity_id"),
             F.coalesce(df.usage_metadata.job_run_id, F.lit("UNKNOWN")).alias("job_run_id"),
-            F.coalesce(df.usage_metadata.cluster_id, F.lit("UNKNOWN")).alias("cluster_id"),
+            F.coalesce(df.usage_metadata.cluster_id, df.usage_metadata.warehouse_id, F.lit("UNKNOWN")).alias("cluster_id"),
             F.date_format(df.usage_date, "yyyyMMdd").cast("int").alias("date_sk"),
             F.current_timestamp().alias("_loaded_at"),
             # Note: parent_workflow_name will be created by tag processor from custom_tags
