@@ -1,0 +1,3578 @@
+{
+  "datasets": [
+    {
+      "name": "dataset_001",
+      "displayName": "Cost Summary KPIs",
+      "queryLines": [
+        "SELECT ",
+        "    COUNT(DISTINCT date_key) as days_analyzed,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost_usd,",
+        "    ROUND(AVG(daily_cost), 2) as avg_daily_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage_quantity,",
+        "    COUNT(DISTINCT workspace_id) as workspaces_analyzed,",
+        "    COUNT(DISTINCT billing_origin_product) as workload_types,",
+        "    COUNT(DISTINCT sku_name) as compute_types ",
+        "FROM platform_observability.plt_gold.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dataset_002",
+      "displayName": "Daily Cost Trend by Workload Type",
+      "queryLines": [
+        "SELECT ",
+        "    TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd') as date,",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(daily_cost, 2) as daily_cost,",
+        "    ROUND(rolling_7day_avg_cost, 2) as rolling_7day_avg_cost ",
+        "FROM platform_observability.plt_gold.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "ORDER BY date_key, billing_origin_product "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dataset_003",
+      "displayName": "Cost Breakdown by Usage Unit",
+      "queryLines": [
+        "SELECT ",
+        "    usage_unit,",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_quantity,",
+        "    ROUND(AVG(daily_cost), 2) as avg_daily_cost ",
+        "FROM platform_observability.plt_gold.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "GROUP BY usage_unit, billing_origin_product ",
+        "ORDER BY total_cost DESC "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dataset_004",
+      "displayName": "Workload Type Distribution",
+      "queryLines": [
+        "SELECT ",
+        "    billing_origin_product as workload_type,",
+        "    usage_unit,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage,",
+        "    COUNT(DISTINCT job_pipeline_id) as unique_jobs_pipelines ",
+        "FROM platform_observability.plt_gold.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "GROUP BY billing_origin_product, usage_unit ",
+        "ORDER BY total_cost DESC "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dataset_005",
+      "displayName": "Top Compute SKUs by Cost",
+      "queryLines": [
+        "SELECT ",
+        "    sku_name as compute_type,",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage,",
+        "    COUNT(DISTINCT job_pipeline_id) as active_jobs_pipelines ",
+        "FROM platform_observability.plt_gold.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "  AND job_pipeline_id != 'NA' ",
+        "GROUP BY sku_name, billing_origin_product ",
+        "ORDER BY total_cost DESC ",
+        "LIMIT 15 "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dataset_006",
+      "displayName": "Top Jobs/Pipelines by Cost",
+      "queryLines": [
+        "SELECT ",
+        "    job_pipeline_id,",
+        "    job_name,",
+        "    billing_origin_product as workload_type,",
+        "    sku_name as compute_type,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage,",
+        "    COUNT(DISTINCT date_key) as active_days ",
+        "FROM platform_observability.plt_gold.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "  AND job_pipeline_id != 'NA' ",
+        "GROUP BY job_pipeline_id, job_name, billing_origin_product, sku_name ",
+        "ORDER BY total_cost DESC ",
+        "LIMIT 20 "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dataset_007",
+      "displayName": "Cost Anomalies with Context",
+      "queryLines": [
+        "SELECT ",
+        "    TO_DATE(CAST(date_key AS STRING), 'yyyyMMdd') as date,",
+        "    workspace_id,",
+        "    billing_origin_product as workload_type,",
+        "    job_pipeline_id,",
+        "    ROUND(usage_cost, 2) as cost,",
+        "    anomaly_flag,",
+        "    CASE ",
+        "        WHEN anomaly_flag = 'HIGH_COST_ANOMALY' THEN 'Cost Spike Detected' ",
+        "        WHEN anomaly_flag = 'LOW_COST_ANOMALY' THEN 'Unusual Low Cost' ",
+        "        ELSE 'Normal' ",
+        "    END as anomaly_description ",
+        "FROM platform_observability.plt_gold.v_cost_anomalies ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "  AND anomaly_flag != 'NORMAL' ",
+        "ORDER BY usage_cost DESC "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dataset_008",
+      "displayName": "Workspace Filter Data",
+      "queryLines": [
+        "SELECT '<ALL_WORKSPACES>' as workspace_id ",
+        "UNION ALL ",
+        "SELECT DISTINCT workspace_id ",
+        "FROM platform_observability.plt_gold.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "ORDER BY workspace_id "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "<ALL_WORKSPACES>"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "cost-overview-page",
+      "displayName": "Cost & Usage Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter_start_date",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "param_start_date",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "2025-08-20T00:00:00.000"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Start Date"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_end_date",
+            "queries": [],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "param_end_date",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "2025-09-20T00:00:00.000"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "End Date"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_workspace",
+            "queries": [
+              {
+                "name": "workspace_query",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "fields": [
+                    {
+                      "name": "workspace_id",
+                      "expression": "`workspace_id`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "workspace_id",
+                    "displayName": "Workspace",
+                    "queryName": "workspace_query"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace"
+                  },
+                  {
+                    "parameterName": "param_workspace",
+                    "queryName": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "<ALL WORKSPACES>"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workspace"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "cost_summary_kpis",
+            "queries": [
+              {
+                "name": "kpi_query",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "fields": [
+                    {
+                      "name": "days_analyzed",
+                      "expression": "`days_analyzed`"
+                    },
+                    {
+                      "name": "total_cost_usd",
+                      "expression": "`total_cost_usd`"
+                    },
+                    {
+                      "name": "avg_daily_cost",
+                      "expression": "`avg_daily_cost`"
+                    },
+                    {
+                      "name": "total_usage_quantity",
+                      "expression": "`total_usage_quantity`"
+                    },
+                    {
+                      "name": "workspaces_analyzed",
+                      "expression": "`workspaces_analyzed`"
+                    },
+                    {
+                      "name": "workload_types",
+                      "expression": "`workload_types`"
+                    },
+                    {
+                      "name": "compute_types",
+                      "expression": "`compute_types`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_start_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_start_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_start_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_start_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_start_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_start_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_end_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_end_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_end_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_end_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_end_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_end_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "days_analyzed",
+                    "queryName": "kpi_query"
+                  },
+                  {
+                    "fieldName": "total_cost_usd",
+                    "queryName": "kpi_query"
+                  },
+                  {
+                    "fieldName": "avg_daily_cost",
+                    "queryName": "kpi_query"
+                  },
+                  {
+                    "fieldName": "workspaces_analyzed",
+                    "queryName": "kpi_query"
+                  },
+                  {
+                    "fieldName": "workload_types",
+                    "queryName": "kpi_query"
+                  },
+                  {
+                    "fieldName": "compute_types",
+                    "queryName": "kpi_query"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cost Summary KPIs"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "daily_cost_trend",
+            "queries": [
+              {
+                "name": "trend_query",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "fields": [
+                    {
+                      "name": "date",
+                      "expression": "`date`"
+                    },
+                    {
+                      "name": "workload_type",
+                      "expression": "`workload_type`"
+                    },
+                    {
+                      "name": "daily_cost",
+                      "expression": "`daily_cost`"
+                    },
+                    {
+                      "name": "rolling_7day_avg_cost",
+                      "expression": "`rolling_7day_avg_cost`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_start_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_start_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_start_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_start_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_start_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_start_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_end_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_end_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_end_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_end_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_end_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_end_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "date",
+                  "queryName": "trend_query",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "axis": {
+                    "title": "Date"
+                  },
+                  "displayName": "Date"
+                },
+                "y": {
+                  "fieldName": "daily_cost",
+                  "queryName": "trend_query",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Daily Cost (USD)"
+                  },
+                  "displayName": "Daily Cost"
+                },
+                "color": {
+                  "fieldName": "workload_type",
+                  "queryName": "trend_query",
+                  "scale": {
+                    "type": "ordinal"
+                  },
+                  "displayName": "Workload Type"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Daily Cost Trend by Workload Type"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "cost_breakdown_usage_unit",
+            "queries": [
+              {
+                "name": "usage_unit_query",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "fields": [
+                    {
+                      "name": "usage_unit",
+                      "expression": "`usage_unit`"
+                    },
+                    {
+                      "name": "workload_type",
+                      "expression": "`workload_type`"
+                    },
+                    {
+                      "name": "total_cost",
+                      "expression": "`total_cost`"
+                    },
+                    {
+                      "name": "total_quantity",
+                      "expression": "`total_quantity`"
+                    },
+                    {
+                      "name": "avg_daily_cost",
+                      "expression": "`avg_daily_cost`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_start_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_start_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_start_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_start_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_start_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_start_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_end_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_end_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_end_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_end_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_end_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_end_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "usage_unit",
+                  "queryName": "usage_unit_query",
+                  "scale": {
+                    "type": "ordinal"
+                  },
+                  "axis": {
+                    "title": "Usage Unit"
+                  },
+                  "displayName": "Usage Unit"
+                },
+                "y": {
+                  "fieldName": "total_cost",
+                  "queryName": "usage_unit_query",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Total Cost (USD)"
+                  },
+                  "displayName": "Total Cost"
+                },
+                "color": {
+                  "fieldName": "workload_type",
+                  "queryName": "usage_unit_query",
+                  "scale": {
+                    "type": "ordinal"
+                  },
+                  "displayName": "Workload Type"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cost Breakdown by Usage Unit (DBU vs Network)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "workload_type_distribution",
+            "queries": [
+              {
+                "name": "workload_query",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "fields": [
+                    {
+                      "name": "workload_type",
+                      "expression": "`workload_type`"
+                    },
+                    {
+                      "name": "usage_unit",
+                      "expression": "`usage_unit`"
+                    },
+                    {
+                      "name": "total_cost",
+                      "expression": "`total_cost`"
+                    },
+                    {
+                      "name": "total_usage",
+                      "expression": "`total_usage`"
+                    },
+                    {
+                      "name": "unique_jobs_pipelines",
+                      "expression": "`unique_jobs_pipelines`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_start_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_start_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_start_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_start_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_start_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_start_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_end_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_end_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_end_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_end_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_end_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_end_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "workload_type",
+                  "queryName": "workload_query",
+                  "scale": {
+                    "type": "ordinal"
+                  },
+                  "axis": {
+                    "title": "Workload Type"
+                  },
+                  "displayName": "Workload Type"
+                },
+                "y": {
+                  "fieldName": "total_cost",
+                  "queryName": "workload_query",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Total Cost (USD)"
+                  },
+                  "displayName": "Total Cost"
+                },
+                "color": {
+                  "fieldName": "usage_unit",
+                  "queryName": "workload_query",
+                  "scale": {
+                    "type": "ordinal"
+                  },
+                  "displayName": "Usage Unit"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Workload Type Distribution"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 6,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "top_compute_skus",
+            "queries": [
+              {
+                "name": "sku_query",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "fields": [
+                    {
+                      "name": "compute_type",
+                      "expression": "`compute_type`"
+                    },
+                    {
+                      "name": "workload_type",
+                      "expression": "`workload_type`"
+                    },
+                    {
+                      "name": "total_cost",
+                      "expression": "`total_cost`"
+                    },
+                    {
+                      "name": "total_usage",
+                      "expression": "`total_usage`"
+                    },
+                    {
+                      "name": "active_jobs_pipelines",
+                      "expression": "`active_jobs_pipelines`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_start_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_start_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_start_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_start_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_start_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_start_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_end_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_end_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_end_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_end_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_end_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_end_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "compute_type",
+                    "queryName": "sku_query"
+                  },
+                  {
+                    "fieldName": "workload_type",
+                    "queryName": "sku_query"
+                  },
+                  {
+                    "fieldName": "total_cost",
+                    "queryName": "sku_query"
+                  },
+                  {
+                    "fieldName": "total_usage",
+                    "queryName": "sku_query"
+                  },
+                  {
+                    "fieldName": "active_jobs_pipelines",
+                    "queryName": "sku_query"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top Compute SKUs by Cost"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "top_jobs_pipelines",
+            "queries": [
+              {
+                "name": "jobs_query",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "fields": [
+                    {
+                      "name": "job_pipeline_id",
+                      "expression": "`job_pipeline_id`"
+                    },
+                    {
+                      "name": "job_name",
+                      "expression": "`job_name`"
+                    },
+                    {
+                      "name": "workload_type",
+                      "expression": "`workload_type`"
+                    },
+                    {
+                      "name": "compute_type",
+                      "expression": "`compute_type`"
+                    },
+                    {
+                      "name": "total_cost",
+                      "expression": "`total_cost`"
+                    },
+                    {
+                      "name": "total_usage",
+                      "expression": "`total_usage`"
+                    },
+                    {
+                      "name": "active_days",
+                      "expression": "`active_days`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_start_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_start_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_start_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_start_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_start_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_start_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_end_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_end_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_end_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_end_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_end_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_end_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "job_pipeline_id",
+                    "queryName": "jobs_query"
+                  },
+                  {
+                    "fieldName": "job_name",
+                    "queryName": "jobs_query"
+                  },
+                  {
+                    "fieldName": "workload_type",
+                    "queryName": "jobs_query"
+                  },
+                  {
+                    "fieldName": "compute_type",
+                    "queryName": "jobs_query"
+                  },
+                  {
+                    "fieldName": "total_cost",
+                    "queryName": "jobs_query"
+                  },
+                  {
+                    "fieldName": "total_usage",
+                    "queryName": "jobs_query"
+                  },
+                  {
+                    "fieldName": "active_days",
+                    "queryName": "jobs_query"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top Jobs/Pipelines by Cost"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "cost_anomalies",
+            "queries": [
+              {
+                "name": "anomalies_query",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "fields": [
+                    {
+                      "name": "date",
+                      "expression": "`date`"
+                    },
+                    {
+                      "name": "workspace_id",
+                      "expression": "`workspace_id`"
+                    },
+                    {
+                      "name": "workload_type",
+                      "expression": "`workload_type`"
+                    },
+                    {
+                      "name": "job_pipeline_id",
+                      "expression": "`job_pipeline_id`"
+                    },
+                    {
+                      "name": "compute_type",
+                      "expression": "`compute_type`"
+                    },
+                    {
+                      "name": "cost",
+                      "expression": "`cost`"
+                    },
+                    {
+                      "name": "anomaly_flag",
+                      "expression": "`anomaly_flag`"
+                    },
+                    {
+                      "name": "anomaly_description",
+                      "expression": "`anomaly_description`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_start_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_start_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_start_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_start_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_start_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_start_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_end_date",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_end_date",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_end_date",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_end_date",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_end_date",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_end_date",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_001_param_workspace",
+                "query": {
+                  "datasetName": "dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_002_param_workspace",
+                "query": {
+                  "datasetName": "dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_003_param_workspace",
+                "query": {
+                  "datasetName": "dataset_003",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_004_param_workspace",
+                "query": {
+                  "datasetName": "dataset_004",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_005_param_workspace",
+                "query": {
+                  "datasetName": "dataset_005",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_006_param_workspace",
+                "query": {
+                  "datasetName": "dataset_006",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_007_param_workspace",
+                "query": {
+                  "datasetName": "dataset_007",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/dbv2/datasets/dataset_008_param_workspace",
+                "query": {
+                  "datasetName": "dataset_008",
+                  "parameters": [
+                    {
+                      "name": "param_workspace",
+                      "keyword": "param_workspace"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "date",
+                    "queryName": "anomalies_query"
+                  },
+                  {
+                    "fieldName": "workspace_id",
+                    "queryName": "anomalies_query"
+                  },
+                  {
+                    "fieldName": "workload_type",
+                    "queryName": "anomalies_query"
+                  },
+                  {
+                    "fieldName": "job_pipeline_id",
+                    "queryName": "anomalies_query"
+                  },
+                  {
+                    "fieldName": "compute_type",
+                    "queryName": "anomalies_query"
+                  },
+                  {
+                    "fieldName": "cost",
+                    "queryName": "anomalies_query"
+                  },
+                  {
+                    "fieldName": "anomaly_description",
+                    "queryName": "anomalies_query"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cost Anomalies with Context"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 6,
+            "height": 3
+          }
+        }
+      ]
+    }
+  ]
+}

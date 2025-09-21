@@ -1,0 +1,417 @@
+{
+  "datasets": {
+    "cost_summary_kpis": {
+      "name": "dataset_001",
+      "displayName": "Cost Summary KPIs",
+      "queryLines": [
+        "SELECT ",
+        "    COUNT(DISTINCT date_key) as days_analyzed,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost_usd,",
+        "    ROUND(AVG(daily_cost), 2) as avg_daily_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage_quantity,",
+        "    COUNT(DISTINCT workspace_id) as workspaces_analyzed,",
+        "    COUNT(DISTINCT billing_origin_product) as workload_types,",
+        "    COUNT(DISTINCT sku_name) as compute_types ",
+        "FROM {catalog}.{gold_schema}.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date", 
+          "keyword": "param_end_date",
+          "dataType": "DATE", 
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [{"value": "<ALL_WORKSPACES>"}]
+            }
+          }
+        }
+      ]
+    },
+    "daily_cost_trend": {
+      "name": "dataset_002",
+      "displayName": "Daily Cost Trend by Workload Type",
+      "queryLines": [
+        "SELECT ",
+        "    date_key as date,",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(SUM(daily_cost), 2) as daily_cost,",
+        "    ROUND(AVG(rolling_7day_avg_cost), 2) as rolling_7day_avg_cost ",
+        "FROM {catalog}.{gold_schema}.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "GROUP BY date_key, billing_origin_product ",
+        "ORDER BY date_key, billing_origin_product"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date", 
+          "keyword": "param_end_date",
+          "dataType": "DATE", 
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [{"value": "<ALL_WORKSPACES>"}]
+            }
+          }
+        }
+      ]
+    },
+    "cost_breakdown_usage_unit": {
+      "name": "dataset_003",
+      "displayName": "Cost Breakdown by Usage Unit",
+      "queryLines": [
+        "SELECT ",
+        "    usage_unit,",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_quantity,",
+        "    ROUND(AVG(daily_cost), 2) as avg_daily_cost ",
+        "FROM {catalog}.{gold_schema}.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "GROUP BY usage_unit, billing_origin_product ",
+        "ORDER BY total_cost DESC"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date", 
+          "keyword": "param_end_date",
+          "dataType": "DATE", 
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [{"value": "<ALL_WORKSPACES>"}]
+            }
+          }
+        }
+      ]
+    },
+    "workload_distribution": {
+      "name": "dataset_004",
+      "displayName": "Workload Type Distribution",
+      "queryLines": [
+        "SELECT ",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage,",
+        "    COUNT(DISTINCT workspace_id) as workspace_count ",
+        "FROM {catalog}.{gold_schema}.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "GROUP BY billing_origin_product ",
+        "ORDER BY total_cost DESC"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date", 
+          "keyword": "param_end_date",
+          "dataType": "DATE", 
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [{"value": "<ALL_WORKSPACES>"}]
+            }
+          }
+        }
+      ]
+    },
+    "top_compute_skus": {
+      "name": "dataset_005",
+      "displayName": "Top Compute SKUs by Cost",
+      "queryLines": [
+        "SELECT ",
+        "    sku_name as compute_type,",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage,",
+        "    COUNT(DISTINCT workspace_id) as workspace_count ",
+        "FROM {catalog}.{gold_schema}.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "GROUP BY sku_name, billing_origin_product ",
+        "ORDER BY total_cost DESC ",
+        "LIMIT 10"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date", 
+          "keyword": "param_end_date",
+          "dataType": "DATE", 
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [{"value": "<ALL_WORKSPACES>"}]
+            }
+          }
+        }
+      ]
+    },
+    "top_jobs_pipelines": {
+      "name": "dataset_006",
+      "displayName": "Top Jobs/Pipelines by Cost",
+      "queryLines": [
+        "SELECT ",
+        "    job_pipeline_id,",
+        "    job_name,",
+        "    billing_origin_product as workload_type,",
+        "    ROUND(SUM(daily_cost), 2) as total_cost,",
+        "    ROUND(SUM(daily_usage_qty), 2) as total_usage,",
+        "    COUNT(DISTINCT date_key) as days_active ",
+        "FROM {catalog}.{gold_schema}.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "GROUP BY job_pipeline_id, job_name, billing_origin_product ",
+        "ORDER BY total_cost DESC ",
+        "LIMIT 10"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date", 
+          "keyword": "param_end_date",
+          "dataType": "DATE", 
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [{"value": "<ALL_WORKSPACES>"}]
+            }
+          }
+        }
+      ]
+    },
+    "cost_anomalies": {
+      "name": "dataset_007",
+      "displayName": "Cost Anomalies with Context",
+      "queryLines": [
+        "SELECT ",
+        "    workspace_id,",
+        "    job_pipeline_id,",
+        "    job_name,",
+        "    billing_origin_product as workload_type,",
+        "    sku_name as compute_type,",
+        "    ROUND(usage_cost, 2) as cost,",
+        "    anomaly_flag,",
+        "    usage_start_time ",
+        "FROM {catalog}.{gold_schema}.v_cost_anomalies ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
+        "  AND anomaly_flag != 'NORMAL' ",
+        "ORDER BY usage_cost DESC ",
+        "LIMIT 20"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date", 
+          "keyword": "param_end_date",
+          "dataType": "DATE", 
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "Workspace",
+          "keyword": "param_workspace",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [{"value": "<ALL_WORKSPACES>"}]
+            }
+          }
+        }
+      ]
+    },
+    "workspace_filter": {
+      "name": "dataset_008",
+      "displayName": "Workspace Filter Data",
+      "queryLines": [
+        "SELECT '<ALL_WORKSPACES>' as workspace_id ",
+        "UNION ALL ",
+        "SELECT DISTINCT workspace_id ",
+        "FROM {catalog}.{gold_schema}.v_cost_trends ",
+        "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
+        "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
+        "ORDER BY workspace_id "
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-08-21T00:00:00.000"}]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [{"value": "2024-09-20T00:00:00.000"}]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
