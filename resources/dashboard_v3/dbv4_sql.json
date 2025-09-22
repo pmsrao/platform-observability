@@ -67,7 +67,7 @@
         "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
         "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
         "GROUP BY date_key, billing_origin_product ",
-        "ORDER BY date_key, billing_origin_product"
+        "ORDER BY date_key, billing_origin_product "
       ],
       "parameters": [
         {
@@ -120,7 +120,7 @@
         "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
         "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
         "GROUP BY usage_unit, billing_origin_product ",
-        "ORDER BY total_cost DESC"
+        "ORDER BY total_cost DESC "
       ],
       "parameters": [
         {
@@ -172,7 +172,7 @@
         "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
         "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
         "GROUP BY billing_origin_product ",
-        "ORDER BY total_cost DESC"
+        "ORDER BY total_cost DESC "
       ],
       "parameters": [
         {
@@ -226,7 +226,7 @@
         "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
         "GROUP BY sku_name, billing_origin_product ",
         "ORDER BY total_cost DESC ",
-        "LIMIT 10"
+        "LIMIT 10 "
       ],
       "parameters": [
         {
@@ -281,7 +281,7 @@
         "  AND IF(:param_workspace = '<ALL_WORKSPACES>', true, workspace_id = :param_workspace) ",
         "GROUP BY job_pipeline_id, job_name, billing_origin_product ",
         "ORDER BY total_cost DESC ",
-        "LIMIT 10"
+        "LIMIT 10 "
       ],
       "parameters": [
         {
@@ -328,10 +328,8 @@
         "    job_pipeline_id,",
         "    job_name,",
         "    billing_origin_product as workload_type,",
-        "    sku_name as compute_type,",
         "    ROUND(usage_cost, 2) as cost,",
-        "    anomaly_flag,",
-        "    usage_start_time ",
+        "    anomaly_flag ",
         "FROM {catalog}.{gold_schema}.v_cost_anomalies ",
         "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",
         "  AND date_key <= date_format(:param_end_date, 'yyyyMMdd') ",
@@ -381,7 +379,7 @@
       "displayName": "Workspace Filter Data",
       "queryLines": [
         "SELECT '<ALL_WORKSPACES>' as workspace_id ",
-        "UNION ALL ",
+        " UNION ALL ",
         "SELECT DISTINCT workspace_id ",
         "FROM {catalog}.{gold_schema}.v_cost_trends ",
         "WHERE date_key >= date_format(:param_start_date, 'yyyyMMdd') ",

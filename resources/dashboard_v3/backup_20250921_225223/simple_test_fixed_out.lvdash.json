@@ -1,0 +1,305 @@
+{
+  "datasets": [
+    {
+      "name": "simple_dataset_001",
+      "displayName": "Simple Cost Summary",
+      "queryLines": [
+        "SELECT ",
+        "    COUNT(*) as total_records,",
+        "    ROUND(SUM(usage_cost), 2) as total_cost,",
+        "    COUNT(DISTINCT workspace_key) as workspaces",
+        "FROM platform_observability.plt_gold.gld_fact_billing_usage ",
+        "WHERE usage_start_time >= :param_start_date ",
+        "  AND usage_start_time <= :param_end_date"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "simple_dataset_002",
+      "displayName": "Simple Cost Trend",
+      "queryLines": [
+        "SELECT ",
+        "    date_key,",
+        "    ROUND(SUM(usage_cost), 2) as daily_cost",
+        "FROM platform_observability.plt_gold.gld_fact_billing_usage ",
+        "WHERE usage_start_time >= :param_start_date ",
+        "  AND usage_start_time <= :param_end_date ",
+        "GROUP BY date_key ",
+        "ORDER BY date_key"
+      ],
+      "parameters": [
+        {
+          "displayName": "Start Date",
+          "keyword": "param_start_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-22T00:00:00.000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "End Date",
+          "keyword": "param_end_date",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-09-21T00:00:00.000"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "SimpleTestPage",
+      "displayName": "Simple Test Page",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter_start_date",
+            "queries": [
+              {
+                "name": "parameter_dashboards/simple/datasets/simple_dataset_001_param_start_date",
+                "query": {
+                  "datasetName": "simple_dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/simple/datasets/simple_dataset_002_param_start_date",
+                "query": {
+                  "datasetName": "simple_dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_start_date",
+                      "keyword": "param_start_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "param_start_date",
+                    "queryName": "parameter_dashboards/simple/datasets/simple_dataset_001_param_start_date"
+                  },
+                  {
+                    "parameterName": "param_start_date",
+                    "queryName": "parameter_dashboards/simple/datasets/simple_dataset_002_param_start_date"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "2025-08-22T00:00:00.000"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_end_date",
+            "queries": [
+              {
+                "name": "parameter_dashboards/simple/datasets/simple_dataset_001_param_end_date",
+                "query": {
+                  "datasetName": "simple_dataset_001",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/simple/datasets/simple_dataset_002_param_end_date",
+                "query": {
+                  "datasetName": "simple_dataset_002",
+                  "parameters": [
+                    {
+                      "name": "param_end_date",
+                      "keyword": "param_end_date"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "param_end_date",
+                    "queryName": "parameter_dashboards/simple/datasets/simple_dataset_001_param_end_date"
+                  },
+                  {
+                    "parameterName": "param_end_date",
+                    "queryName": "parameter_dashboards/simple/datasets/simple_dataset_002_param_end_date"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "DATE",
+                    "values": [
+                      {
+                        "value": "2025-09-21T00:00:00.000"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "simple_summary",
+            "queries": [
+              {
+                "name": "simple_dataset_001"
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "total_records",
+                    "queryName": "simple_dataset_001"
+                  },
+                  {
+                    "fieldName": "total_cost",
+                    "queryName": "simple_dataset_001"
+                  },
+                  {
+                    "fieldName": "workspaces",
+                    "queryName": "simple_dataset_001"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "simple_trend",
+            "queries": [
+              {
+                "name": "simple_dataset_002"
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "line",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "date_key",
+                    "queryName": "simple_dataset_002"
+                  },
+                  {
+                    "fieldName": "daily_cost",
+                    "queryName": "simple_dataset_002"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 3
+          }
+        }
+      ]
+    }
+  ]
+}
