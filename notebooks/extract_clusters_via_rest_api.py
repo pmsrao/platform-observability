@@ -40,11 +40,11 @@ from pyspark.sql.types import StructType, StructField, StringType, TimestampType
 
 # Create widgets for configuration
 dbutils.widgets.text("pat_token", "", "Personal Access Token")
-dbutils.widgets.text("workspace_url", "", "Workspace URL (e.g., https://your-workspace.cloud.databricks.com)")
+dbutils.widgets.text("workspace_url", "https://dbc-8e3108de-b81a.cloud.databricks.com/", "Workspace URL (e.g., https://your-workspace.cloud.databricks.com)")
 dbutils.widgets.text("catalog", "platform_observability", "Target Catalog")
 dbutils.widgets.text("bronze_schema", "plt_bronze", "Target Bronze Schema")
-dbutils.widgets.text("account_id", "", "Account ID")
-dbutils.widgets.text("workspace_id", "", "Workspace ID")
+dbutils.widgets.text("account_id", "bbbbf5c0-dfce-4b0c-8daf-aeae76d68c22", "Account ID")
+dbutils.widgets.text("workspace_id", "1524967460024799", "Workspace ID")
 dbutils.widgets.text("batch_size", "100", "Batch size for API calls")
 
 # Get widget values
