@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_billing_usage (
         uc_table_name:STRING,
         database_instance_id:STRING,
         sharing_materialization_id:STRING,
-        schema_id:STRING
+        schema_id:STRING,
+        usage_policy_id:STRING
     >,
     identity_metadata STRUCT<
         run_as:STRING,
@@ -68,6 +69,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{bronze_schema}.brz_billing_usage (
         ai_runtime:STRUCT<compute_type:STRING>,
         model_serving:STRUCT<offering_type:STRING>,
         ai_gateway:STRUCT<feature_type:STRING>,
+        performance_target:STRING,
         serverless_gpu:STRUCT<workload_type:STRING>
     >,
     usage_type STRING,

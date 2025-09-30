@@ -153,7 +153,8 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
         uc_table_name:STRING,
         database_instance_id:STRING,
         sharing_materialization_id:STRING,
-        schema_id:STRING
+        schema_id:STRING,
+        usage_policy_id:STRING
     >,
     identity_metadata STRUCT<
         run_as:STRING,
@@ -173,6 +174,7 @@ CREATE TABLE IF NOT EXISTS {catalog}.{silver_schema}.slv_usage_txn (
         ai_runtime:STRUCT<compute_type:STRING>,
         model_serving:STRUCT<offering_type:STRING>,
         ai_gateway:STRUCT<feature_type:STRING>,
+        performance_target:string,
         serverless_gpu:STRUCT<workload_type:STRING>
     >,
     usage_type STRING,
